@@ -1,4 +1,4 @@
-package config
+package octoconfig
 
 //
 // Define all configuration variables here

@@ -7,19 +7,21 @@ import (
 	"github.com/songgao/water"
 )
 
-func SomeFunction() {
+func OpenTap(configname string) (ifce *water.Interface, e error) {
 
 	config := water.Config{
 		DeviceType: water.TAP,
 	}
-	config.Name = "octovpn"
+	config.Name = configname
 
-	ifce, err := water.New(config)
-	if err != nil {
-		log.Fatal(err)
-	}
+	ifce, e = water.New(config)
+
+	return ifce, e
+}
+
+func SomeFunction(ifce *water.Interface) {
+
 	var frame ethernet.Frame
-
 	for {
 		frame.Resize(1500)
 		n, err := ifce.Read([]byte(frame))

@@ -1,4 +1,4 @@
-package config
+package octoconfig
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ func ReadConfigs() (configs ConfigRead) {
 			panic(fmt.Sprintf("Failed to load config configuration: %v", err))
 		}
 
-		configs.IFaceName = configConfig["IFaceName"].(string)
+		configs.IFaceName = configConfig.Interfacename.(string)
 
 		//
 		// Logging Configs

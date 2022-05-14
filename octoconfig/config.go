@@ -1,4 +1,4 @@
-package config
+package octoconfig
 
 import (
 	"encoding/json"
@@ -13,6 +13,12 @@ import (
 	"path/filepath"
 	"strings"
 )
+
+type ConfigJson struct {
+	Version       int         `json:"version,omitempty"`
+	Interfacename interface{} `json:"interfacename,omitempty"`
+	Connections   interface{} `json:"connections,omitempty"`
+}
 
 func init() {
 
@@ -94,7 +100,8 @@ func ConfigGetVal(cc ConfigConst) (v string, e error) {
 }
 
 // Local File takes precidence over remote download config
-func LoadConfiguration(pkg string) (data map[string]interface{}, err error) {
+// func LoadConfiguration(pkg string) (data map[string]interface{}, err error) {
+func LoadConfiguration(pkg string) (data ConfigJson, err error) {
 	currDir, _ := os.Getwd()
 	defer os.Chdir(currDir)
 
@@ -114,7 +121,7 @@ func LoadConfiguration(pkg string) (data map[string]interface{}, err error) {
 	byteValue, _ := ioutil.ReadAll(configFile)
 
 	err = json.Unmarshal(byteValue, &data)
-	return data[pkg].(map[string]interface{}), err
+	return data, err
 }
 
 func DownloadConfig(fullURLFile string) {
