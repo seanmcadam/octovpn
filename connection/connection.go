@@ -1,0 +1,5 @@
+package connection
+
+func OpenConn() {
+
+}
