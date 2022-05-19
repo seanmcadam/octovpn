@@ -14,12 +14,41 @@ import (
 	"strings"
 )
 
+type ConnectionProtocol string
+
+const TCP ConnectionProtocol = "tcp"
+const UDP ConnectionProtocol = "udp"
+
 type ConfigJson struct {
-	Version       int         `json:"version,omitempty"`
-	Interfacename interface{} `json:"interfacename,omitempty"`
-	Connections   interface{} `json:"connections,omitempty"`
+	Version     int         `json:"version,omitempty"`
+	Iface       interface{} `json:"interface"`
+	Connections interface{} `json:"connections"`
 }
 
+type ConfigV1 struct {
+	Iface *ConfigInterface
+	Conn  map[string]*ConfigConnection
+}
+
+type ConfigInterface struct {
+	Name    string `json:"name"`
+	TunTap  string `json:"tuntap"`
+	IP      string `json:"ip"`
+	Netmask string `json:"netmask"`
+	MTU     int    `json:"mtu,omitempty"`
+}
+
+type ConfigConnection struct {
+	Protocol ConnectionProtocol `json:"protocol"`
+	Hostname string             `json:"hostname"`
+	Port     int                `json:"port"`
+	MTU      int                `json:"mtu,omitempty"`
+}
+
+//
+// Reads in the configuration map
+// Inializes the environmental variables
+//
 func init() {
 
 	//
@@ -74,7 +103,10 @@ func ConfigGetConfigName(cc ConfigConst) (v string, e error) {
 	return
 }
 
-// MustGet looks for the config key and returns a string value no matter what.
+//
+// MustGet()
+// looks for the config key and returns a string value no matter what.
+//
 func MustGet(cc ConfigConst) string {
 	val, _ := ConfigGetVal(cc)
 
@@ -99,8 +131,10 @@ func ConfigGetVal(cc ConfigConst) (v string, e error) {
 	return
 }
 
+//
 // Local File takes precidence over remote download config
 // func LoadConfiguration(pkg string) (data map[string]interface{}, err error) {
+//
 func LoadConfiguration(pkg string) (data ConfigJson, err error) {
 	currDir, _ := os.Getwd()
 	defer os.Chdir(currDir)
@@ -124,6 +158,9 @@ func LoadConfiguration(pkg string) (data ConfigJson, err error) {
 	return data, err
 }
 
+//
+//
+//
 func DownloadConfig(fullURLFile string) {
 	fileURL, err := url.Parse(fullURLFile)
 	if err != nil {

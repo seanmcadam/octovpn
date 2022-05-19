@@ -33,9 +33,14 @@ func main() {
 
 	//
 	// Open Tun/Tap
-	//
+	// Type /
 
-	iface.OpenTap(configs.IFaceName)
+	iface.OpenTap(configs.IFace)
+
+	//
+	// Setup Interface
+	// IP Address / Netmask / MTU
+	//
 
 	//
 	// Open Connections

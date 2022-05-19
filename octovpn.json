@@ -1,9 +1,17 @@
 {
     "version": 1,
-    "interfacename":"octovpn",
-
-    "connections": [
-
-    ],
-    "dummy":"lastentry"
+    "interface": {
+        "name":"octovpn",
+        "tuntap":"TAP",
+        "ip":"10.10.10.10",
+        "netmask":"255.255.255.252",
+        "mtu": 1300
+    },
+    "connections": {
+        "connection1": {
+            "protocol":"udp",
+            "hostname":"127.0.0.1",
+            "port": 40400
+        }
+    }
 }
