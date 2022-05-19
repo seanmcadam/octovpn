@@ -7,17 +7,27 @@ import (
 	"github.com/songgao/water"
 )
 
-func OpenTap(configname string) (ifce *water.Interface, e error) {
+func OpenTap(octoconfig.ConfigInterface conf) (ifce *water.Interface, e error) {
+
+	name := conf.Name
+	ip :=  conf.IP
+	netmask := conf.NetMask
+	mtu := conf.MTU
 
 	config := water.Config{
 		DeviceType: water.TAP,
+		Name: name,
 	}
-	config.Name = configname
 
 	ifce, e = water.New(config)
 
+	// Set IP / NetMask / MTU
+	
+
 	return ifce, e
 }
+
+
 
 func SomeFunction(ifce *water.Interface) {
 
