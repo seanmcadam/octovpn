@@ -1,43 +1,63 @@
 package octoconfig
 
 import (
-	"fmt"
 	"strings"
+
+	"github.com/seanmcadam/octovpn/octolib"
 )
 
-func ReadConfigs() (configs ConfigV1) {
+func ReadConfigs() (configs ConfigV1, e error) {
 	configFile, err := ConfigGetVal(ConfigFilePath)
 	if err != nil {
-		panic(fmt.Sprintf("Getting Config File val failed: %s\n", err))
+		return configs, octolib.ErrorLocationf("Getting Config File val failed: %s", err)
 	}
 
 	if configFile != "" { // if a config file was specified use it instead of flag params
 		//
 		// Config Configs
 		//
-		configjson, err := LoadConfiguration("config")
+		configjson, err := LoadConfiguration()
 		if err != nil {
-			panic(fmt.Sprintf("Failed to load config configuration: %v", err))
+			return configs, octolib.ErrorLocationf("Failed to load config configuration: %v", err)
 		}
 
-		//var I ConfigInterface
-		//var C ConfigConnection
+		// Convert Configs
 
-		configs.Iface = parseInterface(configjson.Iface)
+		configs.Iface, e = parseInterface(configjson.Iface)
+		if e != nil {
+			return configs, e
+		}
 		configs.Conn = make(map[string]*ConfigConnection)
+		configs.List = make(map[string]*ConfigServer)
 
-		for i, c := range configjson.Connections.(map[string]interface{}) {
-			configs.Conn[i] = parseConnection(c)
+		if configjson.Connections != nil {
+			for i, c := range configjson.Connections.(map[string]interface{}) {
+				configs.Conn[i], e = parseConnection(c)
+				if e != nil {
+					return configs, e
+				}
+			}
+		}
+
+		if configjson.Listen != nil {
+			for i, s := range configjson.Listen.(map[string]interface{}) {
+				configs.List[i], e = parseServer(s)
+				if e != nil {
+					return configs, e
+				}
+			}
 		}
 	}
 
-	return configs
+	return configs, e
 }
 
 //
 //
 //
-func parseInterface(data interface{}) (i *ConfigInterface) {
+func parseInterface(data interface{}) (i *ConfigInterface, e error) {
+
+	var ok bool
 
 	i = &ConfigInterface{
 		Name:    "",
@@ -49,45 +69,61 @@ func parseInterface(data interface{}) (i *ConfigInterface) {
 
 	d, ok := data.(map[string]interface{})
 	if !ok {
-		panic("")
+		return nil, octolib.ErrorLocationf("wrong data type:%t", data)
 	}
-	i.Name, ok = d["name"].(string)
+
+	i.Name, ok = d[string(configName)].(string)
 	if !ok {
-		panic("")
+		return nil, octolib.ErrorLocationf("Cannot read Interface name")
 	}
-	i.TunTap, ok = d["tuntap"].(string)
+
+	i.TunTap, ok = d[string(configTunTap)].(string)
 	if !ok {
-		panic("")
+		return nil, octolib.ErrorLocationf("Cannot read Interface device type")
 	}
-	i.IP, ok = d["ip"].(string)
+	i.TunTap = strings.ToUpper(i.TunTap)
+	switch i.TunTap {
+	case "TUN":
+	case "TAP":
+	default:
+		return nil, octolib.ErrorLocationf("Bad Interface device type:%t", i.TunTap)
+	}
+
+	i.IP, ok = d[string(configIP)].(string)
 	if !ok {
-		panic("")
+		return nil, octolib.ErrorLocationf("Cannot read Interface IP")
 	}
-	i.Netmask, ok = d["netmask"].(string)
+
+	i.Netmask, ok = d[string(configNetmask)].(string)
 	if !ok {
-		panic("")
+		return nil, octolib.ErrorLocationf("Cannot read Interface Netmask")
 	}
-	_, ok = d["mtu"]
+
+	_, ok = d[string(configMTU)]
 	if ok {
-		switch d["mtu"].(type) {
+		switch d[string(configMTU)].(type) {
 		case int:
-			i.MTU = d["mtu"].(int)
+			i.MTU = d[string(configMTU)].(int)
 		case float32:
-			i.MTU = int(d["mtu"].(float32))
+			i.MTU = int(d[string(configMTU)].(float32))
 		case float64:
-			i.MTU = int(d["mtu"].(float64))
+			i.MTU = int(d[string(configMTU)].(float64))
 		default:
-			panic("")
+			return nil, octolib.ErrorLocationf("Bad MTU type:%t", d[string(configMTU)])
 		}
 	}
 
-	return i
+	if i.MTU < 512 || i.MTU > 1500 {
+		return nil, octolib.ErrorLocationf("Bad MTU range:%d", i.MTU)
+	}
+
+	return i, e
 }
 
 //
 //
 //
-func parseConnection(data interface{}) (c *ConfigConnection) {
+func parseConnection(data interface{}) (c *ConfigConnection, e error) {
 
 	c = &ConfigConnection{
 		Protocol: TCP,
@@ -98,11 +134,12 @@ func parseConnection(data interface{}) (c *ConfigConnection) {
 
 	d, ok := data.(map[string]interface{})
 	if !ok {
-		panic("")
+		return nil, octolib.ErrorLocationf("Cannot create map")
 	}
-	protocol, ok := d["protocol"].(string)
+
+	protocol, ok := d[string(configProtocol)].(string)
 	if !ok {
-		panic("")
+		return nil, octolib.ErrorLocationf("Cannot read Protocol")
 	}
 	protocol = strings.ToLower(protocol)
 	switch protocol {
@@ -111,39 +148,107 @@ func parseConnection(data interface{}) (c *ConfigConnection) {
 	case "udp":
 		c.Protocol = UDP
 	default:
-		panic("")
+		return nil, octolib.ErrorLocationf("Bad Protocol:%s", protocol)
 	}
-	c.Hostname, ok = d["hostname"].(string)
+	c.Hostname, ok = d[string(configHostname)].(string)
 	if !ok {
-		panic("")
+		return nil, octolib.ErrorLocationf("Cannot read Hostname")
 	}
-	_, ok = d["port"]
+	if c.Hostname == "" {
+		return nil, octolib.ErrorLocationf("Empty Hostname")
+	}
+	_, ok = d[string(configPort)]
 	if !ok {
-		panic("")
+		return nil, octolib.ErrorLocationf("Cannot read Port")
 	}
-	switch d["port"].(type) {
+	switch d[string(configPort)].(type) {
 	case int:
-		c.Port = d["port"].(int)
+		c.Port = d[string(configPort)].(int)
 	case float32:
-		c.Port = int(d["port"].(float32))
+		c.Port = int(d[string(configPort)].(float32))
 	case float64:
-		c.Port = int(d["port"].(float64))
+		c.Port = int(d[string(configPort)].(float64))
 	default:
-		panic("")
+		return nil, octolib.ErrorLocationf("Bad Port type:%t", d[string(configPort)])
 	}
-	_, ok = d["mtu"]
+	_, ok = d[string(configMTU)]
 	if ok {
-		switch d["mtu"].(type) {
+		switch d[string(configMTU)].(type) {
 		case int:
-			c.MTU = d["mtu"].(int)
+			c.MTU = d[string(configMTU)].(int)
 		case float32:
-			c.MTU = int(d["mtu"].(float32))
+			c.MTU = int(d[string(configMTU)].(float32))
 		case float64:
-			c.MTU = int(d["mtu"].(float64))
+			c.MTU = int(d[string(configMTU)].(float64))
 		default:
-			panic("")
+			return nil, octolib.ErrorLocationf("Bad MTU type:%t", d[string(configMTU)])
 		}
 	}
 
-	return c
+	return c, e
+}
+
+//
+//
+//
+func parseServer(data interface{}) (s *ConfigServer, e error) {
+
+	s = &ConfigServer{
+		Protocol: TCP,
+		IP:       "",
+		Port:     0,
+		MTU:      0,
+	}
+
+	d, ok := data.(map[string]interface{})
+	if !ok {
+		return nil, octolib.ErrorLocationf("Cannot create map")
+	}
+
+	protocol, ok := d[string(configProtocol)].(string)
+	if !ok {
+		return nil, octolib.ErrorLocationf("")
+	}
+	protocol = strings.ToLower(protocol)
+	switch protocol {
+	case "tcp":
+		s.Protocol = TCP
+	case "udp":
+		s.Protocol = UDP
+	default:
+		return nil, octolib.ErrorLocationf("")
+	}
+	s.IP, ok = d[string(configIP)].(string)
+	if !ok {
+		return nil, octolib.ErrorLocationf("")
+	}
+	_, ok = d[string(configPort)]
+	if !ok {
+		return nil, octolib.ErrorLocationf("")
+	}
+	switch d[string(configPort)].(type) {
+	case int:
+		s.Port = d[string(configPort)].(int)
+	case float32:
+		s.Port = int(d[string(configPort)].(float32))
+	case float64:
+		s.Port = int(d[string(configPort)].(float64))
+	default:
+		return nil, octolib.ErrorLocationf("")
+	}
+	_, ok = d[string(configMTU)]
+	if ok {
+		switch d[string(configMTU)].(type) {
+		case int:
+			s.MTU = d[string(configMTU)].(int)
+		case float32:
+			s.MTU = int(d[string(configMTU)].(float32))
+		case float64:
+			s.MTU = int(d[string(configMTU)].(float64))
+		default:
+			return nil, octolib.ErrorLocationf("")
+		}
+	}
+
+	return s, e
 }

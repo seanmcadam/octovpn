@@ -8,15 +8,19 @@ import (
 	"strings"
 )
 
+func FileLineFunc(depth int) string {
+	return fileLineFunc(depth)
+}
+
 //
-// TRACE:[0060|file.go:153:function()]:
-//        GID  file    Line# func()
+// [0060|file.go:153:function()]:
+//  GID  file    Line# func()
 //
 func fileLineFunc(a ...int) string {
 	var depth int = 1
 
 	if len(a) != 0 {
-		depth = len(a)
+		depth = a[0]
 		if depth < 1 && depth > 10 {
 			panic(FileLine() + " depth out of bounds")
 		}

@@ -14,20 +14,36 @@ import (
 	"strings"
 )
 
+type DeviceType string
 type ConnectionProtocol string
+type ConfigMapField string
+
+const TUN DeviceType = "TUN"
+const TAP DeviceType = "TAP"
 
 const TCP ConnectionProtocol = "tcp"
 const UDP ConnectionProtocol = "udp"
 
+const configHostname ConfigMapField = "hostname"
+const configIP ConfigMapField = "ip"
+const configMTU ConfigMapField = "mtu"
+const configName ConfigMapField = "name"
+const configNetmask ConfigMapField = "netmask"
+const configPort ConfigMapField = "port"
+const configProtocol ConfigMapField = "protocol"
+const configTunTap ConfigMapField = "tuntap"
+
 type ConfigJson struct {
 	Version     int         `json:"version,omitempty"`
 	Iface       interface{} `json:"interface"`
-	Connections interface{} `json:"connections"`
+	Connections interface{} `json:"connections,omitempty"`
+	Listen      interface{} `json:"listen,omitempty"`
 }
 
 type ConfigV1 struct {
 	Iface *ConfigInterface
 	Conn  map[string]*ConfigConnection
+	List  map[string]*ConfigServer
 }
 
 type ConfigInterface struct {
@@ -41,6 +57,13 @@ type ConfigInterface struct {
 type ConfigConnection struct {
 	Protocol ConnectionProtocol `json:"protocol"`
 	Hostname string             `json:"hostname"`
+	Port     int                `json:"port"`
+	MTU      int                `json:"mtu,omitempty"`
+}
+
+type ConfigServer struct {
+	Protocol ConnectionProtocol `json:"protocol"`
+	IP       string             `json:"ip"`
 	Port     int                `json:"port"`
 	MTU      int                `json:"mtu,omitempty"`
 }
@@ -135,7 +158,7 @@ func ConfigGetVal(cc ConfigConst) (v string, e error) {
 // Local File takes precidence over remote download config
 // func LoadConfiguration(pkg string) (data map[string]interface{}, err error) {
 //
-func LoadConfiguration(pkg string) (data ConfigJson, err error) {
+func LoadConfiguration() (data ConfigJson, err error) {
 	currDir, _ := os.Getwd()
 	defer os.Chdir(currDir)
 

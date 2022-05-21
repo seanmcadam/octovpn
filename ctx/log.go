@@ -2,8 +2,6 @@ package ctx
 
 import "log"
 
-type any = interface{}
-
 func (*Ctx) LogPanic(v ...any)            { log.Panic(string(LogLevelPanic)+":", v) }
 func (*Ctx) LogPanicf(f string, v ...any) { log.Panicf(string(LogLevelPanic)+":"+f, v) }
 func (*Ctx) LogPanicln(v ...any)          { log.Panicln(string(LogLevelPanic)+":", v) }
@@ -27,7 +25,7 @@ func (*Ctx) LogTracef(f string, v ...any) { log.Printf(string(LogLevelTrace)+":"
 func (*Ctx) LogTraceln(v ...any)          { log.Println(string(LogLevelTrace)+":", v) }
 
 func (c *Ctx) Log(l LogLevel, v ...any) {
-	flf := FileLineFunc()
+	flf := fileLineFunc(2)
 	switch l {
 	case LogLevelPanic:
 		c.LogPanic(flf, v)
@@ -48,28 +46,56 @@ func (c *Ctx) Log(l LogLevel, v ...any) {
 	}
 }
 func (c *Ctx) Logf(l LogLevel, f string, v ...any) {
-	flf := FileLineFunc()
+	flf := fileLineFunc(2)
 	switch l {
 	case LogLevelPanic:
-		c.LogPanicf(flf+f, v)
+		if len(v) > 0 {
+			c.LogPanicf(flf+f, v...)
+		} else {
+			c.LogPanic(flf + f)
+		}
 	case LogLevelFatal:
-		c.LogFatalf(flf+f, v)
+		if len(v) > 0 {
+			c.LogFatalf(flf+f, v...)
+		} else {
+			c.LogFatal(flf + f)
+		}
 	case LogLevelError:
-		c.LogErrorf(flf+f, v)
+		if len(v) > 0 {
+			c.LogErrorf(flf+f, v...)
+		} else {
+			c.LogError(flf + f)
+		}
 	case LogLevelWarn:
-		c.LogWarnf(flf+f, v)
+		if len(v) > 0 {
+			c.LogWarnf(flf+f, v...)
+		} else {
+			c.LogWarn(flf + f)
+		}
 	case LogLevelInfo:
-		c.LogInfof(flf+f, v)
+		if len(v) > 0 {
+			c.LogInfof(flf+f, v...)
+		} else {
+			c.LogInfo(flf + f)
+		}
 	case LogLevelDebug:
-		c.LogDebugf(flf+f, v)
+		if len(v) > 0 {
+			c.LogDebugf(flf+f, v)
+		} else {
+			c.LogDebug(flf + f)
+		}
 	case LogLevelTrace:
-		c.LogTracef(flf+f, v)
+		if len(v) > 0 {
+			c.LogTracef(flf+f, v)
+		} else {
+			c.LogTrace(flf + f)
+		}
 	default:
 		c.LogPanicf("Reached default: %s", l)
 	}
 }
 func (c *Ctx) Logln(l LogLevel, v ...any) {
-	flf := FileLineFunc()
+	flf := fileLineFunc(2)
 	switch l {
 	case LogLevelPanic:
 		c.LogPanicln(flf, v)

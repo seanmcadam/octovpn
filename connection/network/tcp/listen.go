@@ -17,14 +17,14 @@ import (
 //
 // Opens a listening socket on the port and IP address of the local system
 //
-func NewListen(ctx *ctx.Ctx, addr string) (l *ListenTCPStruct, e error) {
+func NewTCPListen(c *ctx.Ctx, addr string) (l *ListenTCPStruct, e error) {
 
-	ctx.Logf(ctx.LogLevelTrace, " called")
+	c.Logf(ctx.LogLevelTrace, " called")
 
-	ctx = ctx.NewWithCancel()
+	c = c.NewWithCancel()
 
 	listenconfig := net.ListenConfig{}
-	listener, e := listenconfig.Listen(ctx.mycontext, "tcp", addr)
+	listener, e := listenconfig.Listen(c.Context(), "tcp", addr)
 
 	if e != nil {
 		return l, e
@@ -33,8 +33,8 @@ func NewListen(ctx *ctx.Ctx, addr string) (l *ListenTCPStruct, e error) {
 	accept := make(chan interface{}, TCPAcceptChannelLen)
 
 	l = &ListenTCPStruct{
+		ctx:      c,
 		listener: listener,
-		ctx:      ctx,
 		accept:   accept,
 	}
 
@@ -49,7 +49,7 @@ func NewListen(ctx *ctx.Ctx, addr string) (l *ListenTCPStruct, e error) {
 //
 //
 //
-func (l *ListenTCPStruct) Run() {
+func (l *ListenTCPStruct) RunTCP() {
 	//	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
 	go l.goListenAccept()
 }
@@ -57,9 +57,9 @@ func (l *ListenTCPStruct) Run() {
 //
 // goAccept() go routine to accept connections and return new socket structs to the Accept() function
 //
-func (l *ListenTCPStruct) goListenAccept() {
+func (l *ListenTCPStruct) goListenAcceptTCP() {
 
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	l.ctx.Logf(ctx.LogLevelTrace, " called")
 
 	defer close(l.accept)
 
@@ -68,12 +68,12 @@ func (l *ListenTCPStruct) goListenAccept() {
 		conn, e := l.listener.Accept()
 
 		if e != nil {
-			contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" listener.Accept() returned error:%s", e)
+			l.ctx.Logf(ctx.LogLevelError, " listener.Accept() returned error:%s", e)
 			break
 		}
 
 		if conn == nil {
-			contextlib.Logf(l.ctx, contextlib.LevelError, lumerinlib.FileLineFunc()+" Accept() returned empty connection")
+			l.ctx.Logf(ctx.LogLevelError, " Accept() returned empty connection")
 			break
 		}
 
@@ -82,7 +82,7 @@ func (l *ListenTCPStruct) goListenAccept() {
 		l.accept <- newsoc
 	}
 
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" closing l.accept and exiting")
+	l.ctx.Logf(ctx.LogLevelTrace, " closing l.accept and exiting")
 }
 
 //

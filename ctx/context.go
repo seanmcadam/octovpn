@@ -5,6 +5,8 @@ import "context"
 type ContextValue string
 type LogLevel string
 
+type any interface{}
+
 const ContextKey ContextValue = "ContextKey"
 
 const (
@@ -28,6 +30,7 @@ func NewContext() (c *Ctx) {
 		mycontext: ctx,
 		cancel:    cancel,
 	}
+	return c
 }
 
 func (c *Ctx) NewWithCancel() (d *Ctx) {
