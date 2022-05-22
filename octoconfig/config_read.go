@@ -27,12 +27,12 @@ func ReadConfigs() (configs ConfigV1, e error) {
 		if e != nil {
 			return configs, e
 		}
-		configs.Conn = make(map[string]*ConfigConnection)
-		configs.List = make(map[string]*ConfigServer)
+		configs.Targ = make(map[string]*ConfigTarget)
+		configs.List = make(map[string]*ConfigListen)
 
-		if configjson.Connections != nil {
-			for i, c := range configjson.Connections.(map[string]interface{}) {
-				configs.Conn[i], e = parseConnection(c)
+		if configjson.Target != nil {
+			for i, c := range configjson.Target.(map[string]interface{}) {
+				configs.Targ[i], e = parseTarget(c)
 				if e != nil {
 					return configs, e
 				}
@@ -123,9 +123,9 @@ func parseInterface(data interface{}) (i *ConfigInterface, e error) {
 //
 //
 //
-func parseConnection(data interface{}) (c *ConfigConnection, e error) {
+func parseTarget(data interface{}) (c *ConfigTarget, e error) {
 
-	c = &ConfigConnection{
+	c = &ConfigTarget{
 		Protocol: TCP,
 		Hostname: "",
 		Port:     0,
@@ -163,11 +163,11 @@ func parseConnection(data interface{}) (c *ConfigConnection, e error) {
 	}
 	switch d[string(configPort)].(type) {
 	case int:
-		c.Port = d[string(configPort)].(int)
+		c.Port = uint16(d[string(configPort)].(int))
 	case float32:
-		c.Port = int(d[string(configPort)].(float32))
+		c.Port = uint16(d[string(configPort)].(float32))
 	case float64:
-		c.Port = int(d[string(configPort)].(float64))
+		c.Port = uint16(d[string(configPort)].(float64))
 	default:
 		return nil, octolib.ErrorLocationf("Bad Port type:%t", d[string(configPort)])
 	}
@@ -175,11 +175,11 @@ func parseConnection(data interface{}) (c *ConfigConnection, e error) {
 	if ok {
 		switch d[string(configMTU)].(type) {
 		case int:
-			c.MTU = d[string(configMTU)].(int)
+			c.MTU = uint16(d[string(configMTU)].(int))
 		case float32:
-			c.MTU = int(d[string(configMTU)].(float32))
+			c.MTU = uint16(d[string(configMTU)].(float32))
 		case float64:
-			c.MTU = int(d[string(configMTU)].(float64))
+			c.MTU = uint16(d[string(configMTU)].(float64))
 		default:
 			return nil, octolib.ErrorLocationf("Bad MTU type:%t", d[string(configMTU)])
 		}
@@ -191,9 +191,9 @@ func parseConnection(data interface{}) (c *ConfigConnection, e error) {
 //
 //
 //
-func parseServer(data interface{}) (s *ConfigServer, e error) {
+func parseServer(data interface{}) (s *ConfigListen, e error) {
 
-	s = &ConfigServer{
+	s = &ConfigListen{
 		Protocol: TCP,
 		IP:       "",
 		Port:     0,
@@ -228,11 +228,11 @@ func parseServer(data interface{}) (s *ConfigServer, e error) {
 	}
 	switch d[string(configPort)].(type) {
 	case int:
-		s.Port = d[string(configPort)].(int)
+		s.Port = uint16(d[string(configPort)].(int))
 	case float32:
-		s.Port = int(d[string(configPort)].(float32))
+		s.Port = uint16(d[string(configPort)].(float32))
 	case float64:
-		s.Port = int(d[string(configPort)].(float64))
+		s.Port = uint16(d[string(configPort)].(float64))
 	default:
 		return nil, octolib.ErrorLocationf("")
 	}
@@ -240,11 +240,11 @@ func parseServer(data interface{}) (s *ConfigServer, e error) {
 	if ok {
 		switch d[string(configMTU)].(type) {
 		case int:
-			s.MTU = d[string(configMTU)].(int)
+			s.MTU = uint16(d[string(configMTU)].(int))
 		case float32:
-			s.MTU = int(d[string(configMTU)].(float32))
+			s.MTU = uint16(d[string(configMTU)].(float32))
 		case float64:
-			s.MTU = int(d[string(configMTU)].(float64))
+			s.MTU = uint16(d[string(configMTU)].(float64))
 		default:
 			return nil, octolib.ErrorLocationf("")
 		}

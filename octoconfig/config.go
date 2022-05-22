@@ -33,17 +33,20 @@ const configPort ConfigMapField = "port"
 const configProtocol ConfigMapField = "protocol"
 const configTunTap ConfigMapField = "tuntap"
 
+type TargMap map[string]*ConfigTarget
+type ListMap map[string]*ConfigListen
+
 type ConfigJson struct {
-	Version     int         `json:"version,omitempty"`
-	Iface       interface{} `json:"interface"`
-	Connections interface{} `json:"connections,omitempty"`
-	Listen      interface{} `json:"listen,omitempty"`
+	Version int         `json:"version,omitempty"`
+	Iface   interface{} `json:"interface"`
+	Target  interface{} `json:"target,omitempty"`
+	Listen  interface{} `json:"listen,omitempty"`
 }
 
 type ConfigV1 struct {
 	Iface *ConfigInterface
-	Conn  map[string]*ConfigConnection
-	List  map[string]*ConfigServer
+	Targ  TargMap
+	List  ListMap
 }
 
 type ConfigInterface struct {
@@ -54,18 +57,18 @@ type ConfigInterface struct {
 	MTU     int    `json:"mtu,omitempty"`
 }
 
-type ConfigConnection struct {
-	Protocol ConnectionProtocol `json:"protocol"`
-	Hostname string             `json:"hostname"`
-	Port     int                `json:"port"`
-	MTU      int                `json:"mtu,omitempty"`
+type ConfigTarget struct {
+	Protocol ConnectionProtocol
+	Hostname string
+	Port     uint16
+	MTU      uint16
 }
 
-type ConfigServer struct {
-	Protocol ConnectionProtocol `json:"protocol"`
-	IP       string             `json:"ip"`
-	Port     int                `json:"port"`
-	MTU      int                `json:"mtu,omitempty"`
+type ConfigListen struct {
+	Protocol ConnectionProtocol
+	IP       string
+	Port     uint16
+	MTU      uint16
 }
 
 //

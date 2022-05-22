@@ -5,7 +5,7 @@ import "context"
 type ContextValue string
 type LogLevel string
 
-type any interface{}
+//type any interface{}
 
 const ContextKey ContextValue = "ContextKey"
 

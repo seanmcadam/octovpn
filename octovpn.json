@@ -7,11 +7,20 @@
         "netmask":"255.255.255.252",
         "mtu": 1300
     },
-    "connections": {
-        "connection1": {
+    "target": {
+        "target1": {
             "protocol":"udp",
             "hostname":"127.0.0.1",
-            "port": 40400
+            "port": 40400,
+            "mtu":1300
+        }
+    },
+    "listen": {
+        "listen1": {
+            "protocol":"udp",
+            "ip":"127.0.0.1",
+            "port": 40401,
+            "mtu":1300
         }
     }
 }
