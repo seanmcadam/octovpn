@@ -130,11 +130,25 @@ func parseTarget(data interface{}) (c *ConfigTarget, e error) {
 		Hostname: "",
 		Port:     0,
 		MTU:      0,
+		Active:   false,
 	}
 
 	d, ok := data.(map[string]interface{})
 	if !ok {
 		return nil, octolib.ErrorLocationf("Cannot create map")
+	}
+
+	active, ok := d[string(configActive)].(string)
+	if !ok {
+		return nil, octolib.ErrorLocationf("")
+	}
+	switch active {
+	case "true":
+		c.Active = true
+	case "false":
+		c.Active = false
+	default:
+		return nil, octolib.ErrorLocationf("Bad Active:%s", active)
 	}
 
 	protocol, ok := d[string(configProtocol)].(string)
@@ -198,11 +212,25 @@ func parseServer(data interface{}) (s *ConfigListen, e error) {
 		IP:       "",
 		Port:     0,
 		MTU:      0,
+		Active:   false,
 	}
 
 	d, ok := data.(map[string]interface{})
 	if !ok {
 		return nil, octolib.ErrorLocationf("Cannot create map")
+	}
+
+	active, ok := d[string(configActive)].(string)
+	if !ok {
+		return nil, octolib.ErrorLocationf("")
+	}
+	switch active {
+	case "true":
+		s.Active = true
+	case "false":
+		s.Active = false
+	default:
+		return nil, octolib.ErrorLocationf("Bad Active:%s", active)
 	}
 
 	protocol, ok := d[string(configProtocol)].(string)
@@ -216,7 +244,7 @@ func parseServer(data interface{}) (s *ConfigListen, e error) {
 	case "udp":
 		s.Protocol = UDP
 	default:
-		return nil, octolib.ErrorLocationf("")
+		return nil, octolib.ErrorLocationf("default reached: %s", protocol)
 	}
 	s.IP, ok = d[string(configIP)].(string)
 	if !ok {

@@ -26,3 +26,29 @@ Each carrier has certain performance charatcteristics, and the system can determ
 
 
 This tool is made for mobile connectivity where solid performance is a requirement, such as video applications.  The packet path does not matter in that all of the combined system paths look like one path to the supported network.
+
+There are 6 directories breaking down the project:
+    ctx
+    octolib
+    octoconfig
+    packet
+    iface
+    connection
+
+ctx 
+    This is the context directory. Context is used extensivly in the project, and the functions for managing context is here.
+
+octolib
+    This is the library, where variious functions are bunched together if they dont fit elsewhere
+
+octoconfig
+    This is the configuration system, it reads environment variables, command line argumants, and a configuration file.
+
+packet
+    This is where ethernet packets are dealt with.
+
+iface
+    This is for the local system interface where the VPN packets are routed though. A TUN or TAP device.
+
+connection
+    This is where connections are managed. The connections are TCP or UDP based, and they can be client or server.

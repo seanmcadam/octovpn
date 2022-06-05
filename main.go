@@ -5,10 +5,15 @@ import (
 	"os"
 	"os/user"
 
+	"github.com/seanmcadam/octovpn/connection"
 	"github.com/seanmcadam/octovpn/ctx"
 	"github.com/seanmcadam/octovpn/iface"
 	"github.com/seanmcadam/octovpn/octoconfig"
 )
+
+func init() {
+	octoconfig.ConfigInit()
+}
 
 func main() {
 
@@ -51,7 +56,7 @@ func main() {
 	// Open Connections
 	//
 
-	if configs.Conn != nil {
+	if configs.Targ != nil {
 
 	}
 
@@ -63,6 +68,11 @@ func main() {
 
 	}
 
+	Conn, e := connection.New(cx, configs, Iface)
+	if e != nil {
+		panic("")
+	}
+
 	//
 	// Launch traffic manager
 	//
@@ -71,8 +81,10 @@ func main() {
 	// Run Packet Loop
 	//
 
+	Conn.Start()
 	Iface.Start()
+	defer Conn.Stop()
 	defer Iface.Stop()
 
-	<-cx.Done()
+	<-cx.DoneChan()
 }

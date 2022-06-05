@@ -115,3 +115,8 @@ func (c *Ctx) Logln(l LogLevel, v ...interface{}) {
 		c.LogPanicf("Reached default: %s", l)
 	}
 }
+
+func (c *Ctx) LogLocation() {
+	flf := fileLineFunc(2)
+	c.LogTrace(flf)
+}

@@ -22,8 +22,13 @@ const TUN DeviceType = "TUN"
 const TAP DeviceType = "TAP"
 
 const TCP ConnectionProtocol = "tcp"
+const TCP4 ConnectionProtocol = "tcp4"
+const TCP6 ConnectionProtocol = "tcp6"
 const UDP ConnectionProtocol = "udp"
+const UDP4 ConnectionProtocol = "udp4"
+const UDP6 ConnectionProtocol = "udp6"
 
+const configActive ConfigMapField = "active"
 const configHostname ConfigMapField = "hostname"
 const configIP ConfigMapField = "ip"
 const configMTU ConfigMapField = "mtu"
@@ -59,6 +64,7 @@ type ConfigInterface struct {
 
 type ConfigTarget struct {
 	Protocol ConnectionProtocol
+	Active   bool
 	Hostname string
 	Port     uint16
 	MTU      uint16
@@ -66,6 +72,7 @@ type ConfigTarget struct {
 
 type ConfigListen struct {
 	Protocol ConnectionProtocol
+	Active   bool
 	IP       string
 	Port     uint16
 	MTU      uint16
@@ -75,7 +82,8 @@ type ConfigListen struct {
 // Reads in the configuration map
 // Inializes the environmental variables
 //
-func init() {
+// func init() {
+func ConfigInit() {
 
 	//
 	// Read in command line flags (config_vars)

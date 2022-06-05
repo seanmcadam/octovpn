@@ -1,4 +1,4 @@
-package iface
+package packet
 
 import (
 	"fmt"
@@ -18,37 +18,32 @@ import (
 // 14-1514 [46-1500]: Payload
 //
 
-type Frame []byte
-
+type EthFrame []byte
 type TaggingSize byte
+type Ethertype uint16
 
 const (
 	NotTaggedSize    TaggingSize = 0
 	TaggedSize       TaggingSize = 4
 	DoubleTaggedSize TaggingSize = 8
 )
-
 const SourceSize = 6
 const DestinationSize = 6
 const SourceDestinationSize = SourceSize + DestinationSize
 const EthertypeSize = 2
 
-// type Ethertype [2]byte
-type Ethertype uint16
-
 // EtherTypes  http://en.wikipedia.org/wiki/Ethertype
-
-var IPv4 Ethertype = 0x0800
-var ARP Ethertype = 0x0806
-var IPv6 Ethertype = 0x86DD
+var ET_IPv4 Ethertype = 0x0800
+var ET_ARP Ethertype = 0x0806
+var ET_IPv6 Ethertype = 0x86DD
 
 func (et Ethertype) String() string {
 	switch et {
-	case IPv4:
+	case ET_IPv4:
 		return "IPv4"
-	case IPv6:
+	case ET_IPv6:
 		return "IPv6"
-	case ARP:
+	case ET_ARP:
 		return "ARP"
 	default:
 		return fmt.Sprintf("%04x", et)
@@ -58,21 +53,21 @@ func (et Ethertype) String() string {
 //
 //
 //
-func (f Frame) Destination() net.HardwareAddr {
+func (f EthFrame) Destination() net.HardwareAddr {
 	return net.HardwareAddr(f[:6:6])
 }
 
 //
 //
 //
-func (f Frame) Source() net.HardwareAddr {
+func (f EthFrame) Source() net.HardwareAddr {
 	return net.HardwareAddr(f[6:12:12])
 }
 
 //
 //
 //
-func (f Frame) Tagging() TaggingSize {
+func (f EthFrame) Tagging() TaggingSize {
 	if f[12] == 0x81 && f[13] == 0x00 {
 		return TaggedSize
 	} else if f[12] == 0x88 && f[13] == 0xa8 {
@@ -84,7 +79,7 @@ func (f Frame) Tagging() TaggingSize {
 //
 //
 //
-func (f Frame) Tags() []byte {
+func (f EthFrame) Tags() []byte {
 	min := SourceDestinationSize
 	tagSize := f.Tagging()
 	max := min + int(tagSize)
@@ -92,7 +87,7 @@ func (f Frame) Tags() []byte {
 	return f[min:max:limit]
 }
 
-func (f Frame) Ethertype() Ethertype {
+func (f EthFrame) Ethertype() Ethertype {
 	ethertypePos := SourceDestinationSize + f.Tagging()
 	return Ethertype(uint16(f[ethertypePos])<<8 | uint16(f[ethertypePos+1]))
 }
@@ -100,14 +95,14 @@ func (f Frame) Ethertype() Ethertype {
 //
 //
 //
-func (f Frame) Payload() []byte {
+func (f EthFrame) Payload() []byte {
 	tagSize := f.Tagging()
 	min := SourceDestinationSize + int(tagSize) + EthertypeSize
 	return f[min:]
 }
 
 //
-func (f *Frame) ResizePayload(payloadSize int) {
+func (f *EthFrame) ResizePayload(payloadSize int) {
 	tagging := NotTaggedSize
 	if len(*f) > SourceDestinationSize+EthertypeSize {
 		tagging = f.Tagging()
@@ -135,10 +130,10 @@ func (f *Frame) ResizePayload(payloadSize int) {
 //	return
 //}
 
-func (f *Frame) resize(length int) {
+func (f *EthFrame) resize(length int) {
 	if cap(*f) < length {
 		old := *f
-		*f = make(Frame, length, length)
+		*f = make(EthFrame, length, length)
 		copy(*f, old)
 	} else {
 		*f = (*f)[:length]

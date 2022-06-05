@@ -3,6 +3,7 @@ package octolib
 //
 // goCounter()
 // Generates a UniqueID (int) and returns via supplied channel
+// Runs forever
 //
 func RunGoCounter64() (c chan uint64) {
 	c = make(chan uint64, 5)

@@ -1,7 +1,13 @@
 package octolib
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+)
 
+var ErrBadIPPort = errors.New("Bad IP Port String")
 var ErrBadNetMask = errors.New("Bad NetMask")
 var ErrBadNetBits = errors.New("Bad NetBits")
 
@@ -35,4 +41,18 @@ func IP4netmask2netbits(netmask string) (string, error) {
 	}
 
 	return u, nil
+}
+
+func SplitAddr(ipport string) (ip string, p uint16, e error) {
+
+	s := strings.Split(ipport, ":")
+	if len(s) < 2 {
+		e = errors.New(fmt.Sprintf("Bad IP Port String:%s", ipport))
+	} else {
+		var pint int
+		ip = s[0]
+		pint, e = strconv.Atoi(s[1])
+		p = uint16(pint)
+	}
+	return
 }

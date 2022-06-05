@@ -17,14 +17,22 @@ import (
 //
 // Opens a listening socket on the port and IP address of the local system
 //
-func NewTCPListen(c *ctx.Ctx, addr string) (l *ListenTCPStruct, e error) {
+func NewListen(cx *ctx.Ctx, network string, addr string) (l *ListenTCPStruct, e error) {
 
-	c.Logf(ctx.LogLevelTrace, " called")
+	cx.Logf(ctx.LogLevelTrace, " called")
 
-	c = c.NewWithCancel()
+	switch network {
+	case "tcp":
+	case "tcp4":
+	case "tcp6":
+	default:
+		return l, ErrSocTCPBadNetwork
+	}
+
+	cx = cx.NewWithCancel()
 
 	listenconfig := net.ListenConfig{}
-	listener, e := listenconfig.Listen(c.Context(), "tcp", addr)
+	listener, e := listenconfig.Listen(cx.Context(), network, addr)
 
 	if e != nil {
 		return l, e
@@ -33,7 +41,7 @@ func NewTCPListen(c *ctx.Ctx, addr string) (l *ListenTCPStruct, e error) {
 	accept := make(chan interface{}, TCPAcceptChannelLen)
 
 	l = &ListenTCPStruct{
-		ctx:      c,
+		ctx:      cx,
 		listener: listener,
 		accept:   accept,
 	}
@@ -90,7 +98,7 @@ func (l *ListenTCPStruct) goListenAcceptTCP() {
 //
 func (l *ListenTCPStruct) GetAcceptChan() <-chan interface{} {
 
-	contextlib.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	l.ctx.LogLocation()
 
 	return l.accept
 
@@ -99,20 +107,13 @@ func (l *ListenTCPStruct) GetAcceptChan() <-chan interface{} {
 // Opens a listening socket on the port and IP address of the local system
 //
 // func NewListen(ctx context.Context, network string, addr string) (l interface{}, e error) {
-func NewListen(ctx context.Context, network string, addr string) (l *ListenTCPStruct, e error) {
+func NewListenX(ctx context.Context, network string, addr string) (l *ListenTCPStruct, e error) {
 
-	contextlib.Logf(ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	ctx.LogLocation()
 
 	//
 	// network can be tcp, tcp4 or tcp6
 	//
-	switch network {
-	case "tcp":
-	case "tcp4":
-	case "tcp6":
-	default:
-		return l, ErrSocTCPBadNetwork
-	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	c := cancel
@@ -196,7 +197,7 @@ func (l *ListenTCPStruct) goListenAccept() {
 //
 func (l *ListenTCPStruct) GetAcceptChan() <-chan interface{} {
 
-	ctx.Logf(l.ctx, contextlib.LevelTrace, lumerinlib.FileLineFunc()+" called")
+	ctx.Logf(ctx.LogLevelTrace, " called")
 
 	return l.accept
 

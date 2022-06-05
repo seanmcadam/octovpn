@@ -1,12 +1,12 @@
 package iface
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/seanmcadam/octovpn/ctx"
 	"github.com/seanmcadam/octovpn/octoconfig"
 	"github.com/seanmcadam/octovpn/octolib"
+	"github.com/seanmcadam/octovpn/packet"
 	"github.com/vishvananda/netlink"
 
 	"github.com/songgao/water"
@@ -31,11 +31,13 @@ type IFace struct {
 	ip         string
 	netmask    string
 	mtu        int
-	readFrame  chan *Frame
-	writeFrame chan *Frame
+	readFrame  chan *packet.EthFrame
+	writeFrame chan *packet.EthFrame
 }
 
 func NewIface(cx *ctx.Ctx, conf *octoconfig.ConfigInterface) (iface *IFace, e error) {
+
+	cx = cx.NewWithCancel()
 
 	cx.Logf(ctx.LogLevelTrace, " called ")
 
@@ -74,7 +76,8 @@ func NewIface(cx *ctx.Ctx, conf *octoconfig.ConfigInterface) (iface *IFace, e er
 	i, e := water.New(config)
 
 	if e == nil {
-		l, e := netlink.LinkByName(conf.Name)
+		var l netlink.Link
+		l, e = netlink.LinkByName(conf.Name)
 		if e == nil {
 
 			iface = &IFace{
@@ -86,8 +89,8 @@ func NewIface(cx *ctx.Ctx, conf *octoconfig.ConfigInterface) (iface *IFace, e er
 				ip:         conf.IP,
 				netmask:    conf.Netmask,
 				mtu:        conf.MTU,
-				readFrame:  make(chan *Frame, readChanDepth),
-				writeFrame: make(chan *Frame, writeChanDepth),
+				readFrame:  make(chan *packet.EthFrame, readChanDepth),
+				writeFrame: make(chan *packet.EthFrame, writeChanDepth),
 			}
 
 			iface.addIP()
@@ -153,21 +156,19 @@ func (i *IFace) addIP() {
 
 //
 // Read()
+// Blocking read from the readFrame channel
 //
-func (i *IFace) Read() (eth *Frame, e error) {
-	select {
-	case <-i.ctx.Done():
-		e := errors.New("Interface Closed")
-		return eth, e
-	case eth := <-i.readFrame:
-		return eth, e
-	}
+func (i *IFace) ReadChan() <-chan *packet.EthFrame {
+	i.ctx.LogLocation()
+	return i.readFrame
 }
 
 //
 // Write()
+// Blocking write to the writeFrame channel
 //
-func (i *IFace) Write(eth *Frame) {
+func (i *IFace) Write(eth *packet.EthFrame) {
+	i.ctx.LogLocation()
 	i.writeFrame <- eth
 }
 
@@ -182,19 +183,27 @@ func (i *IFace) goReader() {
 			break
 		}
 
+		payload := eth.Payload()
 		et := eth.Ethertype()
 		switch et {
-		case IPv4:
-			fallthrough
-		case IPv6:
-			fallthrough
-		case ARP:
-			i.ctx.Logf(ctx.LogLevelTrace, "frame Source:%s Dest:%s, Type:%s", eth.Source(), eth.Destination(), eth.Ethertype().String())
-		// i.readFrame <- eth
+		case packet.ET_IPv4:
+			i.ctx.Logf(ctx.LogLevelTrace, "Eth\n\tSource:%s Dest:%s\n\t%s Source:%s Dest:%s",
+				eth.Source(),
+				eth.Destination(),
+				packet.IPv4Frame(payload).Protocol().String(),
+				packet.IPv4Frame(payload).Source(),
+				packet.IPv4Frame(payload).Dest(),
+			)
+			i.readFrame <- eth
+		case packet.ET_ARP:
+			i.ctx.Logf(ctx.LogLevelTrace, "Frame Source:%s Dest:%s, Type:%s", eth.Source(), eth.Destination(), eth.Ethertype().String())
+			i.readFrame <- eth
+		case packet.ET_IPv6:
+			i.ctx.Logf(ctx.LogLevelTrace, "DROP IPv6 Source:%s Dest:%s, Type:%s", eth.Source(), eth.Destination(), eth.Ethertype().String())
 		default:
+			i.ctx.Logf(ctx.LogLevelTrace, "DROP frame Source:%s Dest:%s, Type:%s", eth.Source(), eth.Destination(), eth.Ethertype().String())
 			// Drop it
 		}
-		// i.readFrame <- eth
 	}
 }
 
@@ -204,13 +213,13 @@ func (i *IFace) goReader() {
 func (i *IFace) goWriter() {
 	for {
 		select {
-		case <-i.ctx.Done():
-			break
+		case <-i.ctx.DoneChan():
+			return
 		case frame := <-i.writeFrame:
 			e := i.write(frame)
 			if e != nil {
 				i.ctx.Logf(ctx.LogLevelError, "write() error:%s", e)
-				break
+				return
 			}
 		}
 	}
@@ -241,8 +250,8 @@ func (i *IFace) LinkDown() error {
 //
 // read()
 //
-func (i *IFace) read() (eth *Frame, e error) {
-	var f Frame
+func (i *IFace) read() (eth *packet.EthFrame, e error) {
+	var f packet.EthFrame
 	eth = &f
 	eth.ResizePayload(1500)
 	count, e := i.iface.Read([]byte(*eth))
@@ -256,7 +265,7 @@ func (i *IFace) read() (eth *Frame, e error) {
 //
 // write()
 //
-func (i *IFace) write(eth *Frame) (e error) {
+func (i *IFace) write(eth *packet.EthFrame) (e error) {
 	len := len([]byte(*eth))
 	sentlen, e := i.iface.Write([]byte(*eth))
 	if e != nil {

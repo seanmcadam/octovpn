@@ -11,6 +11,8 @@ const (
 	ConfigFilePath ConfigConst = "ConfigFile"
 	IFaceName      ConfigConst = "IFaceName"
 	LogLevel       ConfigConst = "LogLevel"
+	TestLogfile    ConfigConst = "TestlogfileUsedForTesting"
+	TestRun        ConfigConst = "TestrunUsedForTesting"
 )
 
 // Config Structure
@@ -89,6 +91,26 @@ var ConfigMap = map[ConfigConst]configitem{
 		envname:    "LogLevel",
 		configname: "LogLevel",
 		defval:     "5",
+		configval:  nil,
+		envval:     nil,
+		flagval:    nil,
+	},
+	TestLogfile: {
+		flagname:   "test.testlogfile",
+		flagusage:  "",
+		envname:    "",
+		configname: "",
+		defval:     "",
+		configval:  nil,
+		envval:     nil,
+		flagval:    nil,
+	},
+	TestRun: {
+		flagname:   "xxxtest.run",
+		flagusage:  "",
+		envname:    "",
+		configname: "",
+		defval:     "",
 		configval:  nil,
 		envval:     nil,
 		flagval:    nil,

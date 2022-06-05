@@ -18,14 +18,14 @@ var ErrSocTCPBadNetwork = errors.New("socket TCP: bad network protocol")
 var ErrSocTCPEmtpyWriteBuf = errors.New("socket TCP: Emtpy Write Buffer")
 
 type ListenTCPStruct struct {
-	listener net.Listener
 	ctx      *ctx.Ctx
+	listener net.Listener
 	accept   chan interface{}
 }
 
 type SocketTCPStruct struct {
-	socket   net.Conn
 	ctx      *ctx.Ctx
+	socket   net.Conn
 	readchan chan readStruct
 }
 
