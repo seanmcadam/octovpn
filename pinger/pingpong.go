@@ -1,4 +1,4 @@
-package connection
+package pinger
 
 import (
 	"encoding/gob"
@@ -16,7 +16,10 @@ const pingTimeLimit time.Duration = time.Second * -1
 const pingHighWater uint = 1
 
 type PingID uint64
-type LossPercent uint8
+type lossPercent uint8
+type Deviation uint16
+type Latency uint16
+type Loss uint16
 type Status uint16
 
 const (
@@ -31,7 +34,7 @@ type Mutex struct {
 	mutex sync.Mutex
 }
 
-type Pinger struct {
+type PingerStruct struct {
 	ctx        *ctx.Ctx
 	mutex      *Mutex
 	sendChan   chan interface{}
@@ -46,11 +49,11 @@ type Pinger struct {
 	RTTAveS15  time.Duration
 	RTTAveS60  time.Duration
 	RTTAveS300 time.Duration
-	LossS1     LossPercent
-	LossS5     LossPercent
-	LossS15    LossPercent
-	LossS60    LossPercent
-	LossS300   LossPercent
+	LossS1     lossPercent
+	LossS5     lossPercent
+	LossS15    lossPercent
+	LossS60    lossPercent
+	LossS300   lossPercent
 }
 
 type Ping struct {
@@ -75,7 +78,7 @@ func init() {
 	gob.Register(Pong{})
 }
 
-func NewPinger(cx *ctx.Ctx, period uint16) (pinger *Pinger) {
+func NewPinger(cx *ctx.Ctx, period uint16) (pinger *PingerStruct) {
 
 	if period == 0 {
 		period = defaultPingPeriod
@@ -87,7 +90,7 @@ func NewPinger(cx *ctx.Ctx, period uint16) (pinger *Pinger) {
 	var count uint
 	count = uint((300*1000)/uint(period)) + 1
 
-	pinger = &Pinger{
+	pinger = &PingerStruct{
 		ctx:        cx,
 		mutex:      &Mutex{},
 		sendChan:   make(chan interface{}, 3),
@@ -122,20 +125,20 @@ func (m *Mutex) Unlock() {
 	m.Unlock()
 }
 
-func (p *Pinger) Run() {
+func (p *PingerStruct) Start() {
 	go p.goPing()
 	go p.goCalc()
 }
 
-func (p *Pinger) Stop() {
+func (p *PingerStruct) Stop() {
 	p.ctx.Cancel()
 }
 
-func (p *Pinger) SendChan() chan interface{} {
+func (p *PingerStruct) SendChan() chan interface{} {
 	return p.sendChan
 }
 
-func (p *Pinger) ping() {
+func (p *PingerStruct) ping() {
 
 	var lastID uint64 = 0
 	pingID := <-counterPingChan
@@ -169,7 +172,7 @@ func (p *Pinger) ping() {
 
 }
 
-func (p *Pinger) goCalc() {
+func (p *PingerStruct) goCalc() {
 	const count5time = 2
 	const count15time = 5
 	const count60time = 10
@@ -210,7 +213,7 @@ func (p *Pinger) goCalc() {
 	}
 }
 
-func (p *Pinger) goPing() {
+func (p *PingerStruct) goPing() {
 
 	for {
 		select {
@@ -222,7 +225,7 @@ func (p *Pinger) goPing() {
 	}
 }
 
-func (p *Pinger) GotPing(ping *Ping) {
+func (p *PingerStruct) GotPing(ping *Ping) {
 	pong := &Pong{
 		ID:   ping.ID,
 		Send: ping.Send,
@@ -231,7 +234,7 @@ func (p *Pinger) GotPing(ping *Ping) {
 	p.sendChan <- pong
 }
 
-func (p *Pinger) GotPong(pong *Pong) {
+func (p *PingerStruct) GotPong(pong *Pong) {
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -264,7 +267,7 @@ func (p *Pinger) GotPong(pong *Pong) {
 // calc()
 // update the statistic used to determine the health of the link
 //
-func (p *Pinger) calc(status Status) {
+func (p *PingerStruct) calc(status Status) {
 
 	var count uint64 = uint64(status) * 1000 / uint64(p.periodMS)
 
@@ -287,14 +290,14 @@ func (p *Pinger) calc(status Status) {
 	p.mutex.Unlock()
 
 	var rtt time.Duration
-	var loss LossPercent
+	var loss lossPercent
 
 	if items > 0 {
 		rtt = time.Duration(sum / uint64(items))
-		loss = LossPercent(100 - (100 * items / count))
+		loss = lossPercent(100 - (100 * items / count))
 	} else {
 		rtt = 0
-		loss = LossPercent(100)
+		loss = lossPercent(100)
 	}
 
 	switch status {

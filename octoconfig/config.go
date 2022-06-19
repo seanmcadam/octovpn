@@ -2,6 +2,7 @@ package octoconfig
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -77,6 +78,8 @@ type ConfigListen struct {
 	Port     uint16
 	MTU      uint16
 }
+
+var ErrBadProtocol = errors.New("bad Protocol")
 
 //
 // Reads in the configuration map

@@ -158,7 +158,7 @@ func (i *IFace) addIP() {
 // Read()
 // Blocking read from the readFrame channel
 //
-func (i *IFace) ReadChan() <-chan *packet.EthFrame {
+func (i *IFace) ReadEthChan() <-chan *packet.EthFrame {
 	i.ctx.LogLocation()
 	return i.readFrame
 }

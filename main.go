@@ -5,10 +5,11 @@ import (
 	"os"
 	"os/user"
 
-	"github.com/seanmcadam/octovpn/connection"
 	"github.com/seanmcadam/octovpn/ctx"
 	"github.com/seanmcadam/octovpn/iface"
 	"github.com/seanmcadam/octovpn/octoconfig"
+	"github.com/seanmcadam/octovpn/routes"
+	"github.com/seanmcadam/octovpn/transit"
 )
 
 func init() {
@@ -67,24 +68,15 @@ func main() {
 	if configs.List != nil {
 
 	}
-
-	Conn, e := connection.New(cx, configs, Iface)
+	route, e := routes.New(cx, configs)
 	if e != nil {
-		panic("")
+		cx.Logf(ctx.LogLevelPanic, "connection.New() error:%s", e)
 	}
 
-	//
-	// Launch traffic manager
-	//
+	Transit, e := transit.New(cx, Iface, route)
 
-	//
-	// Run Packet Loop
-	//
-
-	Conn.Start()
-	Iface.Start()
-	defer Conn.Stop()
-	defer Iface.Stop()
+	Transit.Start()
+	defer Transit.Stop()
 
 	<-cx.DoneChan()
 }

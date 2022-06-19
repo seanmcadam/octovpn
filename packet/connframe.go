@@ -1,91 +1,55 @@
-package connection
+package packet
 
 import (
 	"encoding/gob"
-	"errors"
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/seanmcadam/octovpn/ctx"
 	"github.com/seanmcadam/octovpn/octolib"
-	"github.com/seanmcadam/octovpn/packet"
 )
 
-type headerString string
+//
+// Provides wrapper for packet.Eth frames
+// Allows for tracking Eth frames and only allowing the first one recieved.
+//
 
 const frameMapSize uint = 16384
 const packetTimeLimit time.Duration = time.Second * -5
 const packetHighWater uint = 8192
-const UDPHeaderSignature headerString = "-OctoVPN-UDP-1"
-const TCPHeaderSignature headerString = "-OctoVPN-TCP-1"
 
-type connFrameID uint64
-
-type ConnectionHeader struct {
-	count uint64
-	lenth uint16
-	frame *ConnFrame
-}
+type ConnFrameID uint64
 
 type ConnFrame struct {
-	ID    connFrameID
-	Frame *packet.EthFrame
+	ID    ConnFrameID
+	Frame *EthFrame
 }
 
 type ConnFrameTrackerStruct struct {
 	ctx      *ctx.Ctx
 	m        sync.Mutex
-	id       map[connFrameID]time.Time
-	stamp    map[time.Time]connFrameID
+	id       map[ConnFrameID]time.Time
+	stamp    map[time.Time]ConnFrameID
 	count    int
 	runClean chan interface{}
 }
 
-type ProtoHeader struct {
-	Signature headerString
-	ID        uint64
-	Payload   interface{}
-}
-
-var counterHeaderIDChan chan uint64
+var ConnFrameIDChan chan uint64
 
 //
 //
 //
 func init() {
-	counterHeaderIDChan = octolib.RunGoCounter64()
+	ConnFrameIDChan = octolib.RunGoCounter64()
 	gob.Register(ConnFrame{})
-	gob.Register(ProtoHeader{})
 }
 
-func NewProtoHeader(sig headerString, payload interface{}) (p *ProtoHeader, e error) {
-
-	switch payload.(type) {
-	case *ConnFrame:
-	case ConnFrame:
-	case *Ping:
-	case Ping:
-	case *Pong:
-	case Pong:
-	default:
-		return nil, errors.New(fmt.Sprintf("Invalid payload type:%t", payload))
-	}
-
-	p = &ProtoHeader{
-		Signature: sig,
-		ID:        <-counterHeaderIDChan,
-		Payload:   payload,
-	}
-	return p, e
-}
-
-func newFrameTracker(cx *ctx.Ctx) (f *ConnFrameTrackerStruct) {
+func NewFrameTracker(cx *ctx.Ctx) (f *ConnFrameTrackerStruct) {
 	f = &ConnFrameTrackerStruct{
 		ctx:      cx,
 		m:        sync.Mutex{},
-		id:       make(map[connFrameID]time.Time, frameMapSize),
-		stamp:    make(map[time.Time]connFrameID, frameMapSize),
+		id:       make(map[ConnFrameID]time.Time, frameMapSize),
+		stamp:    make(map[time.Time]ConnFrameID, frameMapSize),
 		count:    0,
 		runClean: make(chan interface{}, 1),
 	}
@@ -93,11 +57,21 @@ func newFrameTracker(cx *ctx.Ctx) (f *ConnFrameTrackerStruct) {
 	return f
 }
 
+func NewConnFrame(eth *EthFrame) (cf *ConnFrame) {
+
+	cf = &ConnFrame{
+		ID:    ConnFrameID(<-ConnFrameIDChan),
+		Frame: eth,
+	}
+
+	return cf
+}
+
 //
 // PassFrame()
 // If this is the first encounter with the frame (ID) then pass it on
 //
-func (f *ConnFrameTrackerStruct) PassFrame(id connFrameID) (b bool) {
+func (f *ConnFrameTrackerStruct) PassFrame(id ConnFrameID) (b bool) {
 
 	// Does the id already exist, meaning that the frame has been seen before
 	_, ok := f.id[id]
@@ -142,7 +116,7 @@ func (f *ConnFrameTrackerStruct) goRunCleanUp() {
 //
 // addID()
 //
-func (f *ConnFrameTrackerStruct) addID(id connFrameID) {
+func (f *ConnFrameTrackerStruct) addID(id ConnFrameID) {
 
 	t := time.Now()
 	_, ok := f.stamp[t]
@@ -162,7 +136,7 @@ func (f *ConnFrameTrackerStruct) addID(id connFrameID) {
 //
 // delID()
 //
-func (f *ConnFrameTrackerStruct) delID(id connFrameID) {
+func (f *ConnFrameTrackerStruct) delID(id ConnFrameID) {
 	t, ok := f.id[id]
 	if !ok {
 		f.ctx.Logf(ctx.LogLevelError, " non-existant ID:%d", id)

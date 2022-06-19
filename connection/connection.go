@@ -1,225 +1,145 @@
 package connection
 
 import (
-	"errors"
+	"bufio"
+	"encoding/gob"
+	"fmt"
 	"net"
-	"time"
 
-	"github.com/seanmcadam/octovpn/connection/client"
-	"github.com/seanmcadam/octovpn/connection/server"
 	"github.com/seanmcadam/octovpn/ctx"
-	"github.com/seanmcadam/octovpn/iface"
 	"github.com/seanmcadam/octovpn/octoconfig"
-	"github.com/seanmcadam/octovpn/octolib"
 	"github.com/seanmcadam/octovpn/packet"
 )
 
-//  Package to manage the conntions to the target vpn system
-//
-//
-
-type ConnState string
-
-const ConnStateNew = "new"
-const ConnStateRunning = "running"
-const ConnStateError = "error"
-const ConnStateClosed = "closed"
-
-var ErrConnectionClosed = errors.New("connection closed")
-
-type ConnectionInterface interface {
-}
-
-type Connection struct {
+type ConnectionStruct struct {
 	ctx          *ctx.Ctx
-	iface        *iface.IFace
-	inFrame      chan *ConnFrame
-	frameTracker *ConnFrameTrackerStruct
-	connections  map[uint64]interface{}
-	addConnChan  chan interface{}
+	conn         net.Conn
+	local        net.Addr
+	remote       net.Addr
+	protocol     octoconfig.ConnectionProtocol
+	writeBuf     *bufio.Writer
+	decoder      *gob.Decoder
+	encoder      *gob.Encoder
+	readChan     chan *packet.ProtoHeader
+	clientConfig *octoconfig.ConfigTarget
 }
 
-type ConnStatus struct {
-	FramesIn      uint64
-	FramesOut     uint64
-	packetLossOut uint64
-	packetLossIn  uint64
-	// RT Latency
-	// Bandwidth in
-	// Bandwidth out
-}
-
-type ConnStruct struct {
-	ctx       *ctx.Ctx
-	conn      net.Conn
-	startTime time.Time
-	state     ConnState
-	status    ConnStatus
-}
-
-//type connInterface interface {
-//	Recv() (*ConnFrame, error)
-//	Send(*ConnFrame) error
-//	Protocol() octoconfig.ConnectionProtocol
-//	HostIP() string
-//	Port() uint16
-//	MTU() uint16
-//	State() ConnState
-//	Status() ConnStatus
-//}
-
-var counterConnectionChan chan uint64
-var counterConnFrameIDChan chan uint64
-var counterConnChanIDChan chan uint64
+// func init() {
+//
+// }
 
 //
 //
 //
-func init() {
-	counterConnectionChan = octolib.RunGoCounter64()
-	counterConnFrameIDChan = octolib.RunGoCounter64()
-	counterConnChanIDChan = octolib.RunGoCounter64()
-}
+func NewConn(cx *ctx.Ctx, config *octoconfig.ConfigTarget) (conn *ConnectionStruct, e error) {
 
-//
-//
-//
-func New(cx *ctx.Ctx, conf octoconfig.ConfigV1, iface *iface.IFace) (c *Connection, e error) {
+	protocol := config.Protocol
+	port := config.Port
+	host := config.Hostname
+	//mtu := config.MTU
 
-	cx = cx.NewWithCancel()
+	var netconn net.Conn
 
-	if len(conf.Targ) == 0 && len(conf.List) == 0 {
-		cx.Logf(ctx.LogLevelPanic, "")
+	switch protocol {
+	case octoconfig.TCP:
+		fallthrough
+	case octoconfig.TCP4:
+		fallthrough
+	case octoconfig.TCP6:
+		netconn, e = dialTCP(protocol, host, port)
+		conn = NewStruct(cx, netconn, config)
+
+	case octoconfig.UDP:
+		fallthrough
+	case octoconfig.UDP4:
+		fallthrough
+	case octoconfig.UDP6:
+		netconn, e = dialUDP(protocol, host, port)
+		conn = NewStruct(cx, netconn, config)
+	default:
+		e = octoconfig.ErrBadProtocol
+		return nil, e
 	}
 
-	c = &Connection{
+	return conn, e
+}
+
+//
+//
+//
+func NewStruct(cx *ctx.Ctx, net net.Conn, config *octoconfig.ConfigTarget) (conn *ConnectionStruct) {
+	readchan := make(chan *packet.ProtoHeader)
+	conn = &ConnectionStruct{
 		ctx:          cx,
-		iface:        iface,
-		inFrame:      make(chan *ConnFrame),
-		frameTracker: newFrameTracker(cx),
-		connections:  make(map[uint64]interface{}),
-		addConnChan:  make(chan interface{}),
+		conn:         net,
+		readChan:     readchan,
+		local:        net.LocalAddr(),
+		remote:       net.RemoteAddr(),
+		writeBuf:     bufio.NewWriter(conn.conn),
+		encoder:      gob.NewEncoder(conn.writeBuf),
+		decoder:      gob.NewDecoder(conn.conn),
+		clientConfig: config,
 	}
-	go c.goAddConnection()
+	return conn
+}
 
-	for _, j := range conf.Targ {
-		if j.Active {
-			client, e := client.New(cx, j, c.inFrame)
+func (conn *ConnectionStruct) Protocol() octoconfig.ConnectionProtocol { return conn.protocol }
+func (conn *ConnectionStruct) LocalAddr() net.Addr                     { return conn.local }
+func (conn *ConnectionStruct) RemoteAddr() net.Addr                    { return conn.remote }
+func (conn *ConnectionStruct) ReadChan() chan *packet.ProtoHeader      { return conn.readChan }
+
+//
+//
+//
+func (conn *ConnectionStruct) Start() {
+	go conn.goRead()
+}
+
+//
+//
+//
+func (conn *ConnectionStruct) Stop() {
+	conn.ctx.Cancel()
+}
+
+//
+// Write()
+// Encode ProtoHeaders and send them over the network
+//
+func (conn *ConnectionStruct) Write(p *packet.ProtoHeader) (e error) {
+	e = conn.encoder.Encode(p)
+	if e == nil {
+		conn.writeBuf.Flush()
+	}
+	return e
+}
+
+//
+// goRead()
+// Read and decode incoming packets from the network connection
+//
+func (conn *ConnectionStruct) goRead() {
+	for {
+		select {
+		case <-conn.ctx.DoneChan():
+			return
+		default:
+			var data interface{}
+			var proto *packet.ProtoHeader
+			e := conn.decoder.Decode(&data)
 			if e != nil {
-				cx.Logf(ctx.LogLevelPanic, "error:%s", e)
+				conn.ctx.Logf(ctx.LogLevelPanic, "Decode() returned error %s", e)
 			}
-			c.addConnChan <- client
-		}
-	}
 
-	var listen interface{}
-	for _, j := range conf.List {
-		if j.Active {
-			switch j.Protocol {
-			case "udp":
-				fallthrough
-			case "udp4":
-				fallthrough
-			case "udp6":
-				listen, e = server.New(cx, j, c.inFrame)
-
-			case "tcp":
-				fallthrough
-			case "tcp4":
-				fallthrough
-			case "tcp6":
-				listen, e = server.New(cx, j, c.addConnChan)
-
+			switch data := data.(type) {
+			case packet.ProtoHeader:
+				proto = &data
+			case *packet.ProtoHeader:
+				proto = data
 			default:
-				cx.Logf(ctx.LogLevelPanic, "protocol nt supported:%s", j.Protocol)
+				conn.ctx.Logf(ctx.LogLevelPanic, "Decode() returned bad type %t", data)
 			}
-
-			if e != nil {
-				cx.Logf(ctx.LogLevelPanic, "error:%s", e)
-			}
-			c.addConnChan <- listen
-		}
-	}
-
-	return c, e
-}
-
-//
-//
-//
-func (c *Connection) goAddConnection() {
-
-	for {
-		var conn interface{}
-
-		connID := <-counterConnectionChan
-		select {
-		case conn = <-c.addConnChan:
-		case <-c.ctx.DoneChan():
-			return
-		}
-
-		switch conn.(type) {
-		case *listenTCPStruct:
-			// conn.(*listenTCPStruct).ID = connID
-		case *TCPStruct:
-			conn.(*TCPStruct).ID = connID
-		case *listenUDPStruct:
-			conn.(*listenUDPStruct).ID = connID
-		case *targetStruct:
-			conn.(*targetStruct).ID = connID
-		default:
-			c.ctx.Logf(ctx.LogLevelPanic, "Type not supported:%t", conn)
-		}
-
-		c.connections[connID] = conn
-	}
-}
-
-//
-//
-//
-func (c *Connection) newConnFrame(frame *packet.EthFrame) (cf *ConnFrame) {
-	c.ctx.LogLocation()
-	cf = &ConnFrame{
-		ID:    connFrameID(<-counterConnChanIDChan),
-		Frame: frame,
-	}
-	return cf
-}
-
-//
-// Ctx()
-//
-//func (c *Connection) Ctxx() *ctx.Ctx {
-//	return c.ctx
-//}
-
-//
-//
-//
-func (c *Connection) Start() {
-	go c.goRunIFRead()
-	go c.goRunConnRead()
-}
-
-//
-//
-//
-func (c *Connection) Stop() {
-	c.ctx.Cancel()
-}
-
-//
-// goRunIFRead()
-//
-func (c *Connection) goRunIFRead() {
-	for {
-		select {
-		case i := <-c.iface.ReadChan():
-			c.handleIfFrame(i)
-		case <-c.ctx.DoneChan():
-			return
+			conn.readChan <- proto
 		}
 	}
 }
@@ -227,63 +147,35 @@ func (c *Connection) goRunIFRead() {
 //
 //
 //
-func (c *Connection) goRunConnRead() {
-	for {
-		select {
-		case frame := <-c.inFrame:
-			c.handleConnFrame(frame)
-		case <-c.ctx.DoneChan():
-			return
-		}
+func dialTCP(protocol octoconfig.ConnectionProtocol, host string, port uint16) (conn *net.TCPConn, e error) {
+
+	var remoteaddr *net.TCPAddr = nil
+	var localaddr *net.TCPAddr = nil
+
+	remoteaddr, e = net.ResolveTCPAddr(string(protocol), fmt.Sprintf("%s:%d", host, port))
+	if e != nil {
+		return nil, e
 	}
+
+	conn, e = net.DialTCP(string(protocol), localaddr, remoteaddr)
+
+	return conn, e
 }
 
 //
 //
 //
-func (c *Connection) handleConnFrame(conn *ConnFrame) {
-	//
-	// Need to track incoming IDs to see if they have passed through already, and drop if they have
-	//
+func dialUDP(protocol octoconfig.ConnectionProtocol, host string, port uint16) (conn *net.UDPConn, e error) {
 
-	if c.frameTracker.PassFrame(conn.ID) {
-		c.iface.Write(conn.Frame)
+	var remoteaddr *net.UDPAddr = nil
+	var localaddr *net.UDPAddr = nil
+
+	remoteaddr, e = net.ResolveUDPAddr(string(protocol), fmt.Sprintf("%s:%d", host, port))
+	if e != nil {
+		return nil, e
 	}
-}
 
-//
-// hadleIfFrame()
-// Take inbound frames from the interface an process them
-//
-func (c *Connection) handleIfFrame(frame *packet.EthFrame) {
+	conn, e = net.DialUDP(string(protocol), localaddr, remoteaddr)
 
-	conn := c.newConnFrame(frame)
-	c.ctx.Logf(ctx.LogLevelTrace, " got Frame ID:%d:%s", conn.ID, conn)
-
-	if 0 == len(c.connections) {
-		c.ctx.Logf(ctx.LogLevelError, " No Connections")
-	}
-	//
-	// Send on every connection for now
-	//
-	for i, j := range c.connections {
-		c.ctx.Logf(ctx.LogLevelTrace, " Send() on connection# %d", i)
-
-		var e error
-		switch j.(type) {
-		case *targetStruct:
-			e = j.(*targetStruct).Send(conn)
-		case *listenUDPStruct:
-			e = j.(*listenUDPStruct).Send(conn)
-		case *TCPStruct:
-			e = j.(*TCPStruct).SendConnFrame(conn)
-		case nil:
-			c.ctx.Logf(ctx.LogLevelError, " j == nil")
-		default:
-			c.ctx.Logf(ctx.LogLevelPanic, " default reached type:%t", j)
-		}
-		if e != nil {
-			c.ctx.Logf(ctx.LogLevelPanic, " error:%s", e)
-		}
-	}
+	return conn, e
 }
