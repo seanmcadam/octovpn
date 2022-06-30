@@ -9,14 +9,14 @@
     },
     "target": {
         "target1": {
-            "active": "true",
+            "active": "false",
             "protocol":"udp",
             "hostname":"127.0.0.1",
             "port": 44443,
             "mtu":1300
         },
         "target2": {
-            "active": "false",
+            "active": "true",
             "protocol":"tcp",
             "hostname":"127.0.0.1",
             "port": 44444,
@@ -25,17 +25,17 @@
     },
     "listen": {
         "listen1": {
-            "active": "true",
+            "active": "false",
             "protocol":"udp",
             "ip":"127.0.0.1",
             "port": 44443,
             "mtu":1300
         },
         "listen2": {
-            "active": "false",
+            "active": "true",
             "protocol":"tcp",
             "ip":"127.0.0.1",
-            "port": 44443,
+            "port": 44444,
             "mtu":1300
         }
     }

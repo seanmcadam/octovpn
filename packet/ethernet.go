@@ -53,6 +53,34 @@ func (et Ethertype) String() string {
 //
 //
 //
+func (f EthFrame) Length() PacketPayloadLen {
+	return PacketPayloadLen(len(f))
+}
+
+//
+//
+//
+func (f EthFrame) ToByte() []byte {
+	return []byte(f)
+}
+
+//
+//
+//
+func (f EthFrame) Type() PacketType {
+	return EthPacket
+}
+
+//
+// ID()
+// EthFrames have no ID, so return 0
+func (f EthFrame) PacketID() PacketID {
+	return 0
+}
+
+//
+//
+//
 func (f EthFrame) Destination() net.HardwareAddr {
 	return net.HardwareAddr(f[:6:6])
 }

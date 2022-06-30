@@ -1,8 +1,7 @@
 package connection
 
 import (
-	"bufio"
-	"encoding/gob"
+	"errors"
 	"fmt"
 	"net"
 
@@ -17,19 +16,31 @@ type ConnectionStruct struct {
 	local        net.Addr
 	remote       net.Addr
 	protocol     octoconfig.ConnectionProtocol
-	writeBuf     *bufio.Writer
-	decoder      *gob.Decoder
-	encoder      *gob.Encoder
-	readChan     chan *packet.ProtoHeader
 	clientConfig *octoconfig.ConfigTarget
+	readChan     chan *ConnReadStruct
 }
 
-// func init() {
-//
-// }
+type ConnReadStruct struct {
+	e      error
+	count  int
+	header *packet.CommonHeader
+}
+
+func (c *ConnReadStruct) Err() error {
+	return c.e
+}
+
+func (c *ConnReadStruct) Count() int {
+	return c.count
+}
+
+func (c *ConnReadStruct) Header() *packet.CommonHeader {
+	return c.header
+}
 
 //
-//
+// NewConn()
+// Create a new ConnectionStruct based on a target config
 //
 func NewConn(cx *ctx.Ctx, config *octoconfig.ConfigTarget) (conn *ConnectionStruct, e error) {
 
@@ -37,6 +48,8 @@ func NewConn(cx *ctx.Ctx, config *octoconfig.ConfigTarget) (conn *ConnectionStru
 	port := config.Port
 	host := config.Hostname
 	//mtu := config.MTU
+
+	conn = nil
 
 	var netconn net.Conn
 
@@ -47,46 +60,48 @@ func NewConn(cx *ctx.Ctx, config *octoconfig.ConfigTarget) (conn *ConnectionStru
 		fallthrough
 	case octoconfig.TCP6:
 		netconn, e = dialTCP(protocol, host, port)
-		conn = NewStruct(cx, netconn, config)
-
 	case octoconfig.UDP:
 		fallthrough
 	case octoconfig.UDP4:
 		fallthrough
 	case octoconfig.UDP6:
 		netconn, e = dialUDP(protocol, host, port)
-		conn = NewStruct(cx, netconn, config)
 	default:
 		e = octoconfig.ErrBadProtocol
-		return nil, e
+	}
+
+	if e == nil {
+		conn = newStruct(cx, netconn, config)
 	}
 
 	return conn, e
 }
 
 //
+// NewStruct()
+// Create a new ConnectionStruct based on net.Conn
 //
-//
-func NewStruct(cx *ctx.Ctx, net net.Conn, config *octoconfig.ConfigTarget) (conn *ConnectionStruct) {
-	readchan := make(chan *packet.ProtoHeader)
+func newStruct(cx *ctx.Ctx, net net.Conn, config *octoconfig.ConfigTarget) (conn *ConnectionStruct) {
+
+	cx.LogLocation()
+
+	readchan := make(chan *ConnReadStruct)
 	conn = &ConnectionStruct{
 		ctx:          cx,
 		conn:         net,
 		readChan:     readchan,
-		local:        net.LocalAddr(),
-		remote:       net.RemoteAddr(),
-		writeBuf:     bufio.NewWriter(conn.conn),
-		encoder:      gob.NewEncoder(conn.writeBuf),
-		decoder:      gob.NewDecoder(conn.conn),
 		clientConfig: config,
 	}
+	conn.local = net.LocalAddr()
+	conn.remote = net.RemoteAddr()
+
 	return conn
 }
 
 func (conn *ConnectionStruct) Protocol() octoconfig.ConnectionProtocol { return conn.protocol }
 func (conn *ConnectionStruct) LocalAddr() net.Addr                     { return conn.local }
 func (conn *ConnectionStruct) RemoteAddr() net.Addr                    { return conn.remote }
-func (conn *ConnectionStruct) ReadChan() chan *packet.ProtoHeader      { return conn.readChan }
+func (conn *ConnectionStruct) ReadChan() chan *ConnReadStruct          { return conn.readChan }
 
 //
 //
@@ -99,6 +114,10 @@ func (conn *ConnectionStruct) Start() {
 //
 //
 func (conn *ConnectionStruct) Stop() {
+	e := conn.conn.Close()
+	if e != nil {
+		conn.ctx.Logf(ctx.LogLevelError, "Close error:%s", e)
+	}
 	conn.ctx.Cancel()
 }
 
@@ -106,17 +125,14 @@ func (conn *ConnectionStruct) Stop() {
 // Write()
 // Encode ProtoHeaders and send them over the network
 //
-func (conn *ConnectionStruct) Write(p *packet.ProtoHeader) (e error) {
-	e = conn.encoder.Encode(p)
-	if e == nil {
-		conn.writeBuf.Flush()
-	}
-	return e
+func (conn *ConnectionStruct) Write(ch *packet.CommonHeader) (count int, e error) {
+	return conn.conn.Write(ch.ToByte())
 }
 
 //
 // goRead()
 // Read and decode incoming packets from the network connection
+// read the first packets to determine the packet type and lenght
 //
 func (conn *ConnectionStruct) goRead() {
 	for {
@@ -124,22 +140,43 @@ func (conn *ConnectionStruct) goRead() {
 		case <-conn.ctx.DoneChan():
 			return
 		default:
-			var data interface{}
-			var proto *packet.ProtoHeader
-			e := conn.decoder.Decode(&data)
+			packetheader := make([]byte, packet.PacketHeaderSize)
+			count, e := conn.conn.Read(packetheader)
 			if e != nil {
-				conn.ctx.Logf(ctx.LogLevelPanic, "Decode() returned error %s", e)
+				conn.ctx.Logf(ctx.LogLevelPanic, "Read header error:%e", e)
+			}
+			if count != packet.PacketHeaderSize {
+				conn.ctx.Logf(ctx.LogLevelPanic, "Bad packetheadersize count:%d", count)
+			}
+			if packet.ValidHeaderV1 != packet.PacketBlockBuf(packetheader) {
+				conn.ctx.Logf(ctx.LogLevelPanic, "Bad PacketHeader")
+			}
+			if packet.VersionV1 != packet.PacketVersionBuf(packetheader) {
+				conn.ctx.Logf(ctx.LogLevelPanic, "Bad PacketHeader")
 			}
 
-			switch data := data.(type) {
-			case packet.ProtoHeader:
-				proto = &data
-			case *packet.ProtoHeader:
-				proto = data
-			default:
-				conn.ctx.Logf(ctx.LogLevelPanic, "Decode() returned bad type %t", data)
+			ch, size := packet.NewHeaderRead(packetheader)
+
+			payload := make([]byte, size)
+			count, e = conn.conn.Read(payload)
+			if e != nil {
+				conn.ctx.Logf(ctx.LogLevelPanic, "Read payload error:%e", e)
 			}
-			conn.readChan <- proto
+			if count != packet.PacketHeaderSize {
+				str := fmt.Sprintf("Bad payload size count:%d", count)
+				conn.ctx.Logf(ctx.LogLevelPanic, str)
+				e = errors.New(str)
+			}
+
+			ch.AddPayload(payload)
+
+			rs := &ConnReadStruct{
+				e:      e,
+				count:  int(size) + packet.PacketHeaderSize,
+				header: ch,
+			}
+
+			conn.readChan <- rs
 		}
 	}
 }

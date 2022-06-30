@@ -101,13 +101,6 @@ func NewIface(cx *ctx.Ctx, conf *octoconfig.ConfigInterface) (iface *IFace, e er
 }
 
 //
-// Ctx()
-//
-func (i *IFace) Ctx() *ctx.Ctx {
-	return i.ctx
-}
-
-//
 //
 //
 func (i *IFace) Start() {
@@ -129,7 +122,7 @@ func (i *IFace) Stop() {
 	if e != nil {
 		i.ctx.Logf(ctx.LogLevelPanic, "LinkDown() error:%s", e)
 	}
-	i.Ctx().Cancel()
+	i.ctx.Cancel()
 }
 
 //
@@ -159,7 +152,7 @@ func (i *IFace) addIP() {
 // Blocking read from the readFrame channel
 //
 func (i *IFace) ReadEthChan() <-chan *packet.EthFrame {
-	i.ctx.LogLocation()
+	// i.ctx.LogLocation()
 	return i.readFrame
 }
 
@@ -183,23 +176,23 @@ func (i *IFace) goReader() {
 			break
 		}
 
-		payload := eth.Payload()
 		et := eth.Ethertype()
 		switch et {
 		case packet.ET_IPv4:
-			i.ctx.Logf(ctx.LogLevelTrace, "Eth\n\tSource:%s Dest:%s\n\t%s Source:%s Dest:%s",
-				eth.Source(),
-				eth.Destination(),
-				packet.IPv4Frame(payload).Protocol().String(),
-				packet.IPv4Frame(payload).Source(),
-				packet.IPv4Frame(payload).Dest(),
-			)
+			//payload := eth.Payload()
+			//i.ctx.Logf(ctx.LogLevelTrace, "Eth\n\tSource:%s Dest:%s\n\t%s Source:%s Dest:%s",
+			//	eth.Source(),
+			//	eth.Destination(),
+			//	packet.IPv4Frame(payload).Protocol().String(),
+			//	packet.IPv4Frame(payload).Source(),
+			//	packet.IPv4Frame(payload).Dest(),
+			//)
 			i.readFrame <- eth
 		case packet.ET_ARP:
 			i.ctx.Logf(ctx.LogLevelTrace, "Frame Source:%s Dest:%s, Type:%s", eth.Source(), eth.Destination(), eth.Ethertype().String())
 			i.readFrame <- eth
 		case packet.ET_IPv6:
-			i.ctx.Logf(ctx.LogLevelTrace, "DROP IPv6 Source:%s Dest:%s, Type:%s", eth.Source(), eth.Destination(), eth.Ethertype().String())
+			// i.ctx.Logf(ctx.LogLevelTrace, "DROP IPv6 Source:%s Dest:%s, Type:%s", eth.Source(), eth.Destination(), eth.Ethertype().String())
 		default:
 			i.ctx.Logf(ctx.LogLevelTrace, "DROP frame Source:%s Dest:%s, Type:%s", eth.Source(), eth.Destination(), eth.Ethertype().String())
 			// Drop it

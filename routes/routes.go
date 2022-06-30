@@ -3,13 +3,11 @@ package routes
 import (
 	"net"
 
-	"github.com/seanmcadam/octovpn/connections"
+	"github.com/seanmcadam/octovpn/connmgmt"
 	"github.com/seanmcadam/octovpn/ctx"
 	"github.com/seanmcadam/octovpn/octoconfig"
 	"github.com/seanmcadam/octovpn/octolib"
 	"github.com/seanmcadam/octovpn/packet"
-	"github.com/seanmcadam/octovpn/pinger"
-	"github.com/seanmcadam/octovpn/server"
 )
 
 // Package to manage all routes to the target vpn system
@@ -18,30 +16,23 @@ import (
 // (c *ConnectionStruct) Stop()
 //
 // Send filtered Eth packets from Transit module
-// (c *ConnectionStruct) Write(eth *packet.EthFrame)
+// (c *ConnectionStruct) Write (eth *packet.EthFrame)
 //
 // Read filtered Eth Packets in Transit module
-// (c *ConnectionStruct) ReadEthChan() <-chan *packet.EthFrame
+// (c *ConnectionStruct) ReadEthChan () <-chan *packet.EthFrame
 //
 // Handler for new incoming connections from listeners
-// (c *ConnectionStruct) goAddConnection()
+// (c *ConnectionStruct) goAddConnection ()
 //
 // Collect and handle incoming packets from the connection layer
-// (c *ConnectionStruct) goReadVPNChan()
+// (c *ConnectionStruct) goReadConnChan ()
 //
 // Collect and handle incoming packets from the connection layer
-// (c *ConnectionStruct) goWriteVPN()
+// (c *ConnectionStruct) goWriteConn ()
 //
 // Create wrapper for Eth Frame
-// (c *ConnectionStruct) newConnFrame(frame *packet.EthFrame) (cf *packet.ConnFrame)
+// (c *ConnectionStruct) newConnFrame (frame *packet.EthFrame) (cf *packet.ConnFrame)
 //
-
-//type ConnState string
-//
-//const ConnStateNew = "new"
-//const ConnStateRunning = "running"
-//const ConnStateError = "error"
-//const ConnStateClosed = "closed"
 
 const ethChanDepth = 2
 
@@ -56,9 +47,9 @@ type RouteInterface interface {
 	ReadChan() chan *packet.ConnFrame
 	Write(*packet.ConnFrame) error
 	Online() bool
-	Loss() pinger.Loss           // Loss calculation 0-1000 - 0 = best
-	Latency() pinger.Latency     // Latency calulation 0-1000 - 0 = best
-	Deviation() pinger.Deviation // Deviation calulation 0-1000 - 0 = best
+	Loss() packet.Loss           // Loss calculation 0-1000 - 0 = best
+	Latency() packet.Latency     // Latency calulation 0-1000 - 0 = best
+	Deviation() packet.Deviation // Deviation calulation 0-1000 - 0 = best
 }
 
 //
@@ -67,40 +58,32 @@ type RouteInterface interface {
 type RouteStruct struct {
 	//
 	// Context structure
-	//
 	ctx *ctx.Ctx
 	//
 	// Configuration
-	//
 	conf octoconfig.ConfigV1
 	//
 	// All connections from both client and server
-	//
 	connections map[uint64]RouteInterface
 	//
 	// Listener Sockets on this device
-	//
-	listeners []*server.ListenerStruct
+	listeners []*connmgmt.ConnMgmtListen
 	//
 	// Tracks ConnFrame packets to make sure that only the first frame recieved passes
-	//
 	frameTracker packet.ConnFrameTrackerStruct
 	//
 	// The channel passes new accepts from listener connections
-	//
-	addVPNChan chan interface{}
+	addConnChan chan *connmgmt.ConnMgmtStruct
 	//
 	// Read channel for Transit layer, only one unique EthFrame ID is passed up
-	//
 	readEthChan chan *packet.EthFrame
 	//
-	// Read channel for VPN layer
+	// Read channel for Connection layer, all ConnFrames pass back this way to be filtered for uniqueness
+	readConnChan chan *packet.ConnFrame
 	//
-	readVPNChan chan *packet.ConnFrame
-	//
-	// Write Channel to connections, pushed into the processing section of sending over which VPNs
-	//
-	writeVPNChan chan *packet.ConnFrame
+	// Write Channel to connections, pushed into the processing section of sending over which Conn
+	// Feed routng go routine
+	writeConnChan chan *packet.ConnFrame
 }
 
 var counterConnectionChan chan uint64
@@ -128,14 +111,14 @@ func New(cx *ctx.Ctx, conf octoconfig.ConfigV1) (r *RouteStruct, e error) {
 	}
 
 	r = &RouteStruct{
-		ctx:          cx,
-		conf:         conf,
-		connections:  make(map[uint64]RouteInterface),
-		listeners:    make([]*server.ListenerStruct, 0),
-		frameTracker: *packet.NewFrameTracker(cx),
-		addVPNChan:   make(chan interface{}),
-		writeVPNChan: make(chan *packet.ConnFrame, ethChanDepth),
-		readVPNChan:  make(chan *packet.ConnFrame, ethChanDepth),
+		ctx:           cx,
+		conf:          conf,
+		connections:   make(map[uint64]RouteInterface),
+		listeners:     make([]*connmgmt.ConnMgmtListen, 0),
+		frameTracker:  *packet.NewFrameTracker(cx),
+		addConnChan:   make(chan *connmgmt.ConnMgmtStruct),
+		writeConnChan: make(chan *packet.ConnFrame, ethChanDepth),
+		readConnChan:  make(chan *packet.ConnFrame, ethChanDepth),
 	}
 
 	return r, e
@@ -147,49 +130,12 @@ func New(cx *ctx.Ctx, conf octoconfig.ConfigV1) (r *RouteStruct, e error) {
 //
 func (r *RouteStruct) Start() {
 
-	go r.goReadVPNChan()
-	go r.goWriteVPN()
+	go r.goReadConnChan()
+	go r.goWriteConn()
 	go r.goAddConnection()
 
-	r.startClientConnections()
 	r.startListeners()
-
-}
-
-//
-//
-//
-func (r *RouteStruct) startClientConnections() {
-
-	for _, j := range r.conf.Targ {
-		if j.Active {
-			connection, e := connections.New(r.ctx, j)
-			if e != nil {
-				r.ctx.Logf(ctx.LogLevelPanic, "error:%s", e)
-			}
-			r.addVPNChan <- connection
-		}
-	}
-}
-
-//
-//
-//
-func (r *RouteStruct) startListeners() {
-
-	for _, j := range r.conf.List {
-		if j.Active {
-			listen, e := server.NewListener(r.ctx, j, r.addVPNChan, r.readVPNChan)
-			if e != nil {
-				r.ctx.Logf(ctx.LogLevelPanic, "server.New() error:%s", e)
-			}
-			r.listeners = append(r.listeners, listen)
-		}
-	}
-
-	for _, j := range r.listeners {
-		j.Start()
-	}
+	r.startClientConnections()
 
 }
 
@@ -205,24 +151,61 @@ func (r *RouteStruct) Stop() {
 		j.Stop()
 	}
 
-	for _, j := range r.vpn {
+	for _, j := range r.connections {
 		j.Stop()
 	}
 }
 
 //
-// goReadVPNChan()
+//
+//
+func (r *RouteStruct) startClientConnections() {
+
+	for _, j := range r.conf.Targ {
+		if j.Active {
+			connection, e := connmgmt.NewClient(r.ctx, j)
+			if e != nil {
+				r.ctx.Logf(ctx.LogLevelPanic, "error:%s", e)
+			}
+			r.addConnChan <- connection
+		}
+	}
+}
+
+//
+//
+//
+func (r *RouteStruct) startListeners() {
+
+	for _, j := range r.conf.List {
+		if j.Active {
+			listen, e := connmgmt.NewListen(r.ctx, j, r.addConnChan)
+			if e != nil {
+				r.ctx.Logf(ctx.LogLevelPanic, "server.New() error:%s", e)
+			}
+			r.listeners = append(r.listeners, listen)
+		}
+	}
+
+	for _, j := range r.listeners {
+		j.Start()
+	}
+
+}
+
+//
+// goReadConnChan()
 // Read packets from the lower stack
 // Determine if the packet has passed already
 // Pass it to the transit layer if not
 //
-func (r *RouteStruct) goReadVPNChan() {
+func (r *RouteStruct) goReadConnChan() {
 
 	for {
 		select {
 		case <-r.ctx.DoneChan():
 			return
-		case conn := <-r.readVPNChan:
+		case conn := <-r.readConnChan:
 			if r.frameTracker.PassFrame(conn.ID) {
 				r.readEthChan <- conn.Frame
 			} else {
@@ -245,33 +228,40 @@ func (r *RouteStruct) ReadEthChan() <-chan *packet.EthFrame {
 // Write()
 // Get EthFrame packet to write
 // Wrap in ConnFrame for tracking
-// Wrap in standard ProtoHeader (what is actually sent over the VPN)
+// Wrap in standard ProtoHeader (what is actually sent over the Conn)
 // Push into writeEthChan
 // Send an ether packet to one or more connections
 //
 func (r *RouteStruct) Write(eth *packet.EthFrame) {
 	conn := packet.NewConnFrame(eth)
-	r.writeVPNChan <- conn
+	// comm := packet.NewHeaderV1Payload(conn)
+	r.writeConnChan <- conn
 
 }
 
 //
+// goWriteConn()
+// Figure out which connection(s) to send packs over
 //
-//
-func (r *RouteStruct) goWriteVPN() {
+func (r *RouteStruct) goWriteConn() {
 
-	select {
-	case <-r.ctx.DoneChan():
-		return
-	case proto := <-r.writeVPNChan:
-		//
-		// Lots of calculations here... which VPN circuits do we send the packets on?
-		//
-		// For now, write to all online VPN channels
+	for {
+		select {
+		case <-r.ctx.DoneChan():
+			return
+		case proto := <-r.writeConnChan:
+			//
+			// Lots of calculations here... which Conn circuits do we send the packets on?
+			//
+			// For now, write to all online Conn channels
 
-		for _, j := range r.vpn {
-			if j.Online() {
-				j.Write(proto)
+			for _, j := range r.connections {
+				if j.Online() {
+
+					//ch := packet.NewHeaderV1Payload(proto)
+					//j.Write(ch)
+					j.Write(proto)
+				}
 			}
 		}
 	}
@@ -288,21 +278,21 @@ func (r *RouteStruct) goAddConnection() {
 		select {
 		case <-r.ctx.DoneChan():
 			return
-		case conn = <-r.addVPNChan:
+		case conn = <-r.addConnChan:
+
+			connID := <-counterConnectionChan
+			var ri RouteInterface
+
+			switch conn := conn.(type) {
+			case *connmgmt.ConnMgmtStruct:
+				ri = conn
+			default:
+				r.ctx.Logf(ctx.LogLevelPanic, "Type not supported:%t", conn)
+			}
+
+			r.connections[connID] = ri
+			ri.Start()
 		}
-
-		connID := <-counterConnectionChan
-		var ri RouteInterface
-
-		switch conn.(type) {
-		case *connections.ConnectionsStruct:
-			ri = conn.(*connections.ConnectionsStruct)
-		default:
-			r.ctx.Logf(ctx.LogLevelPanic, "Type not supported:%t", conn)
-		}
-
-		r.connections[connID] = ri
-		ri.Start()
 	}
 }
 

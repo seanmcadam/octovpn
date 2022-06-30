@@ -3,21 +3,10 @@ package ctx
 import "context"
 
 type ContextValue string
-type LogLevel string
 
 //type any interface{}
 
 const ContextKey ContextValue = "ContextKey"
-
-const (
-	LogLevelPanic LogLevel = "PANIC"
-	LogLevelFatal LogLevel = "FATAL"
-	LogLevelError LogLevel = "ERROR"
-	LogLevelWarn  LogLevel = " WARN"
-	LogLevelInfo  LogLevel = " INFO"
-	LogLevelDebug LogLevel = "DEBUG"
-	LogLevelTrace LogLevel = "TRACE"
-)
 
 type Ctx struct {
 	mycontext context.Context

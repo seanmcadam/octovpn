@@ -5,6 +5,11 @@ package transit
 //
 //
 
+// func New(cx *ctx.Ctx, iface *iface.IFace, route *routes.RouteStruct) (transit *TransitStruct, e error) {
+// func (t *TransitStruct) Start() {
+// func (t *TransitStruct) Stop() {
+// func (t *TransitStruct) goRun() {
+
 import (
 	"github.com/seanmcadam/octovpn/ctx"
 	"github.com/seanmcadam/octovpn/iface"

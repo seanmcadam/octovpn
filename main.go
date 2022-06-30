@@ -68,6 +68,7 @@ func main() {
 	if configs.List != nil {
 
 	}
+
 	route, e := routes.New(cx, configs)
 	if e != nil {
 		cx.Logf(ctx.LogLevelPanic, "connection.New() error:%s", e)

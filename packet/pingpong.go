@@ -1,7 +1,7 @@
-package pinger
+package packet
 
 import (
-	"encoding/gob"
+	"encoding/binary"
 	"sync"
 	"time"
 
@@ -9,8 +9,13 @@ import (
 	"github.com/seanmcadam/octovpn/octolib"
 )
 
-const defaultPingPeriod uint16 = 200
-const minimumPingPeriod uint16 = 75
+const defaultPingsPerSec uint16 = 5
+const maximumPingsPerSec uint16 = 15
+const minimumPingsPerSec uint16 = 1
+const defaultPingPeriodMS uint16 = 1000 / defaultPingsPerSec
+const minimumPingPeriodMS uint16 = 1000 / maximumPingsPerSec
+const maximumPingPeriodMS uint16 = 1000 / minimumPingsPerSec
+
 const pingMapSize uint = 32
 const pingTimeLimit time.Duration = time.Second * -1
 const pingHighWater uint = 1
@@ -40,8 +45,8 @@ type PingerStruct struct {
 	sendChan   chan interface{}
 	runCalc    chan interface{}
 	periodMS   uint16
-	sent       map[PingID]time.Time
-	rtt        map[PingID]time.Duration
+	sent       map[PingID]int64
+	rtt        map[PingID]int64
 	currentID  PingID
 	count      uint
 	RTTAveS1   time.Duration
@@ -57,14 +62,72 @@ type PingerStruct struct {
 }
 
 type Ping struct {
-	ID   PingID
-	Send time.Time
+	id   PingID
+	Send int64
+}
+
+func (p *Ping) PacketID() PacketID {
+	return PacketID(p.id)
+}
+
+func (p *Ping) Type() PacketType {
+	return PingPacket
+}
+
+func (p *Ping) Length() PacketPayloadLen {
+	return PacketPayloadLen(8 + 8)
+}
+
+func (ch *Ping) ToByte() (buf []byte) {
+	totallen := 8 + 8
+	buf = make([]byte, 0, totallen)
+	buf4a := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf4a, uint32(ch.id))
+
+	buf4b := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf4b, uint32(ch.Send))
+
+	buf = append(buf, buf4a...)
+	buf = append(buf, buf4b...)
+
+	return buf
 }
 
 type Pong struct {
-	ID   PingID
-	Recv time.Time
-	Send time.Time
+	id   PingID
+	Send int64
+	Recv int64
+}
+
+func (p *Pong) PacketID() PacketID {
+	return PacketID(p.id)
+}
+
+func (p *Pong) Type() PacketType {
+	return PongPacket
+}
+
+func (p *Pong) Length() PacketPayloadLen {
+	return PacketPayloadLen(8 + 8 + 8)
+}
+
+func (ch *Pong) ToByte() (buf []byte) {
+	totallen := 8 + 8 + 8
+	buf = make([]byte, 0, totallen)
+	buf4a := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf4a, uint32(ch.id))
+
+	buf4b := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf4b, uint32(ch.Send))
+
+	buf4c := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf4c, uint32(ch.Recv))
+
+	buf = append(buf, buf4a...)
+	buf = append(buf, buf4b...)
+	buf = append(buf, buf4c...)
+
+	return buf
 }
 
 var counterPingChan chan uint64
@@ -74,29 +137,42 @@ var counterPingChan chan uint64
 //
 func init() {
 	counterPingChan = octolib.RunGoCounter64()
-	gob.Register(Ping{})
-	gob.Register(Pong{})
 }
 
-func NewPinger(cx *ctx.Ctx, period uint16) (pinger *PingerStruct) {
+//
+//
+//
+func NewPinger(cx *ctx.Ctx, pingsPerSec uint16) (pinger *PingerStruct) {
 
-	if period == 0 {
-		period = defaultPingPeriod
-	}
-	if period < minimumPingPeriod {
-		period = minimumPingPeriod
+	cx.LogLocation()
+
+	var period uint16
+
+	//
+	// Figure out what the period is
+	// The period is the number of MS between each
+	//
+	if pingsPerSec == 0 {
+		period = defaultPingPeriodMS
+	} else if pingsPerSec > maximumPingsPerSec {
+		period = minimumPingPeriodMS
+	} else {
+		period = maximumPingPeriodMS
 	}
 
-	var count uint
-	count = uint((300*1000)/uint(period)) + 1
+	//
+	// (300 seconds/1000 ms/s)/period
+	// Calculate the number of periods are in 300 seconds
+	//
+	count := uint((300*1000)/uint(period)) + 1
 
 	pinger = &PingerStruct{
 		ctx:        cx,
 		mutex:      &Mutex{},
 		sendChan:   make(chan interface{}, 3),
 		periodMS:   period,
-		sent:       make(map[PingID]time.Time, count),
-		rtt:        make(map[PingID]time.Duration, count),
+		sent:       make(map[PingID]int64, count),
+		rtt:        make(map[PingID]int64, count),
 		currentID:  0,
 		count:      count,
 		RTTAveS1:   0,
@@ -112,52 +188,76 @@ func NewPinger(cx *ctx.Ctx, period uint16) (pinger *PingerStruct) {
 		runCalc:    make(chan interface{}),
 	}
 
-	// Prime the pump, remove the zero ID
-	<-counterPingChan
-
 	return pinger
 }
 
+//
+//
+//
 func (m *Mutex) Lock() {
-	m.Lock()
-}
-func (m *Mutex) Unlock() {
-	m.Unlock()
+	m.mutex.Lock()
 }
 
+//
+//
+//
+func (m *Mutex) Unlock() {
+	m.mutex.Unlock()
+}
+
+//
+//
+//
 func (p *PingerStruct) Start() {
 	go p.goPing()
 	go p.goCalc()
 }
 
+//
+//
+//
 func (p *PingerStruct) Stop() {
 	p.ctx.Cancel()
 }
 
+//
+//
+//
 func (p *PingerStruct) SendChan() chan interface{} {
 	return p.sendChan
 }
 
+//
+//
+//
 func (p *PingerStruct) ping() {
 
 	var lastID uint64 = 0
 	pingID := <-counterPingChan
 
-	t := time.Now()
+	now := time.Now()
+	send := now.UnixNano()
 	ping := &Ping{
-		ID:   PingID(pingID),
-		Send: t,
+		id:   PingID(pingID),
+		Send: send,
 	}
 
 	if pingID > uint64(p.count) {
 		lastID = pingID - uint64(p.count)
 	}
 
-	p.sendChan <- ping
+	select {
+	case p.sendChan <- ping:
+	default:
+		p.ctx.Logf(ctx.LogLevelError, "Send Ping ID:%d failed", pingID)
+		return
+	}
 
 	p.mutex.Lock()
-	p.sent[ping.ID] = t
-	p.currentID = ping.ID
+	defer p.mutex.Unlock()
+
+	p.sent[ping.id] = ping.Send
+	p.currentID = ping.id
 	if lastID > 0 {
 		_, ok := p.sent[PingID(lastID)]
 		if ok {
@@ -168,10 +268,11 @@ func (p *PingerStruct) ping() {
 			delete(p.rtt, PingID(lastID))
 		}
 	}
-	p.mutex.Unlock()
-
 }
 
+//
+//
+//
 func (p *PingerStruct) goCalc() {
 	const count5time = 2
 	const count15time = 5
@@ -213,7 +314,12 @@ func (p *PingerStruct) goCalc() {
 	}
 }
 
+//
+//
+//
 func (p *PingerStruct) goPing() {
+
+	p.ctx.LogLocation()
 
 	for {
 		select {
@@ -225,41 +331,51 @@ func (p *PingerStruct) goPing() {
 	}
 }
 
+//
+//
+//
 func (p *PingerStruct) GotPing(ping *Ping) {
+	p.ctx.LogLocation()
+	t := time.Now()
+	recv := t.UnixNano()
 	pong := &Pong{
-		ID:   ping.ID,
+		id:   ping.id,
 		Send: ping.Send,
-		Recv: time.Now(),
+		Recv: recv,
 	}
 	p.sendChan <- pong
 }
 
+//
+//
+//
 func (p *PingerStruct) GotPong(pong *Pong) {
 
+	p.ctx.LogLocation()
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	t, ok := p.sent[pong.ID]
+	nanosent, ok := p.sent[pong.id]
 	if !ok {
-		p.ctx.Logf(ctx.LogLevelError, "Pong with no ping ID:%d", pong.ID)
+		p.ctx.Logf(ctx.LogLevelError, "Pong with no ping ID:%d", pong.id)
 		return
 	}
 
-	_, ok = p.rtt[pong.ID]
+	_, ok = p.rtt[pong.id]
 	if ok {
-		p.ctx.Logf(ctx.LogLevelError, "Pong RTT already exists, ID:%d", t, pong.ID)
+		p.ctx.Logf(ctx.LogLevelError, "Pong RTT already exists, ID:%d", pong.id)
 		return
 	}
 
-	if t != pong.Send {
-		p.ctx.Logf(ctx.LogLevelError, "Ping and Pong times do not match:%s, %s", t, pong.Send)
+	if nanosent != pong.Send {
+		p.ctx.Logf(ctx.LogLevelError, "Ping and Pong times do not match:%d, %d", nanosent, pong.Send)
 		return
 	}
 
-	now := time.Now()
-	delta := now.Sub(t)
+	nanonow := time.Now().UnixNano()
+	delta := nanosent - nanonow
 
-	p.rtt[pong.ID] = delta
+	p.rtt[pong.id] = delta
 
 }
 
@@ -319,5 +435,4 @@ func (p *PingerStruct) calc(status Status) {
 	default:
 		p.ctx.Logf(ctx.LogLevelPanic, "Bast Status:%s", status)
 	}
-
 }

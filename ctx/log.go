@@ -2,6 +2,18 @@ package ctx
 
 import "log"
 
+type LogLevel string
+
+const (
+	LogLevelPanic LogLevel = "PANIC"
+	LogLevelFatal LogLevel = "FATAL"
+	LogLevelError LogLevel = "ERROR"
+	LogLevelWarn  LogLevel = " WARN"
+	LogLevelInfo  LogLevel = " INFO"
+	LogLevelDebug LogLevel = "DEBUG"
+	LogLevelTrace LogLevel = "TRACE"
+)
+
 func (*Ctx) LogPanic(v ...interface{})            { log.Panic(string(LogLevelPanic)+":", v) }
 func (*Ctx) LogPanicf(f string, v ...interface{}) { log.Panicf(string(LogLevelPanic)+":"+f, v...) }
 func (*Ctx) LogPanicln(v ...interface{})          { log.Panicln(string(LogLevelPanic)+":", v) }

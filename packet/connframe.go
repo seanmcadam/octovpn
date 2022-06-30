@@ -1,7 +1,6 @@
 package packet
 
 import (
-	"encoding/gob"
 	"sync"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 //
 // Provides wrapper for packet.Eth frames
 // Allows for tracking Eth frames and only allowing the first one recieved.
+// Used at the connmgmt layer to wrap Eth Frames and track them for uniqueness
 //
 
 const frameMapSize uint = 16384
@@ -41,7 +41,24 @@ var ConnFrameIDChan chan uint64
 //
 func init() {
 	ConnFrameIDChan = octolib.RunGoCounter64()
-	gob.Register(ConnFrame{})
+}
+
+//
+//
+//
+func (c *ConnFrame) ToByte() (buf []byte) {
+	totallen := 8 + len(*c.Frame)
+	buf = make([]byte, 0, totallen)
+	buf = append(buf, convertToByte(c.ID)...)
+	buf = append(buf, ([]byte(*c.Frame))...)
+	return buf
+}
+
+//
+//
+//
+func (c *ConnFrame) EthFrame() (eth *EthFrame) {
+	return c.Frame
 }
 
 func NewFrameTracker(cx *ctx.Ctx) (f *ConnFrameTrackerStruct) {
