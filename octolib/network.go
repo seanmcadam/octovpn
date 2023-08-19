@@ -1,8 +1,11 @@
 package octolib
 
 import (
+	"math/rand"
 	"net"
 	"regexp"
+
+	"github.com/seanmcadam/octovpn/constants"
 )
 
 var ipv4Pattern *regexp.Regexp
@@ -12,6 +15,13 @@ func init() {
 	ipv4Pattern = regexp.MustCompile(`^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`)
 	ipv6Pattern = regexp.MustCompile(`^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$`)
 }
+
+func GetRandomNetworkPort() (n constants.NetworkPort) {
+	i := rand.Intn(50000) + 10000
+	n = constants.NetworkPort(i)
+	return n
+}
+
 
 func ValidIP(ip string) bool {
 	return (ValidIP4(ip) || ValidIP6(ip))
@@ -72,7 +82,6 @@ func ValidIP6Host(host string) bool {
 
 	return false
 }
-
 
 //
 func isValidIPv4Address(address string) bool {

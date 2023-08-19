@@ -1,11 +1,17 @@
 package octolibtest
 
 import (
+	"fmt"
 	"net"
+
+	"github.com/seanmcadam/octovpn/octolib"
 )
 
 func NewNetworkTCPConnPair()( a,b net.Conn, err error){
-		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		port := octolib.GetRandomNetworkPort()
+		address := fmt.Sprintf("127.0.0.1:%d", port)
+
+		listener, err := net.Listen("tcp", address)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -29,7 +35,10 @@ func NewNetworkTCPConnPair()( a,b net.Conn, err error){
 
 
 func NewNetworkUDPConnPair()( a,b net.Conn, err error){
-	localAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
+	port := octolib.GetRandomNetworkPort()
+	address := fmt.Sprintf("127.0.0.1:%d", port)
+
+	localAddr, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
 		return nil, nil, err
 	}

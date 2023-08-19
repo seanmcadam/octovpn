@@ -1,12 +1,14 @@
 package netconn
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
+	"log"
 )
 
 
-func (nc *NetConnStruct)GetReadChan()(ch chan []byte, err error){
+func (nc *NetConnStruct)GetReadChan()(ch chan *NetPacketStruct, err error){
 	if nc.isClosed(){
 		return nil, fmt.Errorf("connection closed")
 	}
@@ -18,7 +20,7 @@ func (nc *NetConnStruct)Read()(b []byte, err error){
 		return nil, fmt.Errorf("connection closed")
 	}
 
-	b = <- nc.recvch
+	b = (<- nc.recvch).Packet()
 	return b, nil
 }
 
@@ -29,18 +31,63 @@ func (nc *NetConnStruct)Read()(b []byte, err error){
 func (nc *NetConnStruct)goRead(){
 	defer nc.close()
 
+
 	for {
-			buffer := make([]byte, 2048) // Create a buffer to read data
-			n, err := nc.conn.Read(buffer)
+			var n int
+			var err error
+			lengthbyte := make([]byte,2)
+			n, err = nc.conn.Read(lengthbyte)
 			if err != nil {
-				if err != io.EOF{
-				fmt.Println("Error reading:", err)
+				if err == io.EOF {
+					log.Print("Network Connection EOF...")
+				} else {
+					log.Printf("Error reading:%s", err)
 				}
 				return
 			}
+			if n != 2 {
+				log.Printf("read length wrong:2 != %d", n)
+				return
+			}
+			length := binary.BigEndian.Uint16(lengthbyte)
 
-			buffer = buffer[:n]
+			countbyte := make([]byte,4)
+			n, err = nc.conn.Read(countbyte)
+			if err != nil {
+				if err == io.EOF {
+					log.Print("Network Connection EOF...")
+				} else {
+					log.Printf("Error reading:%s", err)
+				}
+				return
+			}
+			if n != 4 {
+				log.Printf("read count wrong:4 != %d", n)
+				return
+			}
+			count := binary.BigEndian.Uint32(countbyte)
 
+			data := make([]byte,int(length-4))
+			n, err = nc.conn.Read(data)
+			if err != nil {
+				if err == io.EOF {
+					log.Print("Network Connection EOF...")
+				} else {
+					log.Printf("Error reading:%s", err)
+				}
+				return
+			}
+			if n != int(length-4){
+				log.Printf("read data wrong:%d != %d", n, int(length-4))
+				return
+			}
+
+			buffer := &NetPacketStruct{
+				length: length,
+				count: count,
+				packet: data,
+			}
+			
 			nc.clock.Lock()
 			if nc.isClosed() {
 				return
