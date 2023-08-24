@@ -1,0 +1,42 @@
+package main
+
+import (
+	"fmt"
+	"net"
+)
+
+func main() {
+	// TCP server
+	tcpListener, _ := net.Listen("tcp", ":8080")
+	defer tcpListener.Close()
+
+	go func() {
+		for {
+			tcpConn, _ := tcpListener.Accept()
+			go handleTCPConnection(tcpConn)
+		}
+	}()
+
+	// UDP server
+	udpAddr, _ := net.ResolveUDPAddr("udp", ":12345")
+	udpConn, _ := net.ListenUDP("udp", udpAddr)
+	defer udpConn.Close()
+
+	buffer := make([]byte, 1024)
+
+	for {
+		n, addr, _ := udpConn.ReadFromUDP(buffer)
+		go handleUDPConnection(udpConn, addr, buffer[:n])
+	}
+}
+
+func handleTCPConnection(conn net.Conn) {
+	// Handle TCP connection logic here
+	fmt.Println("TCP Connection from:", conn.RemoteAddr())
+	conn.Close()
+}
+
+func handleUDPConnection(conn *net.UDPConn, addr *net.UDPAddr, data []byte) {
+	// Handle UDP connection logic here
+	fmt.Printf("UDP Packet from %s: %s\n", addr, data)
+}

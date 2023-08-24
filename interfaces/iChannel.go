@@ -2,7 +2,8 @@ package interfaces
 
 
 type ChannelInterface interface {
-	Send([]byte) error
+	Active() bool
+	Send([]byte) (error)
 	Recv() ([]byte, error)
 	Reset() error
 	Close()
