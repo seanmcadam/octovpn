@@ -66,17 +66,18 @@ func (u *UdpServerStruct) goRun() {
 		var err error
 		var conn *net.UDPConn
 
-		// Dial it and keep trying forever
-		conn, err = net.DialUDP(u.config.Proto, nil, u.udpaddr)
+		//
+		// conn, err = net.DialUDP(u.config.Proto, nil, u.udpaddr)
+		conn, err = net.ListenUDP(u.config.Proto, u.udpaddr)
 
 		if err != nil {
-			log.Warnf("connection failed %s: %s, wait", u.address, err)
+			log.Warnf("UDP Listener failed %s: %s, wait", u.address, err)
 			u.udpconn = nil
 			time.Sleep(1 * time.Second)
 
 			select {
 			case <-u.closech:
-				log.Debug("udpcli goRun() closed")
+				log.Debug("udpsrv goRun() closed")
 				return
 			default:
 			}

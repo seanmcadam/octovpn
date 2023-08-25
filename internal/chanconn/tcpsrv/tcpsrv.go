@@ -82,7 +82,7 @@ func (t *TcpServerStruct) goRun() {
 
 		select {
 		case conn := <-t.tcpconnch:
-			log.Info("New TCP Connection")
+			log.Info("New incoming TCP Connection")
 
 			// Authenticate
 

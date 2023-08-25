@@ -3,12 +3,12 @@ package tcp
 import (
 	"io"
 
-	"github.com/seanmcadam/octovpn/internal/chanconn"
 	"github.com/seanmcadam/octovpn/octolib/log"
+	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
 // Recv()
-func (t *TcpStruct) Recv() (packet *chanconn.ConnPacket, err error) {
+func (t *TcpStruct) Recv() (packet *packetconn.ConnPacket, err error) {
 
 	packet = <-t.recvch
 
@@ -33,15 +33,36 @@ func (t *TcpStruct) goRecv() {
 
 		buf = buf[:l]
 
-		packet, err := chanconn.MakePacket(buf)
+		packet, err := packetconn.MakePacket(buf)
 		if err != nil {
-			log.Errorf("Err:%s", err)
+			log.Errorf("TCP Err:%s", err)
 			continue
 		}
 
 		switch packet.GetType() {
-		case chanconn.PACKET_TYPE_TCP:
-		case chanconn.PACKET_TYPE_TCPAUTH:
+		case packetconn.PACKET_TYPE_TCP:
+			t.recvch <- packet
+
+		case packetconn.PACKET_TYPE_TCPAUTH:
+			log.Fatal("Not implemented")
+
+		case packetconn.PACKET_TYPE_PONG:
+			log.Debug("Got Pong")
+			ping := packet.GetPayload()
+			t.pinger.Pongch <- ping
+
+		case packetconn.PACKET_TYPE_PING:
+			log.Debug("Got Ping")
+
+			ping := packet.GetPayload()
+			packet, err := packetconn.NewPacket(packetconn.PACKET_TYPE_PONG, ping)
+			if err != nil {
+				log.Fatalf("err:%s", err)
+			}
+			if !t.closed() {
+				t.sendch <- packet
+			}
+
 		default:
 			log.Errorf("Err:%s", err)
 			continue
@@ -51,7 +72,6 @@ func (t *TcpStruct) goRecv() {
 			return
 		}
 
-		t.recvch <- packet
 	}
 
 }

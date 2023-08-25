@@ -1,8 +1,8 @@
 package tcpcli
 
 import (
+	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
-	"github.com/seanmcadam/octovpn/octolib/netlib"
 )
 
 // Reset()
@@ -15,6 +15,6 @@ func (t *TcpClientStruct) Reset() error {
 		t.tcpconn.Close()
 		return nil
 	} else {
-		return netlib.ErrNetChannelDown
+		return errors.ErrNetChannelDown
 	}
 }

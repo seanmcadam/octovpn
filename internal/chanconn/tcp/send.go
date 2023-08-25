@@ -3,14 +3,14 @@ package tcp
 import (
 	"io"
 
-	"github.com/seanmcadam/octovpn/internal/chanconn"
 	"github.com/seanmcadam/octovpn/octolib/log"
+	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
 // Send()
-func (t *TcpStruct) Send(packet *chanconn.ConnPacket) (err error) {
+func (t *TcpStruct) Send(packet *packetconn.ConnPacket) (err error) {
 
-	go func(p *chanconn.ConnPacket) {
+	go func(p *packetconn.ConnPacket) {
 		t.sendch <- p
 	}(packet)
 	return err
@@ -23,26 +23,45 @@ func (t *TcpStruct) goSend() {
 
 	for {
 		select {
-		case packet := <-t.sendch:
-			packetlen := int(packet.GetLength()) + chanconn.PacketOverhead
-			l, err := t.conn.Write(packet.ToByte())
-			if err != nil {
-				if err != io.EOF {
-					log.Errorf("TCP Write():%s", err)
-				}
-				return
-			}
+		case ping := <-t.pinger.Pingch:
 
-			if l != packetlen {
-				log.Errorf("TCP Write() Length Error:%d != %d", l, packetlen)
-				return
+			packet, err := packetconn.NewPacket(packetconn.PACKET_TYPE_PING, ping.ToByte())
+			if err != nil {
+				log.Fatalf("err:%s", err)
 			}
+			t.sendpacket(packet)
+
+		case packet := <-t.sendch:
+			t.sendpacket(packet)
 
 		case <-t.Closech:
 			return
 		}
+
+		if t.closed() {
+			return
+		}
 	}
 
+}
+
+func (t *TcpStruct) sendpacket(packet *packetconn.ConnPacket) {
+	var l int
+	var err error
+	packetlen := int(packet.GetLength()) + packetconn.PacketOverhead
+	l, err = t.conn.Write(packet.ToByte())
+
+	if err != nil {
+		if err != io.EOF {
+			log.Errorf("TCP Write() Error:%s", err)
+		}
+		t.Close()
+	}
+
+	if l != packetlen {
+		log.Errorf("TCP Write() Length Error:%d != %d", l, packetlen)
+		t.Close()
+	}
 }
 
 func (t *TcpStruct) emptysend() {

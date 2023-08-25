@@ -2,30 +2,36 @@ package udp
 
 import (
 	"net"
+	"time"
 
-	"github.com/seanmcadam/octovpn/internal/chanconn"
 	"github.com/seanmcadam/octovpn/octolib/log"
+	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
+	"github.com/seanmcadam/octovpn/octolib/pinger"
 )
 
 type UdpStruct struct {
 	srv     bool
 	conn    *net.UDPConn
 	addr    *net.UDPAddr
-	sendch  chan *chanconn.ConnPacket
-	recvch  chan *chanconn.ConnPacket
+	pinger  *pinger.Pinger64Struct
+	sendch  chan *packetconn.ConnPacket
+	recvch  chan *packetconn.ConnPacket
 	Closech chan interface{}
 }
 
 func NewUDPSrv(conn *net.UDPConn) (udp *UdpStruct) {
 
 	log.Debug("Local Addr %s", conn.LocalAddr())
+
+	closech := make(chan interface{})
 	udp = &UdpStruct{
 		srv:     true,
 		conn:    conn,
 		addr:    nil,
-		sendch:  make(chan *chanconn.ConnPacket),
-		recvch:  make(chan *chanconn.ConnPacket),
-		Closech: make(chan interface{}),
+		pinger:  pinger.NewPinger64(time.Second, 5*time.Second, closech),
+		sendch:  make(chan *packetconn.ConnPacket),
+		recvch:  make(chan *packetconn.ConnPacket),
+		Closech: closech,
 	}
 
 	udp.run()
@@ -35,13 +41,16 @@ func NewUDPSrv(conn *net.UDPConn) (udp *UdpStruct) {
 func NewUDPCli(conn *net.UDPConn) (udp *UdpStruct) {
 
 	log.Debug("Local Addr %s", conn.LocalAddr())
+
+	closech := make(chan interface{})
 	udp = &UdpStruct{
 		srv:     false,
 		conn:    conn,
 		addr:    nil,
-		sendch:  make(chan *chanconn.ConnPacket),
-		recvch:  make(chan *chanconn.ConnPacket),
-		Closech: make(chan interface{}),
+		pinger:  pinger.NewPinger64(time.Second, 5*time.Second, closech),
+		sendch:  make(chan *packetconn.ConnPacket),
+		recvch:  make(chan *packetconn.ConnPacket),
+		Closech: closech,
 	}
 
 	udp.run()

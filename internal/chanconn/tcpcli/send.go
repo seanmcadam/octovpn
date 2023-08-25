@@ -1,25 +1,25 @@
 package tcpcli
 
 import (
-	"github.com/seanmcadam/octovpn/internal/chanconn"
-	"github.com/seanmcadam/octovpn/octolib/netlib"
+	"github.com/seanmcadam/octovpn/octolib/errors"
+	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
 // Send()
 func (t *TcpClientStruct) Send(buf []byte) (err error) {
 
-	if len(buf)+chanconn.PacketOverhead > int(t.config.GetMtu()) {
-		return netlib.ErrNetPacketTooBig
+	if len(buf)+packetconn.PacketOverhead > int(t.config.GetMtu()) {
+		return errors.ErrNetPacketTooBig
 	}
 
 	if t.tcpconn != nil {
-		packet, err := chanconn.NewPacket(chanconn.PACKET_TYPE_TCP, buf)
+		packet, err := packetconn.NewPacket(packetconn.PACKET_TYPE_TCP, buf)
 		if err != nil {
 			return err
 		}
 		return t.tcpconn.Send(packet)
 	}
 
-	return netlib.ErrNetChannelDown
+	return errors.ErrNetChannelDown
 
 }

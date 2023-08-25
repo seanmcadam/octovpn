@@ -1,17 +1,17 @@
 package udpsrv
 
 import (
-	"github.com/seanmcadam/octovpn/internal/chanconn"
+	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
-	"github.com/seanmcadam/octovpn/octolib/netlib"
+	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
 // Recv()
 func (u *UdpServerStruct) Recv() (buf []byte, err error) {
-	var packet *chanconn.ConnPacket
+	var packet *packetconn.ConnPacket
 
 	if u.udpconn == nil {
-		err = netlib.ErrNetChannelDown
+		err = errors.ErrNetChannelDown
 	}
 
 	packet, err = u.udpconn.Recv()
@@ -19,7 +19,7 @@ func (u *UdpServerStruct) Recv() (buf []byte, err error) {
 		return nil, err
 	}
 
-	if (int(packet.GetLength()) + chanconn.PacketOverhead) > int(u.config.GetMtu()) {
+	if (int(packet.GetLength()) + packetconn.PacketOverhead) > int(u.config.GetMtu()) {
 		log.Warnf("TCPSrv recv large packet %d > %d", len(buf), u.config.GetMtu())
 	}
 

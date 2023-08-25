@@ -15,6 +15,7 @@ func (t *TcpServerStruct) goListen() {
 			return
 		}
 
+		log.Debug("TCP New connection")
 		newconn := tcp.NewTCP(conn)
 
 		select {

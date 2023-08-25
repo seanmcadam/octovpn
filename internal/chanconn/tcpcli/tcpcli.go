@@ -63,6 +63,7 @@ func (t *TcpClientStruct) goRun() {
 
 	}(t)
 
+TCPFOR:
 	for {
 		var err error
 		var conn *net.TCPConn
@@ -75,35 +76,40 @@ func (t *TcpClientStruct) goRun() {
 			t.tcpconn = nil
 			time.Sleep(1 * time.Second)
 
-			select {
-			case <-t.closech:
-				log.Debug("tcpcli goRun() closed")
-				return
-			default:
+			if conn != nil {
+				select {
+				case <-t.closech:
+					log.Debug("tcpcli goRun() closed")
+					return
+				default:
+				}
 			}
+			continue TCPFOR
+		}
 
-			continue
+		if conn == nil {
+			log.Fatal("conn == nil")
 		}
 
 		log.Info("New TCP Connection")
 
 		t.tcpconn = tcp.NewTCP(conn)
 		if t.tcpconn == nil {
-			log.Error("tcpconn == nil")
-			continue
+			log.Fatal("tcpconn == nil")
 		}
 
 		closech := t.tcpconn.Closech
 
+	TCPCLOSE:
 		for {
 			select {
 			case <-t.closech:
 				log.Debug("TCPCli Closing Down")
 				return
 			case <-closech:
-				log.Debug("TCPCli Channel Closedt")
+				log.Debug("TCPCli Channel Closed")
 				t.tcpconn = nil
-				break
+				break TCPCLOSE
 			}
 		}
 	}

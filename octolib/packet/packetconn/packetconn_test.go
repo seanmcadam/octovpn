@@ -1,4 +1,4 @@
-package chanconn
+package packetconn
 
 import (
 	"testing"

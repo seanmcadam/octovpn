@@ -1,6 +1,11 @@
-package chanconn
+package packetconn
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+
+	"github.com/seanmcadam/octovpn/octolib/errors"
+	"github.com/seanmcadam/octovpn/octolib/log"
+)
 
 const PacketOverhead int = 3
 
@@ -13,7 +18,9 @@ const (
 	PACKET_TYPE_UDP     PacketType = 0x42
 	PACKET_TYPE_TCPAUTH PacketType = 0x84
 	PACKET_TYPE_TCP     PacketType = 0x88
-	PACKET_TYPE_LOOP    PacketType = 0xF2
+	PACKET_TYPE_LOOP    PacketType = 0xA2
+	PACKET_TYPE_PING    PacketType = 0xE1
+	PACKET_TYPE_PONG    PacketType = 0xE2
 	PACKET_TYPE_ERROR   PacketType = 0xFF
 )
 
@@ -26,7 +33,7 @@ type ConnPacket struct {
 func NewPacket(t PacketType, payload []byte) (cp *ConnPacket, err error) {
 
 	if len(payload) == 0 {
-		return nil, ErrChanConnPayloadLength
+		return nil, errors.ErrChanConnPayloadLength
 	}
 	cp = &ConnPacket{
 		pType:   t,
@@ -51,8 +58,9 @@ func (cp *ConnPacket) GetPayload() (b []byte) {
 
 func MakePacket(data []byte) (cp *ConnPacket, err error) {
 
-	if len(data) < 4 {
-		return nil, ErrChanConnShortPacket
+	if len(data) < (PacketOverhead + 1) {
+		log.Debugf("Short Packet data:%d < %d", len(data), PacketOverhead+1)
+		return nil, errors.ErrChanConnShortPacket
 	}
 
 	var t PacketType = PACKET_TYPE_ERROR
@@ -66,22 +74,28 @@ func MakePacket(data []byte) (cp *ConnPacket, err error) {
 		t = PACKET_TYPE_TCPAUTH
 	case PACKET_TYPE_TCP:
 		t = PACKET_TYPE_TCP
+	case PACKET_TYPE_PING:
+		t = PACKET_TYPE_PING
+	case PACKET_TYPE_PONG:
+		t = PACKET_TYPE_PONG
 	case PACKET_TYPE_LOOP:
 		t = PACKET_TYPE_LOOP
 	default:
-		return nil, ErrChanConnBadPacket
+		log.Debugf("Bad Packet type:%d", PacketType(data[0]))
+		return nil, errors.ErrChanConnBadPacket
 	}
 
-	payloadlen := binary.LittleEndian.Uint16(data[1:3])
+	payloadlen := binary.LittleEndian.Uint16(data[1:PacketOverhead])
 
-	if payloadlen != uint16(len(data)-3) {
-		return nil, ErrChanConnPayloadLength
+	if payloadlen != uint16(len(data)-PacketOverhead) {
+		log.Debugf("Bad Packet length:%d != %d", payloadlen, uint16(len(data)-PacketOverhead))
+		return nil, errors.ErrChanConnPayloadLength
 	}
 
 	cp = &ConnPacket{
 		pType:   t,
 		pLength: PacketLength(payloadlen),
-		payload: data[3:],
+		payload: data[PacketOverhead:],
 	}
 
 	return cp, nil

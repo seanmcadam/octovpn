@@ -4,17 +4,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/seanmcadam/octovpn/internal/chanconn/tcpcli"
-	"github.com/seanmcadam/octovpn/internal/chanconn/tcpsrv"
+	"github.com/seanmcadam/octovpn/internal/chanconn/udpcli"
+	"github.com/seanmcadam/octovpn/internal/chanconn/udpsrv"
 	"github.com/seanmcadam/octovpn/internal/settings"
 )
 
-func TestNewChannel_Tcp(t *testing.T) {
+func TestNewChannel_Udp(t *testing.T) {
 	var testval = []byte("test")
 
 	config := &settings.NetworkStruct{
 		Name:  "testing",
-		Proto: "tcp",
+		Proto: "udp",
 		Host:  "127.0.0.1",
 		Port:  "50000",
 		Auth:  "",
@@ -22,17 +22,17 @@ func TestNewChannel_Tcp(t *testing.T) {
 
 	// Get Client and Server
 
-	serv, err := tcpsrv.New(config)
+	serv, err := udpsrv.New(config)
 	if err != nil {
-		t.Fatalf("tcpsrv New err:%s", err)
+		t.Fatalf("udpsrv New err:%s", err)
 	}
 	if serv == nil {
 		t.Fatal("serv == nil")
 	}
 
-	client, err := tcpcli.New(config)
+	client, err := udpcli.New(config)
 	if err != nil {
-		t.Fatalf("tcpcli New err:%s", err)
+		t.Fatalf("udpcli New err:%s", err)
 	}
 	if client == nil {
 		t.Fatal("client == nil")
