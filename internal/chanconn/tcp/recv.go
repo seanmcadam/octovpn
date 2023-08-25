@@ -3,42 +3,55 @@ package tcp
 import (
 	"io"
 
+	"github.com/seanmcadam/octovpn/internal/chanconn"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 // Recv()
-func (t *TcpStruct) Recv() (buf []byte, err error) {
+func (t *TcpStruct) Recv() (packet *chanconn.ConnPacket, err error) {
 
-	buf = <-t.recvch
+	packet = <-t.recvch
 
-	return buf, err
+	return packet, err
 }
-
 
 // Run while connection is running
 // Exit when closed
 func (t *TcpStruct) goRecv() {
 	defer t.emptyrecv()
 
-	for{
+	for {
 		buf := make([]byte, 2048)
 
 		l, err := t.conn.Read(buf)
 		if err != nil {
-			if err != io.EOF{
+			if err != io.EOF {
 				log.Errorf("TCP Read() Error:%s", err)
 			}
-			return 
+			return
 		}
 
 		buf = buf[:l]
-	
-		select {
-		case t.recvch <- buf:
-		case <-t.Closech:
-			return
-		default:
+
+		packet, err := chanconn.MakePacket(buf)
+		if err != nil {
+			log.Errorf("Err:%s", err)
+			continue
 		}
+
+		switch packet.GetType() {
+		case chanconn.PACKET_TYPE_TCP:
+		case chanconn.PACKET_TYPE_TCPAUTH:
+		default:
+			log.Errorf("Err:%s", err)
+			continue
+		}
+
+		if t.closed() {
+			return
+		}
+
+		t.recvch <- packet
 	}
 
 }
@@ -48,8 +61,8 @@ func (t *TcpStruct) emptyrecv() {
 		select {
 		case <-t.recvch:
 		default:
+			close(t.recvch)
 			return
 		}
 	}
-	close(t.recvch)
 }

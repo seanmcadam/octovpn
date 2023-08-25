@@ -12,7 +12,7 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/netlib"
 )
 
-func NewUdpLoop() (loop1 interfaces.ChannelInterface, loop2 interfaces.ChannelInterface, err error) {
+func NewUdpLoop() (srv interfaces.ChannelInterface, cli interfaces.ChannelInterface, err error) {
 
 	udpconfig := &settings.NetworkStruct{
 		Name:  "LoopbackUDP",
@@ -22,16 +22,17 @@ func NewUdpLoop() (loop1 interfaces.ChannelInterface, loop2 interfaces.ChannelIn
 		Auth:  "",
 	}
 
-	loop1, err = udpsrv.New(udpconfig)
-	if err != nil {
-		return nil, nil, err
-	}
-	loop2, err = udpcli.New(udpconfig)
+	srv, err = udpsrv.New(udpconfig)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return loop1, loop2, err
+	cli, err = udpcli.New(udpconfig)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return srv, cli, err
 }
 
 func NewTcpLoop() (loop1 interfaces.ChannelInterface, loop2 interfaces.ChannelInterface, err error) {

@@ -1,22 +1,27 @@
 package tcpcli
 
 import (
+	"github.com/seanmcadam/octovpn/internal/chanconn"
 	"github.com/seanmcadam/octovpn/octolib/log"
 	"github.com/seanmcadam/octovpn/octolib/netlib"
 )
 
 // Recv()
 func (t *TcpClientStruct) Recv() (buf []byte, err error) {
+	var packet *chanconn.ConnPacket
 
 	if t.tcpconn != nil {
-		buf, err = t.tcpconn.Recv()
+		packet, err = t.tcpconn.Recv()
+		if err != nil {
+			return nil, err
+		}
 
-		if len(buf) > int(t.config.GetMtu()) {
-			log.Warnf("TCPCli recv large packet %d > %d", len(buf), t.config.GetMtu())
+		if int(packet.GetLength())+chanconn.PacketOverhead > int(t.config.GetMtu()) {
+			log.Warnf("TCPCli recv large packet %d > %d", packet.GetLength(), t.config.GetMtu())
 		}
 	} else {
 		err = netlib.ErrNetChannelDown
 	}
 
-	return buf, err
+	return packet.GetPayload(), err
 }

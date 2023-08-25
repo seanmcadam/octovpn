@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func TestNewUdpLoop(t *testing.T) {
+func TestNewUdpLoop_OpenClose(t *testing.T) {
 
 	l1, l2, err := NewUdpLoop()
 
@@ -21,6 +21,40 @@ func TestNewUdpLoop(t *testing.T) {
 	if !l2.Active() {
 		t.Fatal("UDP L2 Active failed")
 	}
+}
+
+func TestNewUdpLoop_SendRecv(t *testing.T) {
+
+	data := []byte("data")
+	srv, cli, err := NewUdpLoop()
+
+	if err != nil {
+		t.Fatalf("UDP Error:%s", err)
+	}
+
+	time.Sleep(2 * time.Second)
+	if !srv.Active() {
+		t.Fatal("UDP L1 Active failed")
+	}
+
+	if !cli.Active() {
+		t.Fatal("UDP L2 Active failed")
+	}
+
+	err = cli.Send(data)
+	if err != nil {
+		t.Fatalf("UDP Send Error:%s", err)
+	}
+
+	recv, err := srv.Recv()
+	if err != nil {
+		t.Fatalf("UDP Recv Error:%s", err)
+	}
+
+	if recv == nil {
+		t.Fatalf("UDP Recv Returned nil")
+	}
+
 }
 
 func TestNewTcpLoop_OpenClose(t *testing.T) {
@@ -76,7 +110,6 @@ func TestNewTcpLoop_SendRecv(t *testing.T) {
 	}
 
 }
-
 
 func TestNewTcpLoop_SendRecvReset(t *testing.T) {
 

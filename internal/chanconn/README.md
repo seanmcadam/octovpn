@@ -12,7 +12,7 @@ Chanconn resource provide the following
 	Recv() ([]byte, error)
     Recieve a Byte array as a single packet
 
-	Reset()
+	Reset() error
     Forces the current active connection to be restarted
 
 	Close()

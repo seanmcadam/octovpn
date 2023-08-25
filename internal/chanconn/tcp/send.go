@@ -3,15 +3,16 @@ package tcp
 import (
 	"io"
 
+	"github.com/seanmcadam/octovpn/internal/chanconn"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 // Send()
-func (t *TcpStruct) Send(buf []byte) (err error) {
+func (t *TcpStruct) Send(packet *chanconn.ConnPacket) (err error) {
 
-	go func(buf []byte) {
-		t.sendch <- buf
-	}(buf)
+	go func(p *chanconn.ConnPacket) {
+		t.sendch <- p
+	}(packet)
 	return err
 
 }
@@ -22,23 +23,23 @@ func (t *TcpStruct) goSend() {
 
 	for {
 		select {
-		case buf := <-t.sendch:
-			l, err := t.conn.Write(buf)
+		case packet := <-t.sendch:
+			packetlen := int(packet.GetLength()) + chanconn.PacketOverhead
+			l, err := t.conn.Write(packet.ToByte())
 			if err != nil {
 				if err != io.EOF {
-					log.Errorf("TCPCli Write():%s", err)
+					log.Errorf("TCP Write():%s", err)
 				}
 				return
 			}
 
-			if l != len(buf) {
-				log.Errorf("TCP Write() Length Error:%d != %d", l, len(buf))
+			if l != packetlen {
+				log.Errorf("TCP Write() Length Error:%d != %d", l, packetlen)
 				return
 			}
 
 		case <-t.Closech:
 			return
-		default:
 		}
 	}
 
@@ -49,8 +50,8 @@ func (t *TcpStruct) emptysend() {
 		select {
 		case <-t.sendch:
 		default:
+			close(t.sendch)
 			return
 		}
 	}
-	close(t.sendch)
 }

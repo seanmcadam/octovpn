@@ -1,4 +1,4 @@
-package tcpsrv
+package udpcli
 
 import (
 	"github.com/seanmcadam/octovpn/internal/chanconn"
@@ -7,17 +7,17 @@ import (
 )
 
 // Recv()
-func (t *TcpServerStruct) Recv() (buf []byte, err error) {
+func (u *UdpClientStruct) Recv() (buf []byte, err error) {
 	var packet *chanconn.ConnPacket
 
-	if t.tcpconn != nil {
-		packet, err = t.tcpconn.Recv()
+	if u.udpconn != nil {
+		packet, err = u.udpconn.Recv()
 		if err != nil {
 			return nil, err
 		}
 
-		if int(packet.GetLength())+chanconn.PacketOverhead > int(t.config.GetMtu()) {
-			log.Warnf("TCPCli recv large packet %d > %d", packet.GetLength(), t.config.GetMtu())
+		if (int(packet.GetLength()) + chanconn.PacketOverhead) > int(u.config.GetMtu()) {
+			log.Warnf("TCPCli recv large packet %d > %d", len(buf), u.config.GetMtu())
 		}
 	} else {
 		err = netlib.ErrNetChannelDown

@@ -1,4 +1,4 @@
-package tcpcli
+package udpsrv
 
 import (
 	"testing"
@@ -7,23 +7,23 @@ import (
 	"github.com/seanmcadam/octovpn/internal/settings"
 )
 
-func TestNewTcpClient_host(t *testing.T) {
+func TestNewUdpServer_new(t *testing.T) {
 
 	config := &settings.NetworkStruct{
 		Name:  "testing",
-		Proto: "tcp",
+		Proto: "udp",
 		Host:  "127.0.0.1",
 		Port:  "50000",
 		Auth:  "",
 	}
 
-	tcpclient, err := New(config)
+	udpclient, err := New(config)
 	if err != nil {
 		t.Fatalf("New Error:%s", err)
 	}
 
 	time.Sleep(time.Second)
 
-	tcpclient.Close()
+	udpclient.Close()
 
 }
