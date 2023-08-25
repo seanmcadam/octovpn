@@ -5,9 +5,12 @@ import (
 	"time"
 
 	"github.com/seanmcadam/octovpn/internal/settings"
+	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
 
 func TestNewTcpClient_host(t *testing.T) {
+
+	cx := ctx.NewContext()
 
 	config := &settings.NetworkStruct{
 		Name:  "testing",
@@ -17,13 +20,16 @@ func TestNewTcpClient_host(t *testing.T) {
 		Auth:  "",
 	}
 
-	tcpclient, err := New(config)
+	tcpclient, err := New(cx, config)
+	_ = tcpclient
+
 	if err != nil {
 		t.Fatalf("New Error:%s", err)
 	}
 
 	time.Sleep(time.Second)
 
-	tcpclient.Close()
+	cx.Done()
+	//tcpclient.Close()
 
 }

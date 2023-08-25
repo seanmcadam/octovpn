@@ -8,29 +8,27 @@ import (
 	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/chanconn/udp"
 	"github.com/seanmcadam/octovpn/internal/settings"
+	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 type UdpClientStruct struct {
-	//
-	// Link is currently active
-	//
+	cx      *ctx.Ctx
 	config  *settings.NetworkStruct
 	address string
 	udpaddr *net.UDPAddr
 	udpconn *udp.UdpStruct
-	closech chan interface{}
 	resetch chan interface{}
 }
 
-func New(config *settings.NetworkStruct) (udpclient interfaces.ChannelInterface, err error) {
+func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpclient interfaces.ChannelInterface, err error) {
 
 	u := &UdpClientStruct{
+		cx:      ctx,
 		config:  config,
 		address: fmt.Sprintf("%s:%d", config.GetHost(), config.GetPort()),
 		udpaddr: nil,
 		udpconn: nil,
-		closech: make(chan interface{}),
 		resetch: make(chan interface{}),
 	}
 
@@ -55,10 +53,9 @@ func (u *UdpClientStruct) goRun() {
 
 	defer func(u *UdpClientStruct) {
 		if u.udpconn != nil {
-			u.udpconn.Close()
+			u.udpconn.Cancel()
 			u.udpconn = nil
 		}
-		close(u.closech)
 		close(u.resetch)
 
 	}(u)
@@ -76,7 +73,7 @@ func (u *UdpClientStruct) goRun() {
 			time.Sleep(1 * time.Second)
 
 			select {
-			case <-u.closech:
+			case <-u.cx.DoneChan():
 				log.Debug("udpcli goRun() closed")
 				return
 			default:
@@ -87,20 +84,18 @@ func (u *UdpClientStruct) goRun() {
 
 		log.Info("New UDP Connection")
 
-		u.udpconn = udp.NewUDPCli(conn)
+		u.udpconn = udp.NewUDPCli(u.cx.NewWithCancel(), conn)
 		if u.udpconn == nil {
 			log.Error("udpconn == nil")
 			continue
 		}
 
-		closech := u.udpconn.Closech
-
 		for {
 			select {
-			case <-u.closech:
+			case <-u.cx.DoneChan():
 				log.Debug("UDPCli Closing Down")
 				return
-			case <-closech:
+			case <-u.udpconn.DoneChan():
 				log.Debug("UDPCli Channel Closed")
 				u.udpconn = nil
 				break

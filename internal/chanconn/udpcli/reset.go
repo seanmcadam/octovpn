@@ -12,7 +12,7 @@ func (u *UdpClientStruct) Reset() error {
 	log.Debugf("UDPCli Reset()")
 
 	if u.udpconn != nil {
-		u.udpconn.Close()
+		u.udpconn.Cancel()
 		return nil
 	} else {
 		return errors.ErrNetChannelDown

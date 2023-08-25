@@ -6,27 +6,28 @@ import (
 	"time"
 
 	"github.com/seanmcadam/octovpn/octolib/counter"
+	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 type Pinger64Struct struct {
+	cx      *ctx.Ctx
 	active  bool
 	freq    time.Duration
 	timeout time.Duration
 	counter *counter.Counter64Struct
-	closech chan interface{}
 	Pingch  chan counter.Counter64
 	Pongch  chan []byte
 	Errorch chan error
 }
 
-func NewPinger64(freq time.Duration, timeout time.Duration, c chan interface{}) (p *Pinger64Struct) {
+func NewPinger64(ctx *ctx.Ctx, freq time.Duration, timeout time.Duration) (p *Pinger64Struct) {
 	p = &Pinger64Struct{
+		cx:      ctx,
 		active:  false,
 		freq:    freq,
 		timeout: timeout,
-		counter: counter.NewCounter64(),
-		closech: c,
+		counter: counter.NewCounter64(ctx),
 		Pingch:  make(chan counter.Counter64),
 		Pongch:  make(chan []byte),
 		Errorch: make(chan error),
@@ -59,7 +60,6 @@ func (p *Pinger64Struct) goRun() {
 	defer tick.Stop()
 	defer close(p.Pingch)
 	defer close(p.Errorch)
-	defer p.counter.Close()
 
 	for {
 		select {
@@ -90,7 +90,7 @@ func (p *Pinger64Struct) goRun() {
 				}
 			}
 
-		case <-p.closech:
+		case <-p.cx.DoneChan():
 			return
 		}
 

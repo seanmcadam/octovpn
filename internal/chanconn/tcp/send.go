@@ -34,7 +34,7 @@ func (t *TcpStruct) goSend() {
 		case packet := <-t.sendch:
 			t.sendpacket(packet)
 
-		case <-t.Closech:
+		case <-t.cx.DoneChan():
 			return
 		}
 
@@ -42,7 +42,6 @@ func (t *TcpStruct) goSend() {
 			return
 		}
 	}
-
 }
 
 func (t *TcpStruct) sendpacket(packet *packetconn.ConnPacket) {
@@ -55,12 +54,14 @@ func (t *TcpStruct) sendpacket(packet *packetconn.ConnPacket) {
 		if err != io.EOF {
 			log.Errorf("TCP Write() Error:%s", err)
 		}
-		t.Close()
+		//t.Close()
+		t.cx.Done()
 	}
 
 	if l != packetlen {
 		log.Errorf("TCP Write() Length Error:%d != %d", l, packetlen)
-		t.Close()
+		//t.Close()
+		t.cx.Done()
 	}
 }
 

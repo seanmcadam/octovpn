@@ -42,7 +42,7 @@ func (u *UdpStruct) goRecv() {
 			if err != io.EOF {
 				log.Errorf("UDP %s Read() Error:%s", u.endpoint(), err)
 			}
-			u.Close()
+			u.cx.Cancel()
 			return
 		}
 

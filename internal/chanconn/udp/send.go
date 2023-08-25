@@ -34,7 +34,7 @@ func (u *UdpStruct) goSend() {
 		case packet := <-u.sendch:
 			u.sendpacket(packet)
 
-		case <-u.Closech:
+		case <-u.cx.DoneChan():
 			return
 		}
 
@@ -59,12 +59,12 @@ func (u *UdpStruct) sendpacket(packet *packetconn.ConnPacket) {
 		if err != io.EOF {
 			log.Errorf("UDP %s Write() Error:%s", u.endpoint(), err)
 		}
-		u.Close()
+		u.cx.Cancel()
 	}
 
 	if l != packetlen {
 		log.Errorf("UDP Write() Length Error:%d != %d", l, packetlen)
-		u.Close()
+		u.cx.Cancel()
 	}
 }
 

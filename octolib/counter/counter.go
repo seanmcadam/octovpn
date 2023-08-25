@@ -3,14 +3,15 @@ package counter
 import (
 	"encoding/binary"
 
+	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 type Counter64 uint64
 
 type Counter64Struct struct {
+	cx      *ctx.Ctx
 	CountCh chan Counter64
-	closech chan interface{}
 }
 
 func (c Counter64) ToByte() (b []byte) {
@@ -19,10 +20,10 @@ func (c Counter64) ToByte() (b []byte) {
 	return b
 }
 
-func NewCounter64() (c *Counter64Struct) {
+func NewCounter64(ctx *ctx.Ctx) (c *Counter64Struct) {
 	c = &Counter64Struct{
+		cx:      ctx,
 		CountCh: make(chan Counter64, 5),
-		closech: make(chan interface{}),
 	}
 	go c.goCount()
 	return c
@@ -30,10 +31,6 @@ func NewCounter64() (c *Counter64Struct) {
 
 func (c *Counter64Struct) GetCountCh() (ch chan Counter64) {
 	return c.CountCh
-}
-
-func (c *Counter64Struct) Close() {
-	close(c.closech)
 }
 
 // goCounter()
@@ -50,7 +47,7 @@ func (c *Counter64Struct) goCount() {
 		select {
 		case c.CountCh <- counter:
 			counter += 1
-		case <-c.closech:
+		case <-c.cx.DoneChan():
 			return
 		}
 	}

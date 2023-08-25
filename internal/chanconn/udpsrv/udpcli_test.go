@@ -5,9 +5,12 @@ import (
 	"time"
 
 	"github.com/seanmcadam/octovpn/internal/settings"
+	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
 
 func TestNewUdpServer_new(t *testing.T) {
+
+	cx := ctx.NewContext()
 
 	config := &settings.NetworkStruct{
 		Name:  "testing",
@@ -17,13 +20,13 @@ func TestNewUdpServer_new(t *testing.T) {
 		Auth:  "",
 	}
 
-	udpclient, err := New(config)
+	_, err := New(cx,config)
 	if err != nil {
 		t.Fatalf("New Error:%s", err)
 	}
 
 	time.Sleep(time.Second)
 
-	udpclient.Close()
+	cx.Cancel()
 
 }

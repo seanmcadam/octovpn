@@ -12,7 +12,7 @@ func (u *UdpServerStruct) Reset() error {
 	log.Debugf("UDPSrv Reset()")
 
 	if u.udpconn != nil {
-		u.udpconn.Close()
+		u.udpconn.Cancel()
 		return nil
 	} else {
 		return errors.ErrNetChannelDown

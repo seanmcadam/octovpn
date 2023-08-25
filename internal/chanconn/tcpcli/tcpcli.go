@@ -8,29 +8,29 @@ import (
 	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/chanconn/tcp"
 	"github.com/seanmcadam/octovpn/internal/settings"
+	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 type TcpClientStruct struct {
-	//
-	// Link is currently active
-	//
+	cx      *ctx.Ctx
 	config  *settings.NetworkStruct
 	address string
 	tcpaddr *net.TCPAddr
 	tcpconn *tcp.TcpStruct
-	closech chan interface{}
+	//closech chan interface{}
 	resetch chan interface{}
 }
 
-func New(config *settings.NetworkStruct) (tcpclient interfaces.ChannelInterface, err error) {
+func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpclient interfaces.ChannelInterface, err error) {
 
 	t := &TcpClientStruct{
+		cx:      ctx,
 		config:  config,
 		address: fmt.Sprintf("%s:%d", config.GetHost(), config.GetPort()),
 		tcpaddr: nil,
 		tcpconn: nil,
-		closech: make(chan interface{}),
+		//closech: make(chan interface{}),
 		resetch: make(chan interface{}),
 	}
 
@@ -54,11 +54,12 @@ func New(config *settings.NetworkStruct) (tcpclient interfaces.ChannelInterface,
 func (t *TcpClientStruct) goRun() {
 
 	defer func(t *TcpClientStruct) {
+		t.cx.Cancel()
 		if t.tcpconn != nil {
-			t.tcpconn.Close()
+			//t.tcpconn.Close()
 			t.tcpconn = nil
 		}
-		close(t.closech)
+		//close(t.closech)
 		close(t.resetch)
 
 	}(t)
@@ -78,7 +79,7 @@ TCPFOR:
 
 			if conn != nil {
 				select {
-				case <-t.closech:
+				case <-t.cx.DoneChan():
 					log.Debug("tcpcli goRun() closed")
 					return
 				default:
@@ -93,20 +94,21 @@ TCPFOR:
 
 		log.Info("New TCP Connection")
 
-		t.tcpconn = tcp.NewTCP(conn)
+		t.tcpconn = tcp.NewTCP(t.cx.NewWithCancel(), conn)
 		if t.tcpconn == nil {
 			log.Fatal("tcpconn == nil")
 		}
 
-		closech := t.tcpconn.Closech
+		//closech := t.tcpconn.Closech
 
 	TCPCLOSE:
 		for {
 			select {
-			case <-t.closech:
+			case <-t.cx.DoneChan():
 				log.Debug("TCPCli Closing Down")
 				return
-			case <-closech:
+
+			case <-t.tcpconn.DoneChan():
 				log.Debug("TCPCli Channel Closed")
 				t.tcpconn = nil
 				break TCPCLOSE

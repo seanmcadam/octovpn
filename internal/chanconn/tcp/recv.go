@@ -71,9 +71,7 @@ func (t *TcpStruct) goRecv() {
 		if t.closed() {
 			return
 		}
-
 	}
-
 }
 
 func (t *TcpStruct) emptyrecv() {

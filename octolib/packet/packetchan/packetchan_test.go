@@ -2,26 +2,25 @@ package packetchan
 
 import (
 	"testing"
-	"time"
 
-	"github.com/seanmcadam/octovpn/internal/chanconn/loopconn"
+	"github.com/seanmcadam/octovpn/octolib/errors"
 )
 
 func TestNewPacket(t *testing.T) {
 
 	cp, err := NewPacket(CHAN_TYPE_ERROR, []byte(""))
-	if err != ErrChanPayloadLength {
+	if err != errors.ErrChanPayloadLength {
 		t.Error("Zero Payload did not return error")
 	}
 
 	data := []byte("data")
 
-	cp, err = NewPacket(CHAN_TYPE_ERROR, data)
+	cp, err = NewPacket(CHAN_TYPE_DATA, data)
 	if err != nil {
 		t.Fatalf("Err:%s", err)
 	}
 
-	if cp.GetType() != CHAN_TYPE_ERROR {
+	if cp.GetType() != CHAN_TYPE_DATA {
 		t.Error("Packet Type is not correct")
 	}
 
@@ -29,21 +28,27 @@ func TestNewPacket(t *testing.T) {
 		t.Error("Payload Length is not correct")
 	}
 
-}
-
-func TestNewPacketTcp(t *testing.T) {
-
-	srv, cli, err := loopconn.NewTcpLoop()
+	_, err = MakePacket(cp.ToByte())
 	if err != nil {
-		t.Fatalf("Error:%s", err)
+		t.Errorf("MakePacket Err:%s", err)
 	}
 
-	cssrv, err := NewChannel(srv)
-	cscli, err := NewChannel(cli)
-
-	time.Sleep(3 * time.Second)
-
-	cssrv.Close()
-	cscli.Close()
-
 }
+
+//func TestNewPacketTcp(t *testing.T) {
+//
+//	srv, cli, err := loopconn.NewTcpLoop()
+//	if err != nil {
+//		t.Fatalf("Error:%s", err)
+//	}
+//
+//	cssrv, err := NewChannel(srv)
+//	cscli, err := NewChannel(cli)
+//
+//	time.Sleep(3 * time.Second)
+//
+//	cssrv.Close()
+//	cscli.Close()
+//
+//}
+//

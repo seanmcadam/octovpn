@@ -6,7 +6,7 @@ import (
 )
 
 func (t *TcpServerStruct) goListen() {
-	defer t.Close()
+	defer t.cx.Done()
 
 	for {
 		conn, err := t.tcplistener.AcceptTCP()
@@ -16,11 +16,11 @@ func (t *TcpServerStruct) goListen() {
 		}
 
 		log.Debug("TCP New connection")
-		newconn := tcp.NewTCP(conn)
+		newconn := tcp.NewTCP(t.cx.NewWithCancel(), conn)
 
 		select {
 		case t.tcpconnch <- newconn:
-		case <-t.closech:
+		case <-t.cx.DoneChan():
 			log.Debug("TCPSrv listener close ch")
 			return
 		}

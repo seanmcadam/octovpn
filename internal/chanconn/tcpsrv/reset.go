@@ -10,7 +10,7 @@ func (t *TcpServerStruct) Reset() error {
 	log.Debugf("TCPSrv Reset()")
 
 	if t.tcpconn != nil {
-		t.tcpconn.Close()
+		t.tcpconn.Cancel()
 		return nil
 	} else {
 		return errors.ErrNetChannelDown

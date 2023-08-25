@@ -7,31 +7,34 @@ import (
 	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/chanconn/tcp"
 	"github.com/seanmcadam/octovpn/internal/settings"
+	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 type TcpServerStruct struct {
+	cx          *ctx.Ctx
 	config      *settings.NetworkStruct
 	address     string
 	tcplistener *net.TCPListener
 	tcpaddr     *net.TCPAddr
 	tcpconn     *tcp.TcpStruct
 	tcpconnch   chan *tcp.TcpStruct
-	closech     chan interface{}
-	resetch     chan interface{}
+	//closech     chan interface{}
+	resetch chan interface{}
 }
 
 // NewTcpServer()
 // Returns a TcpServerStruct and error value
-func New(config *settings.NetworkStruct) (tcpserver interfaces.ChannelInterface, err error) {
+func New(cx *ctx.Ctx, config *settings.NetworkStruct) (tcpserver interfaces.ChannelInterface, err error) {
 
 	t := &TcpServerStruct{
+		cx:          cx,
 		config:      config,
 		address:     fmt.Sprintf("%s:%d", config.GetHost(), config.GetPort()),
 		tcplistener: nil,
 		tcpaddr:     nil,
 		tcpconn:     nil,
-		closech:     make(chan interface{}),
+		//closech:     make(chan interface{}),
 		resetch:     make(chan interface{}),
 		tcpconnch:   make(chan *tcp.TcpStruct),
 	}
@@ -69,7 +72,7 @@ func (t *TcpServerStruct) goRun() {
 			t.tcplistener = nil
 		}
 		if t.tcpconn != nil {
-			t.tcpconn.Close()
+			t.tcpconn.Cancel()
 			t.emptyconn()
 			t.tcpconn = nil
 		}
@@ -91,7 +94,7 @@ func (t *TcpServerStruct) goRun() {
 			if t.tcpconn != nil {
 				log.Debug("Shutdown Previous connection")
 				// Existing Go Routines will close out and shutdown.
-				t.tcpconn.Close()
+				t.tcpconn.Cancel()
 				t.tcpconn = nil
 			}
 
@@ -101,12 +104,12 @@ func (t *TcpServerStruct) goRun() {
 		case <-tcpconnclosech:
 			continue
 
-		case <-t.closech:
+		case <-t.cx.DoneChan():
 			return
 
 		case <-t.resetch:
 			if t.tcpconn != nil {
-				t.tcpconn.Close()
+				t.tcpconn.Cancel()
 			}
 		}
 	}
