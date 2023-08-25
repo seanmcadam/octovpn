@@ -3,11 +3,14 @@ package loopconn
 import (
 	"testing"
 	"time"
+
+	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
 
 func TestNewUdpLoop_OpenClose(t *testing.T) {
 
-	l1, l2, err := NewUdpLoop()
+	cx := ctx.NewContext()
+	l1, l2, err := NewUdpLoop(cx)
 
 	if err != nil {
 		t.Fatalf("UDP Error:%s", err)
@@ -26,8 +29,9 @@ func TestNewUdpLoop_OpenClose(t *testing.T) {
 
 func TestNewUdpLoop_SendRecv(t *testing.T) {
 
+	cx := ctx.NewContext()
 	data := []byte("data")
-	srv, cli, err := NewUdpLoop()
+	srv, cli, err := NewUdpLoop(cx)
 
 	if err != nil {
 		t.Fatalf("UDP Error:%s", err)
