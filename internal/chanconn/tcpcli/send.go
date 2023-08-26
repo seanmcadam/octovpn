@@ -2,18 +2,19 @@ package tcpcli
 
 import (
 	"github.com/seanmcadam/octovpn/octolib/errors"
+	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
 	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
 // Send()
-func (t *TcpClientStruct) Send(buf []byte) (err error) {
+func (t *TcpClientStruct) Send(cp *packetchan.ChanPacket) (err error) {
 
-	if len(buf)+packetconn.PacketOverhead > int(t.config.GetMtu()) {
+	if cp.GetSize() > int(t.config.GetMtu()) {
 		return errors.ErrNetPacketTooBig
 	}
 
 	if t.tcpconn != nil {
-		packet, err := packetconn.NewPacket(packetconn.PACKET_TYPE_TCP, buf)
+		packet, err := packetconn.NewPacket(packetconn.PACKET_TYPE_TCP, cp)
 		if err != nil {
 			return err
 		}

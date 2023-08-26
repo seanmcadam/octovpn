@@ -44,7 +44,7 @@ func (cs *ChannelStruct) Send(b []byte) error {
 	}
 
 	cs.tracker.Send(packet)
-	return cs.channel.Send(packet.ToByte())
+	return cs.channel.Send(packet)
 }
 
 func (cs *ChannelStruct) RecvChan() <-chan packetchan.ChanPayload {

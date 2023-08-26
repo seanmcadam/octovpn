@@ -68,7 +68,7 @@ func (u *UdpStruct) goRecv() {
 		case packetconn.PACKET_TYPE_PONG:
 			log.Debug("Got Pong")
 			ping := packet.GetPayload()
-			u.pinger.Pongch <- ping
+			u.pinger.Pongch <- ping.([]byte)
 
 		case packetconn.PACKET_TYPE_PING:
 			log.Debug("Got Ping")

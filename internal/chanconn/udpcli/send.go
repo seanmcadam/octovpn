@@ -2,18 +2,19 @@ package udpcli
 
 import (
 	"github.com/seanmcadam/octovpn/octolib/errors"
+	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
 	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
 // Send()
-func (u *UdpClientStruct) Send(buf []byte) (err error) {
+func (u *UdpClientStruct) Send(cp *packetchan.ChanPacket) (err error) {
 
-	if len(buf)+packetconn.PacketOverhead > int(u.config.GetMtu()) {
+	if cp.GetSize() > int(u.config.GetMtu()) {
 		return errors.ErrNetPacketTooBig
 	}
 
 	if u.udpconn != nil {
-		packet, err := packetconn.NewPacket(packetconn.PACKET_TYPE_UDP, buf)
+		packet, err := packetconn.NewPacket(packetconn.PACKET_TYPE_UDP, cp)
 		if err != nil {
 			return err
 		}

@@ -6,11 +6,11 @@ Chanconn resource provide the following
 	Active() bool
     Checks that the link is active, and packets wll be send as opposed to dropped
 
-	Send([]byte) (error)
-    Send a Byte array as a single packet
+	Send(*packetchan.ChanPacket) (error)
+    Send a ChanPacket
 
-	Recv() ([]byte, error)
-    Recieve a Byte array as a single packet
+	RecvChan() <-chan *packetchan.ChanPacket
+    Wait for a ChanPacket
 
 	Reset() error
     Forces the current active connection to be restarted

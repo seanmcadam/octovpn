@@ -47,7 +47,7 @@ func (t *TcpStruct) goSend() {
 func (t *TcpStruct) sendpacket(packet *packetconn.ConnPacket) {
 	var l int
 	var err error
-	packetlen := int(packet.GetLength()) + packetconn.PacketOverhead
+	packetlen := int(packet.GetPayloadLength()) + packetconn.ConnOverhead
 	l, err = t.conn.Write(packet.ToByte())
 
 	if err != nil {

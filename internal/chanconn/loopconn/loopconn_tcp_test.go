@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/seanmcadam/octovpn/octolib/ctx"
+	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
 )
 
 func TestNewTcpLoop_OpenClose(t *testing.T) {
@@ -34,6 +35,11 @@ func TestNewTcpLoop_SendRecv(t *testing.T) {
 	cx := ctx.NewContext()
 
 	data := []byte("data")
+	cp, err := packetchan.NewPacket(packetchan.CHAN_TYPE_DATA, data)
+	if err != nil{
+		t.Fatalf("NewPacket Err:%s",err)
+	}
+
 	l1, l2, err := NewTcpLoop(cx)
 
 	if err != nil {
@@ -50,7 +56,7 @@ func TestNewTcpLoop_SendRecv(t *testing.T) {
 		t.Fatal("TCP L2 Active failed")
 	}
 
-	err = l1.Send(data)
+	err = l1.Send(cp)
 	if err != nil {
 		t.Fatalf("TCP Send Error:%s", err)
 	}
@@ -61,8 +67,8 @@ func TestNewTcpLoop_SendRecv(t *testing.T) {
 		t.Fatalf("TCP Recv Returned nil")
 	}
 
-	if !reflect.DeepEqual(recv.ToByte(), data) {
-		t.Fatalf("TCP Recv Returned bad Data: '%s', '%s'", string(recv.GetPayload()), string(data))
+	if !reflect.DeepEqual(recv.ToByte(), cp.ToByte()) {
+		t.Fatalf("TCP Recv Returned bad Data: '%v', '%v'", recv, cp)
 	}
 
 }
@@ -72,6 +78,11 @@ func TestNewTcpLoop_SendRecvReset(t *testing.T) {
 	cx := ctx.NewContext()
 
 	data := []byte("data")
+	cp, err := packetchan.NewPacket(packetchan.CHAN_TYPE_DATA, data)
+	if err != nil{
+		t.Fatalf("NewPacket Err:%s",err)
+	}
+
 	l1, l2, err := NewTcpLoop(cx)
 
 	if err != nil {
@@ -88,7 +99,7 @@ func TestNewTcpLoop_SendRecvReset(t *testing.T) {
 		t.Fatal("TCP L2 Active failed")
 	}
 
-	err = l1.Send(data)
+	err = l1.Send(cp)
 	if err != nil {
 		t.Fatalf("TCP Send Error:%s", err)
 	}
@@ -101,7 +112,7 @@ func TestNewTcpLoop_SendRecvReset(t *testing.T) {
 
 	//l2.Reset()
 
-	err = l2.Send(data)
+	err = l2.Send(cp)
 	if err != nil {
 		t.Fatalf("TCP Send Error:%s", err)
 	}

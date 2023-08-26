@@ -1,10 +1,12 @@
 package loopconn
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/seanmcadam/octovpn/octolib/ctx"
+	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
 )
 
 func TestNewUdpLoop_OpenClose(t *testing.T) {
@@ -31,6 +33,8 @@ func TestNewUdpLoop_SendRecv(t *testing.T) {
 
 	cx := ctx.NewContext()
 	data := []byte("data")
+	cp, err := packetchan.NewPacket(packetchan.CHAN_TYPE_DATA, data)
+
 	srv, cli, err := NewUdpLoop(cx)
 
 	if err != nil {
@@ -46,7 +50,7 @@ func TestNewUdpLoop_SendRecv(t *testing.T) {
 		t.Fatal("UDP L2 Active failed")
 	}
 
-	err = cli.Send(data)
+	err = cli.Send(cp)
 	if err != nil {
 		t.Fatalf("UDP Send Error:%s", err)
 	}
@@ -60,4 +64,7 @@ func TestNewUdpLoop_SendRecv(t *testing.T) {
 		t.Fatalf("UDP Recv Returned nil")
 	}
 
+	if !reflect.DeepEqual(recv.ToByte(), cp.ToByte()) {
+		t.Fatalf("UDP Recv Returned bad Data: '%v', '%v'", recv, cp)
+	}
 }

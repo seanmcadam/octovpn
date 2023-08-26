@@ -23,16 +23,20 @@ func (t *UdpServerStruct) goRecv() {
 
 			packettype := data.GetType()
 			switch packettype {
-			case packetconn.PACKET_TYPE_TCP:
-				pc, err := packetchan.MakePacket(data.GetPayload())
-				if err != nil {
-					log.Fatalf("MakePacket Err:%s", err)
+			case packetconn.PACKET_TYPE_UDP:
+				payload := data.GetPayload()
+				switch payload.(type) {
+				case *packetchan.ChanPacket:
+					t.recvch <- payload.(*packetchan.ChanPacket)
+				default:
+					log.Fatalf("Unexpected type:%t", payload)
 				}
-				t.recvch <- pc
 			case packetconn.PACKET_TYPE_PING:
 				log.Debug("Ignore PING")
 			case packetconn.PACKET_TYPE_PONG:
 				log.Debug("Ignore PONG")
+			default:
+				log.Fatalf("Unhandled Type: %s", packettype)
 			}
 		}
 	}

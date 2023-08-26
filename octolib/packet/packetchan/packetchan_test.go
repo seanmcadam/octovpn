@@ -2,7 +2,13 @@ package packetchan
 
 import (
 	"testing"
+
+	"github.com/seanmcadam/octovpn/octolib/log"
 )
+
+func TestCompilerCheck(t *testing.T) {
+	_, _ = NewPacket(CHAN_TYPE_ERROR, nil)
+}
 
 func TestNewPacket(t *testing.T) {
 
@@ -18,11 +24,13 @@ func TestNewPacket(t *testing.T) {
 		t.Fatalf("Err:%s", err)
 	}
 
+	log.Infof("Size ConnPacket:%d", cp.GetSize())
+
 	if cp.GetType() != CHAN_TYPE_DATA {
 		t.Error("Packet Type is not correct")
 	}
 
-	if cp.GetLength() != ChanLength(len(data)) {
+	if cp.GetPayloadLength() != ChanLength(len(data)) {
 		t.Error("Payload Length is not correct")
 	}
 
@@ -31,8 +39,8 @@ func TestNewPacket(t *testing.T) {
 		t.Errorf("MakePacket DATA Err:%s", err)
 	}
 
-	cp.ConvertDataToAck()
-	_, err = MakePacket(cp.ToByte())
+	ackcp := cp.CopyDataToAck()
+	_, err = MakePacket(ackcp.ToByte())
 	if err != nil {
 		t.Errorf("MakePacket ACK Err:%s", err)
 	}

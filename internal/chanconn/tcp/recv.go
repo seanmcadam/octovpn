@@ -49,7 +49,7 @@ func (t *TcpStruct) goRecv() {
 		case packetconn.PACKET_TYPE_PONG:
 			log.Debug("Got Pong")
 			ping := packet.GetPayload()
-			t.pinger.Pongch <- ping
+			t.pinger.Pongch <- ping.([]byte)
 
 		case packetconn.PACKET_TYPE_PING:
 			log.Debug("Got Ping")

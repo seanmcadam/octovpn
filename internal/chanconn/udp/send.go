@@ -48,7 +48,7 @@ func (u *UdpStruct) goSend() {
 func (u *UdpStruct) sendpacket(packet *packetconn.ConnPacket) {
 	var l int
 	var err error
-	packetlen := int(packet.GetLength()) + packetconn.PacketOverhead
+	packetlen := int(packet.GetPayloadLength()) + packetconn.ConnOverhead
 	if u.srv {
 		l, err = u.conn.WriteToUDP(packet.ToByte(), u.addr)
 	} else {
