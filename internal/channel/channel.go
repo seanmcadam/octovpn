@@ -16,7 +16,7 @@ type ChannelStruct struct {
 	channel interfaces.ChannelInterface
 	counter *counter.Counter64Struct
 	tracker *tracker.TrackerStruct
-	recvch  chan packetchan.ChanPayload
+	recvch  chan *packetchan.ChanPacket
 }
 
 func NewChannel(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStruct, err error) {
@@ -24,9 +24,9 @@ func NewChannel(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStruct
 	cs = &ChannelStruct{
 		cx:      ctx,
 		channel: ci,
-		counter: counter.NewCounter64(),
-		tracker: tracker.NewTracker(),
-		recvch:  make(packetchan.ChanPayload, 16),
+		counter: counter.NewCounter64(ctx),
+		tracker: tracker.NewTracker(ctx),
+		recvch:  make(chan *packetchan.ChanPacket, 16),
 	}
 
 	go cs.goRecv()
@@ -47,7 +47,7 @@ func (cs *ChannelStruct) Send(b []byte) error {
 	return cs.channel.Send(packet)
 }
 
-func (cs *ChannelStruct) RecvChan() <-chan packetchan.ChanPayload {
+func (cs *ChannelStruct) RecvChan() <-chan *packetchan.ChanPacket {
 	return cs.recvch
 }
 

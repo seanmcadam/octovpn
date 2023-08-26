@@ -13,7 +13,7 @@ func (cs *ChannelStruct) goRecv() {
 
 	for {
 		select {
-		case cs.cx.DoneChan():
+		case <-cs.cx.DoneChan():
 			return
 		case data := <-cs.channel.RecvChan():
 			cs.recv(data)
@@ -26,7 +26,7 @@ func (cs *ChannelStruct) recv(data *packetchan.ChanPacket) {
 	switch t {
 	case packetchan.CHAN_TYPE_DATA:
 
-		cs.channel.Send(data.CopyDataToAck().ToByte())
+		cs.channel.Send(data.CopyDataToAck())
 		cs.tracker.Recv(data.Copy())
 		cs.recvch <- data
 
