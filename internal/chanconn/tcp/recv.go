@@ -7,12 +7,8 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
-// Recv()
-func (t *TcpStruct) Recv() (packet *packetconn.ConnPacket, err error) {
-
-	packet = <-t.recvch
-
-	return packet, err
+func (t *TcpStruct) RecvChan() <-chan *packetconn.ConnPacket {
+	return t.recvch
 }
 
 // Run while connection is running
@@ -28,6 +24,10 @@ func (t *TcpStruct) goRecv() {
 			if err != io.EOF {
 				log.Errorf("TCP Read() Error:%s", err)
 			}
+			return
+		}
+
+		if t.closed() {
 			return
 		}
 

@@ -10,11 +10,8 @@ import (
 )
 
 // Recv()
-func (u *UdpStruct) Recv() (packet *packetconn.ConnPacket, err error) {
-
-	packet = <-u.recvch
-
-	return packet, err
+func (u *UdpStruct) RecvChan() <-chan *packetconn.ConnPacket {
+	return u.recvch
 }
 
 // Run while connection is running

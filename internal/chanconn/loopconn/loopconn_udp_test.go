@@ -51,7 +51,7 @@ func TestNewUdpLoop_SendRecv(t *testing.T) {
 		t.Fatalf("UDP Send Error:%s", err)
 	}
 
-	recv, err := srv.Recv()
+	recv := <-srv.RecvChan()
 	if err != nil {
 		t.Fatalf("UDP Recv Error:%s", err)
 	}

@@ -18,19 +18,16 @@ type TcpStruct struct {
 	pinger  *pinger.Pinger64Struct
 	sendch  chan *packetconn.ConnPacket
 	recvch  chan *packetconn.ConnPacket
-	Closech chan interface{}
 }
 
 func NewTCP(ctx *ctx.Ctx, conn *net.TCPConn) (tcp *TcpStruct) {
 
-	closech := make(chan interface{})
 	tcp = &TcpStruct{
 		cx:      ctx,
 		conn:    conn,
 		pinger:  pinger.NewPinger64(ctx, TcpPingFreq, TcpPingTimeout),
 		sendch:  make(chan *packetconn.ConnPacket),
 		recvch:  make(chan *packetconn.ConnPacket),
-		Closech: closech,
 	}
 
 	tcp.run()

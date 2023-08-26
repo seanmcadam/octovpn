@@ -1,28 +1,39 @@
 package tcpsrv
 
 import (
-	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
+	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
 	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
-// Recv()
-func (t *TcpServerStruct) Recv() (buf []byte, err error) {
-	var packet *packetconn.ConnPacket
+func (t *TcpServerStruct) RecvChan() <-chan *packetchan.ChanPacket {
+	return t.recvch
+}
 
-	if t.tcpconn == nil {
-		err = errors.ErrNetChannelDown
-		return nil, err
+func (t *TcpServerStruct) goRecv() {
+	for {
+		select {
+		case <-t.cx.DoneChan():
+			return
+		case data := <-t.tcpconn.RecvChan():
+			if data == nil {
+				// Closed connection...
+				return
+			}
+
+			packettype := data.GetType()
+			switch packettype {
+			case packetconn.PACKET_TYPE_TCP:
+				pc, err := packetchan.MakePacket(data.GetPayload())
+				if err != nil {
+					log.Fatalf("MakePacket Err:%s", err)
+				}
+				t.recvch <- pc
+			case packetconn.PACKET_TYPE_PING:
+				log.Debug("Ignore PING")
+			case packetconn.PACKET_TYPE_PONG:
+				log.Debug("Ignore PONG")
+			}
+		}
 	}
-
-	packet, err = t.tcpconn.Recv()
-	if err != nil {
-		return nil, err
-	}
-
-	if int(packet.GetLength())+packetconn.PacketOverhead > int(t.config.GetMtu()) {
-		log.Warnf("TCPCli recv large packet %d > %d", packet.GetLength(), t.config.GetMtu())
-	}
-
-	return packet.GetPayload(), err
 }

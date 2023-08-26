@@ -24,6 +24,8 @@ const ChanSigVal ChanSig = 0xee
 
 const (
 	CHAN_TYPE_DATA  ChanType = 0x11
+	CHAN_TYPE_ACK   ChanType = 0x21
+	CHAN_TYPE_NAK   ChanType = 0x22
 	CHAN_TYPE_PING  ChanType = 0xE1
 	CHAN_TYPE_PONG  ChanType = 0xE2
 	CHAN_TYPE_ERROR ChanType = 0xFF
@@ -38,10 +40,6 @@ type ChanPacket struct {
 }
 
 func NewPacket(t ChanType, payload []byte) (cp *ChanPacket, err error) {
-
-	if len(payload) == 0 {
-		return nil, errors.ErrChanPayloadLength
-	}
 
 	cp = &ChanPacket{
 		cSig:     ChanSigVal,
@@ -70,9 +68,30 @@ func (cp *ChanPacket) GetPayload() (b []byte) {
 	return cp.cPayload
 }
 
+func (cp *ChanPacket) Copy() (copy *ChanPacket) {
+	copy = &ChanPacket{
+		cSig:     ChanSigVal,
+		cType:    cp.GetType(),
+		cLength:  cp.GetLength(),
+		cCounter: cp.GetCounter(),
+		cPayload: cp.GetPayload(),
+	}
+	return copy
+}
+func (cp *ChanPacket) CopyDataToAck() (ack *ChanPacket) {
+	ack = &ChanPacket{
+		cSig:     ChanSigVal,
+		cType:    CHAN_TYPE_ACK,
+		cLength:  0,
+		cCounter: cp.GetCounter(),
+		cPayload: nil,
+	}
+	return ack
+}
+
 func MakePacket(data []byte) (cp *ChanPacket, err error) {
 
-	if len(data) < (ChanOverhead + 1) {
+	if len(data) < (ChanOverhead) {
 		return nil, errors.ErrChanShortPacket
 	}
 
@@ -84,6 +103,10 @@ func MakePacket(data []byte) (cp *ChanPacket, err error) {
 	switch ChanType(data[TypeStart]) {
 	case CHAN_TYPE_DATA:
 		t = CHAN_TYPE_DATA
+	case CHAN_TYPE_ACK:
+		t = CHAN_TYPE_ACK
+	case CHAN_TYPE_NAK:
+		t = CHAN_TYPE_NAK
 	case CHAN_TYPE_PING:
 		t = CHAN_TYPE_PING
 	case CHAN_TYPE_PONG:
@@ -105,7 +128,11 @@ func MakePacket(data []byte) (cp *ChanPacket, err error) {
 		cType:    t,
 		cLength:  ChanLength(payloadlen),
 		cCounter: ChanCount(counter),
-		cPayload: data[PayloadStart:],
+		cPayload: nil,
+	}
+
+	if len(data) > (ChanOverhead) {
+		cp.cPayload = data[PayloadStart:]
 	}
 
 	return cp, nil

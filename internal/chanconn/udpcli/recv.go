@@ -1,27 +1,39 @@
 package udpcli
 
 import (
-	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
+	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
 	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
-// Recv()
-func (u *UdpClientStruct) Recv() (buf []byte, err error) {
-	var packet *packetconn.ConnPacket
+func (t *UdpClientStruct) RecvChan() <-chan *packetchan.ChanPacket {
+	return t.recvch
+}
 
-	if u.udpconn == nil {
-		err = errors.ErrNetChannelDown
+func (t *UdpClientStruct) goRecv() {
+	for {
+		select {
+		case <-t.cx.DoneChan():
+			return
+		case data := <-t.udpconn.RecvChan():
+			if data == nil {
+				// Closed connection...
+				return
+			}
+
+			packettype := data.GetType()
+			switch packettype {
+			case packetconn.PACKET_TYPE_TCP:
+				pc, err := packetchan.MakePacket(data.GetPayload())
+				if err != nil {
+					log.Fatalf("MakePacket Err:%s", err)
+				}
+				t.recvch <- pc
+			case packetconn.PACKET_TYPE_PING:
+				log.Debug("Ignore PING")
+			case packetconn.PACKET_TYPE_PONG:
+				log.Debug("Ignore PONG")
+			}
+		}
 	}
-
-	packet, err = u.udpconn.Recv()
-	if err != nil {
-		return nil, err
-	}
-
-	if (int(packet.GetLength()) + packetconn.PacketOverhead) > int(u.config.GetMtu()) {
-		log.Warnf("TCPCli recv large packet %d > %d", len(buf), u.config.GetMtu())
-	}
-
-	return packet.GetPayload(), err
 }

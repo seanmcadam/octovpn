@@ -55,17 +55,14 @@ func TestNewTcpLoop_SendRecv(t *testing.T) {
 		t.Fatalf("TCP Send Error:%s", err)
 	}
 
-	recv, err := l2.Recv()
-	if err != nil {
-		t.Fatalf("TCP Recv Error:%s", err)
-	}
+	recv := <-l2.RecvChan()
 
 	if recv == nil {
 		t.Fatalf("TCP Recv Returned nil")
 	}
 
-	if !reflect.DeepEqual(recv, data) {
-		t.Fatalf("TCP Recv Returned bad Data: '%s', '%s'", string(recv), string(data))
+	if !reflect.DeepEqual(recv.ToByte(), data) {
+		t.Fatalf("TCP Recv Returned bad Data: '%s', '%s'", string(recv.GetPayload()), string(data))
 	}
 
 }
@@ -96,10 +93,7 @@ func TestNewTcpLoop_SendRecvReset(t *testing.T) {
 		t.Fatalf("TCP Send Error:%s", err)
 	}
 
-	recv, err := l2.Recv()
-	if err != nil {
-		t.Fatalf("TCP Recv Error:%s", err)
-	}
+	recv := <-l2.RecvChan()
 
 	if recv == nil {
 		t.Fatalf("TCP Recv Returned nil")
@@ -112,10 +106,7 @@ func TestNewTcpLoop_SendRecvReset(t *testing.T) {
 		t.Fatalf("TCP Send Error:%s", err)
 	}
 
-	recv, err = l1.Recv()
-	if err != nil {
-		t.Fatalf("TCP Recv Error:%s", err)
-	}
+	recv = <-l1.RecvChan()
 
 	if recv == nil {
 		t.Fatalf("TCP Recv Returned nil")

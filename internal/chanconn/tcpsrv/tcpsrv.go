@@ -9,6 +9,7 @@ import (
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
+	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
 )
 
 type TcpServerStruct struct {
@@ -19,8 +20,7 @@ type TcpServerStruct struct {
 	tcpaddr     *net.TCPAddr
 	tcpconn     *tcp.TcpStruct
 	tcpconnch   chan *tcp.TcpStruct
-	//closech     chan interface{}
-	resetch chan interface{}
+	recvch      chan *packetchan.ChanPacket
 }
 
 // NewTcpServer()
@@ -34,9 +34,8 @@ func New(cx *ctx.Ctx, config *settings.NetworkStruct) (tcpserver interfaces.Chan
 		tcplistener: nil,
 		tcpaddr:     nil,
 		tcpconn:     nil,
-		//closech:     make(chan interface{}),
-		resetch:     make(chan interface{}),
 		tcpconnch:   make(chan *tcp.TcpStruct),
+		recvch:      make(chan *packetchan.ChanPacket, 16),
 	}
 
 	// Recheck this each time, the IP could change or rotate
@@ -76,7 +75,6 @@ func (t *TcpServerStruct) goRun() {
 			t.emptyconn()
 			t.tcpconn = nil
 		}
-		close(t.resetch)
 		close(t.tcpconnch)
 	}(t)
 
@@ -98,8 +96,7 @@ func (t *TcpServerStruct) goRun() {
 				t.tcpconn = nil
 			}
 
-			// Start New Connection
-			go t.goNewConn(conn)
+			t.tcpconn = conn
 
 		case <-tcpconnclosech:
 			continue
@@ -107,10 +104,6 @@ func (t *TcpServerStruct) goRun() {
 		case <-t.cx.DoneChan():
 			return
 
-		case <-t.resetch:
-			if t.tcpconn != nil {
-				t.tcpconn.Cancel()
-			}
 		}
 	}
 }

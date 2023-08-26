@@ -2,15 +2,13 @@ package packetchan
 
 import (
 	"testing"
-
-	"github.com/seanmcadam/octovpn/octolib/errors"
 )
 
 func TestNewPacket(t *testing.T) {
 
 	cp, err := NewPacket(CHAN_TYPE_ERROR, []byte(""))
-	if err != errors.ErrChanPayloadLength {
-		t.Error("Zero Payload did not return error")
+	if err != nil {
+		t.Errorf("Zero Payload Err:%s", err)
 	}
 
 	data := []byte("data")
@@ -30,7 +28,13 @@ func TestNewPacket(t *testing.T) {
 
 	_, err = MakePacket(cp.ToByte())
 	if err != nil {
-		t.Errorf("MakePacket Err:%s", err)
+		t.Errorf("MakePacket DATA Err:%s", err)
+	}
+
+	cp.ConvertDataToAck()
+	_, err = MakePacket(cp.ToByte())
+	if err != nil {
+		t.Errorf("MakePacket ACK Err:%s", err)
 	}
 
 }

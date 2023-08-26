@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/seanmcadam/octovpn/octolib/counter"
+	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
 	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
 )
@@ -13,6 +14,7 @@ const DefaultTrackerChanDepth = 64
 const MaintTimeoutDuration = 5 * time.Second
 
 type TrackerStruct struct {
+	cx      *ctx.Ctx
 	ticker  *time.Ticker
 	entry   map[counter.Counter64]time.Time
 	track   map[counter.Counter64]interface{}
@@ -25,12 +27,12 @@ type TrackerStruct struct {
 	sendch  chan interface{}
 	ackch   chan counter.Counter64
 	nakch   chan counter.Counter64
-	closech chan interface{}
 }
 
-func NewTracker(closech chan interface{}) (t *TrackerStruct) {
+func NewTracker(ctx *ctx.Ctx) (t *TrackerStruct) {
 
 	t = &TrackerStruct{
+		cx:      ctx,
 		ticker:  time.NewTicker(1 * time.Second),
 		entry:   make(map[counter.Counter64]time.Time, DefaultTrackerDataDepth),
 		track:   make(map[counter.Counter64]interface{}, DefaultTrackerDataDepth),
@@ -43,7 +45,6 @@ func NewTracker(closech chan interface{}) (t *TrackerStruct) {
 		sendch:  make(chan interface{}, DefaultTrackerChanDepth),
 		ackch:   make(chan counter.Counter64, DefaultTrackerChanDepth),
 		nakch:   make(chan counter.Counter64, DefaultTrackerChanDepth),
-		closech: closech,
 	}
 
 	go t.goRun()
@@ -64,7 +65,7 @@ func (t *TrackerStruct) Ack(counter counter.Counter64) {
 	t.ackch <- counter
 }
 
-func (t *TrackerStruct) Nck(counter counter.Counter64) {
+func (t *TrackerStruct) Nak(counter counter.Counter64) {
 	t.nakch <- counter
 }
 
@@ -89,7 +90,8 @@ func (t *TrackerStruct) goRun() {
 
 		case nak := <-t.nakch:
 			t.nak(nak)
-		case <-t.closech:
+
+		case <-t.cx.DoneChan():
 			return
 		}
 	}
@@ -131,12 +133,10 @@ func (t *TrackerStruct) rcv(p interface{}) {
 	}
 }
 
-//
 // ack
 // Recieve ACK packet
 // Add to send bandwidth, add and latecny
 // Remove from entry and track
-//
 func (t *TrackerStruct) ack(c counter.Counter64) {
 
 	if p, ok := t.track[c]; !ok {
@@ -187,11 +187,8 @@ func (t *TrackerStruct) nak(c counter.Counter64) {
 
 }
 
-
-//
 // Tasks:
 // Find Stale entries (no ACKs nor NAKs)
-//
 func (tracker *TrackerStruct) maint() {
 	for c, t := range tracker.entry {
 		if time.Since(t) > MaintTimeoutDuration {

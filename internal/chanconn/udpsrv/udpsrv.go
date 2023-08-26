@@ -10,6 +10,7 @@ import (
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
+	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
 )
 
 type UdpServerStruct struct {
@@ -19,7 +20,7 @@ type UdpServerStruct struct {
 	udpaddr *net.UDPAddr
 	udpconn *udp.UdpStruct
 	auth    bool
-	resetch chan interface{}
+	recvch  chan *packetchan.ChanPacket
 }
 
 func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpserver interfaces.ChannelInterface, err error) {
@@ -31,7 +32,7 @@ func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpserver interfaces.Cha
 		udpaddr: nil,
 		udpconn: nil,
 		auth:    false,
-		resetch: make(chan interface{}),
+		recvch:  make(chan *packetchan.ChanPacket, 16),
 	}
 
 	// Do an initial check and fail if it fails
@@ -58,8 +59,6 @@ func (u *UdpServerStruct) goRun() {
 			u.udpconn.Cancel()
 			u.udpconn = nil
 		}
-		close(u.resetch)
-
 	}(u)
 
 	for {
@@ -87,7 +86,7 @@ func (u *UdpServerStruct) goRun() {
 
 		log.Info("New UDP Connection")
 
-		u.udpconn = udp.NewUDPSrv(u.cx.NewWithCancel(),conn)
+		u.udpconn = udp.NewUDPSrv(u.cx.NewWithCancel(), conn)
 		if u.udpconn == nil {
 			log.Error("udpconn == nil")
 			continue
