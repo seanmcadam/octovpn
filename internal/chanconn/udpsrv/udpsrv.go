@@ -10,7 +10,7 @@ import (
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
+	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
 type UdpServerStruct struct {
@@ -20,10 +20,10 @@ type UdpServerStruct struct {
 	udpaddr *net.UDPAddr
 	udpconn *udp.UdpStruct
 	auth    bool
-	recvch  chan *packetchan.ChanPacket
+	recvch  chan *packetconn.ConnPacket
 }
 
-func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpserver interfaces.ChannelInterface, err error) {
+func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpserver interfaces.ConnInterface, err error) {
 
 	u := &UdpServerStruct{
 		cx:      ctx,
@@ -32,7 +32,7 @@ func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpserver interfaces.Cha
 		udpaddr: nil,
 		udpconn: nil,
 		auth:    false,
-		recvch:  make(chan *packetchan.ChanPacket, 16),
+		recvch:  make(chan *packetconn.ConnPacket, 16),
 	}
 
 	// Do an initial check and fail if it fails

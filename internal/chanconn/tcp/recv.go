@@ -8,6 +8,16 @@ import (
 )
 
 func (t *TcpStruct) RecvChan() <-chan *packetconn.ConnPacket {
+
+	if t == nil {
+		log.FFatal("Nil struct pointer")
+		return nil
+	}
+	if t.recvch == nil {
+		log.FFatal("Nil recvch pointer")
+		return nil
+	}
+
 	return t.recvch
 }
 
@@ -35,38 +45,11 @@ func (t *TcpStruct) goRecv() {
 
 		packet, err := packetconn.MakePacket(buf)
 		if err != nil {
-			log.Errorf("TCP Err:%s", err)
+			log.Errorf("TCP MakePacket() Err:%s", err)
 			continue
 		}
 
-		switch packet.GetType() {
-		case packetconn.PACKET_TYPE_TCP:
-			t.recvch <- packet
-
-		case packetconn.PACKET_TYPE_TCPAUTH:
-			log.Fatal("Not implemented")
-
-		case packetconn.PACKET_TYPE_PONG:
-			log.Debug("Got Pong")
-			ping := packet.GetPayload()
-			t.pinger.Pongch <- ping.([]byte)
-
-		case packetconn.PACKET_TYPE_PING:
-			log.Debug("Got Ping")
-
-			ping := packet.GetPayload()
-			packet, err := packetconn.NewPacket(packetconn.PACKET_TYPE_PONG, ping)
-			if err != nil {
-				log.Fatalf("err:%s", err)
-			}
-			if !t.closed() {
-				t.sendch <- packet
-			}
-
-		default:
-			log.Errorf("Err:%s", err)
-			continue
-		}
+		t.recvch <- packet
 
 		if t.closed() {
 			return

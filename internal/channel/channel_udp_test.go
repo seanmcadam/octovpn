@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/seanmcadam/octovpn/internal/chanconn"
 	"github.com/seanmcadam/octovpn/internal/chanconn/udpcli"
 	"github.com/seanmcadam/octovpn/internal/chanconn/udpsrv"
 	"github.com/seanmcadam/octovpn/internal/settings"
@@ -11,7 +12,6 @@ import (
 )
 
 func TestNewChannel_Udp(t *testing.T) {
-	//var testval = []byte("test")
 
 	cx := ctx.NewContext()
 
@@ -25,7 +25,7 @@ func TestNewChannel_Udp(t *testing.T) {
 
 	// Get Client and Server
 
-	serv, err := udpsrv.New(cx, config)
+	serv, err := chanconn.New(cx, config, udpsrv.New)
 	if err != nil {
 		t.Fatalf("udpsrv New err:%s", err)
 	}
@@ -33,7 +33,7 @@ func TestNewChannel_Udp(t *testing.T) {
 		t.Fatal("serv == nil")
 	}
 
-	client, err := udpcli.New(cx, config)
+	client, err := chanconn.New(cx, config, udpcli.New)
 	if err != nil {
 		t.Fatalf("udpcli New err:%s", err)
 	}

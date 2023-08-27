@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/seanmcadam/octovpn/octolib/counter"
 	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
 	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
@@ -22,14 +23,12 @@ type PacketLength uint16 // 2
 const ConnSigVal PacketSig = 0xAA
 
 const (
-	PACKET_TYPE_UDPAUTH PacketType = 0x41 // []byte  (payload conversion)
-	PACKET_TYPE_UDP     PacketType = 0x42 // ChanPacket
-	PACKET_TYPE_TCPAUTH PacketType = 0x84 // []byte
-	PACKET_TYPE_TCP     PacketType = 0x88 // ChanPacket
-	PACKET_TYPE_LOOP    PacketType = 0xA2 // []byte
-	PACKET_TYPE_PING    PacketType = 0xE1 // []byte
-	PACKET_TYPE_PONG    PacketType = 0xE2 // []byte
-	PACKET_TYPE_ERROR   PacketType = 0xFF // []byte
+	PACKET_TYPE_RAW    PacketType = 0x00 // []byte
+	PACKET_TYPE_AUTH   PacketType = 0x01 // []byte  (payload conversion)
+	PACKET_TYPE_CHAN   PacketType = 0x02 // ChanPacket
+	PACKET_TYPE_PING64 PacketType = 0xE1 // []byte
+	PACKET_TYPE_PONG64 PacketType = 0xE2 // []byte
+	PACKET_TYPE_ERROR  PacketType = 0xFF // []byte
 )
 
 type ConnPacket struct {
@@ -49,6 +48,11 @@ func NewPacket(t PacketType, payload interface{}) (cp *ConnPacket, err error) {
 		plen = 0
 	case []byte:
 		plen = len(payload.([]byte))
+	case counter.Counter64:
+		b := make([]byte, 8)
+		binary.LittleEndian.PutUint64(b, uint64(payload.(counter.Counter64)))
+		payload = b
+		plen = 8
 	case *packetchan.ChanPacket:
 		plen = payload.(*packetchan.ChanPacket).GetSize()
 	default:
@@ -78,17 +82,20 @@ func (cp *ConnPacket) GetPayloadLength() (l PacketLength) {
 	return cp.pLength
 }
 
-func (cp *ConnPacket) GetPayload()( payload interface{} ) {
+func (cp *ConnPacket) GetPayload() (payload interface{}) {
 	switch cp.payload.(type) {
 	case nil:
 		return nil
+
 	case []byte:
 		payload = make([]byte, len(cp.payload.([]byte)))
 		copy(payload.([]byte), cp.payload.([]byte))
+
 	case *packetchan.ChanPacket:
 		payload = cp.payload.(*packetchan.ChanPacket).Copy()
+
 	default:
-		log.Fatalf("Unhandled Type:%t",cp.payload)
+		log.Fatalf("Unhandled Type:%t", cp.payload)
 	}
 	return payload
 }
@@ -123,9 +130,10 @@ func MakePacket(data []byte) (cp *ConnPacket, err error) {
 	var payloadlen PacketLength
 
 	switch cp.pType {
-	case PACKET_TYPE_UDP:
-		fallthrough
-	case PACKET_TYPE_TCP:
+	case PACKET_TYPE_RAW:
+		cp.payload = data[ConnOverhead:]
+
+	case PACKET_TYPE_CHAN:
 
 		ch, err := packetchan.MakePacket(data[ConnOverhead:])
 		if err != nil {
@@ -135,17 +143,16 @@ func MakePacket(data []byte) (cp *ConnPacket, err error) {
 		payloadlen = PacketLength(ch.GetSize())
 		cp.payload = ch
 
-	case PACKET_TYPE_UDPAUTH:
+	case PACKET_TYPE_PING64:
 		fallthrough
-	case PACKET_TYPE_TCPAUTH:
+	case PACKET_TYPE_PONG64:
+		if payloadlen != 8 {
+			log.Fatalf("Bad PING-PONG payload len:%d", payloadlen)
+		}
+		cp.payload = counter.Counter64(binary.LittleEndian.Uint64(data[ConnOverhead:]))
+
+	case PACKET_TYPE_AUTH:
 		fallthrough
-	case PACKET_TYPE_PING:
-		fallthrough
-	case PACKET_TYPE_PONG:
-		fallthrough
-	case PACKET_TYPE_LOOP:
-		payloadlen = PacketLength(len(data) - ConnOverhead)
-		cp.payload = data[ConnOverhead:]
 	default:
 		log.Debugf("Bad Packet type:%d", cp.pType)
 		return nil, errors.ErrConnBadPacket
@@ -184,24 +191,20 @@ func (p *ConnPacket) ToByte() (b []byte) {
 
 func (p PacketType) String() string {
 	switch p {
-	case PACKET_TYPE_UDPAUTH:
-		return "UDPAUTH"
-	case PACKET_TYPE_UDP:
-		return "UDP"
-	case PACKET_TYPE_TCPAUTH:
-		return "TCPAUTH"
-	case PACKET_TYPE_TCP:
-		return "TCP"
-	case PACKET_TYPE_LOOP:
-		return "LOOP"
-	case PACKET_TYPE_PING:
-		return "PING"
-	case PACKET_TYPE_PONG:
-		return "PONG"
+	case PACKET_TYPE_CHAN:
+		return "CHAN"
+	case PACKET_TYPE_AUTH:
+		return "AUTH"
+	case PACKET_TYPE_PING64:
+		return "PING64"
+	case PACKET_TYPE_PONG64:
+		return "PONG64"
+	case PACKET_TYPE_RAW:
+		return "RAW"
 	case PACKET_TYPE_ERROR:
 		return "ERROR"
 	default:
-		return fmt.Sprintf("UNKNOWN TYPE:%x", p)
+		return fmt.Sprintf("UNKNOWN TYPE:%s", p.String())
 
 	}
 }

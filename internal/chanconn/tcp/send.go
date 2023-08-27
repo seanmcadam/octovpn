@@ -23,14 +23,6 @@ func (t *TcpStruct) goSend() {
 
 	for {
 		select {
-		case ping := <-t.pinger.Pingch:
-
-			packet, err := packetconn.NewPacket(packetconn.PACKET_TYPE_PING, ping.ToByte())
-			if err != nil {
-				log.Fatalf("err:%s", err)
-			}
-			t.sendpacket(packet)
-
 		case packet := <-t.sendch:
 			t.sendpacket(packet)
 
@@ -54,13 +46,11 @@ func (t *TcpStruct) sendpacket(packet *packetconn.ConnPacket) {
 		if err != io.EOF {
 			log.Errorf("TCP Write() Error:%s", err)
 		}
-		//t.Close()
 		t.cx.Done()
 	}
 
 	if l != packetlen {
 		log.Errorf("TCP Write() Length Error:%d != %d", l, packetlen)
-		//t.Close()
 		t.cx.Done()
 	}
 }

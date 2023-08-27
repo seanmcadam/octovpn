@@ -23,14 +23,6 @@ func (u *UdpStruct) goSend() {
 
 	for {
 		select {
-		case ping := <-u.pinger.Pingch:
-
-			packet, err := packetconn.NewPacket(packetconn.PACKET_TYPE_PING, ping.ToByte())
-			if err != nil {
-				log.Fatalf("err:%s", err)
-			}
-			u.sendpacket(packet)
-
 		case packet := <-u.sendch:
 			u.sendpacket(packet)
 

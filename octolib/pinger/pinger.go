@@ -1,7 +1,6 @@
 package pinger
 
 import (
-	"encoding/binary"
 	"fmt"
 	"time"
 
@@ -17,7 +16,7 @@ type Pinger64Struct struct {
 	timeout time.Duration
 	counter *counter.Counter64Struct
 	Pingch  chan counter.Counter64
-	Pongch  chan []byte
+	Pongch  chan counter.Counter64
 	Errorch chan error
 }
 
@@ -29,7 +28,7 @@ func NewPinger64(ctx *ctx.Ctx, freq time.Duration, timeout time.Duration) (p *Pi
 		timeout: timeout,
 		counter: counter.NewCounter64(ctx),
 		Pingch:  make(chan counter.Counter64),
-		Pongch:  make(chan []byte),
+		Pongch:  make(chan counter.Counter64),
 		Errorch: make(chan error),
 	}
 
@@ -68,26 +67,19 @@ func (p *Pinger64Struct) goRun() {
 				c := <-countch
 				p.Pingch <- c
 				pingmap[c] = time.Now()
-
-				//log.GDebugf("Tick %d", c)
 			}
 
-		case pongbyte := <-p.Pongch:
-			if len(pongbyte) != 8 {
-				p.Errorch <- fmt.Errorf("Bad Pong Length: %d", len(pongbyte))
-			} else {
-				pong := counter.Counter64(binary.LittleEndian.Uint64(pongbyte))
-				if t, ok := pingmap[pong]; ok {
-					delete(pingmap, pong)
-					dur := time.Since(t)
-					if dur > p.timeout {
-						log.Warnf("Ping Timeout: %d", pong)
-						p.Errorch <- fmt.Errorf("Ping Timeout: %d", pong)
-					}
-				} else {
-					log.Warnf("Ping Missing: %d", pong)
-					p.Errorch <- fmt.Errorf("Ping Missing: %d", pong)
+		case pong := <-p.Pongch:
+			if t, ok := pingmap[pong]; ok {
+				delete(pingmap, pong)
+				dur := time.Since(t)
+				if dur > p.timeout {
+					log.Warnf("Ping Timeout: %d", pong)
+					p.Errorch <- fmt.Errorf("Ping Timeout: %d", pong)
 				}
+			} else {
+				log.Warnf("Ping Missing: %d", pong)
+				p.Errorch <- fmt.Errorf("Ping Missing: %d", pong)
 			}
 
 		case <-p.cx.DoneChan():

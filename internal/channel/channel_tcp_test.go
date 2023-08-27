@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/seanmcadam/octovpn/internal/chanconn"
 	"github.com/seanmcadam/octovpn/internal/chanconn/tcpcli"
 	"github.com/seanmcadam/octovpn/internal/chanconn/tcpsrv"
 	"github.com/seanmcadam/octovpn/internal/settings"
@@ -25,7 +26,7 @@ func TestNewChannel_Tcp(t *testing.T) {
 
 	// Get Client and Server
 
-	serv, err := tcpsrv.New(cx,config)
+	serv, err := chanconn.New(cx, config, tcpsrv.New)
 	if err != nil {
 		t.Fatalf("tcpsrv New err:%s", err)
 	}
@@ -33,7 +34,7 @@ func TestNewChannel_Tcp(t *testing.T) {
 		t.Fatal("serv == nil")
 	}
 
-	client, err := tcpcli.New(cx,config)
+	client, err := chanconn.New(cx, config, tcpcli.New)
 	if err != nil {
 		t.Fatalf("tcpcli New err:%s", err)
 	}
@@ -43,19 +44,19 @@ func TestNewChannel_Tcp(t *testing.T) {
 
 	// Create Channels
 
-	chanServ, err := NewChannel(cx,serv)
+	chanServ, err := NewChannel(cx, serv)
 	if err != nil {
 		t.Fatalf("NewChannel Server error:%s", err)
 	}
 	_ = chanServ
 
-	chanClient, err := NewChannel(cx,client)
+	chanClient, err := NewChannel(cx, client)
 	if err != nil {
 		t.Fatalf("NewChannel Client error:%s", err)
 	}
 	_ = chanClient
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	//err = chanClient.Send(testval)
 	//if err != nil {

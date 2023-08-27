@@ -19,10 +19,6 @@ func (u *UdpStruct) RecvChan() <-chan *packetconn.ConnPacket {
 func (u *UdpStruct) goRecv() {
 	defer u.emptyrecv()
 
-	if !u.srv {
-		u.pinger.TurnOn() // If this is a client turn Ping on
-	}
-
 	for {
 		buf := make([]byte, 2048)
 		var l int
@@ -54,40 +50,11 @@ func (u *UdpStruct) goRecv() {
 
 		packet, err := packetconn.MakePacket(buf)
 		if err != nil {
-			log.Errorf("Err:%s", err)
+			log.Errorf("UDP MakePacket() Err:%s", err)
 			continue
 		}
 
-		switch packet.GetType() {
-		case packetconn.PACKET_TYPE_UDP:
-			u.recvch <- packet
-
-		case packetconn.PACKET_TYPE_UDPAUTH:
-			log.Fatal("Not Implemented")
-
-		case packetconn.PACKET_TYPE_PONG:
-			log.Debug("Got Pong")
-			ping := packet.GetPayload()
-			u.pinger.Pongch <- ping.([]byte)
-
-		case packetconn.PACKET_TYPE_PING:
-			log.Debug("Got Ping")
-
-			if u.srv {
-				u.pinger.TurnOn() // Turn this pinger on once the first PING is receieved
-			}
-
-			ping := packet.GetPayload()
-			packet, err := packetconn.NewPacket(packetconn.PACKET_TYPE_PONG, ping)
-			if err != nil {
-				log.Fatalf("err:%s", err)
-			}
-			u.sendch <- packet
-
-		default:
-			log.Errorf("Err:%s", err)
-			continue
-		}
+		u.recvch <- packet
 
 		if u.closed() {
 			return

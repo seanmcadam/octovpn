@@ -4,10 +4,9 @@ import "github.com/seanmcadam/octovpn/octolib/packet/packetchan"
 
 // Interface between the Channel and ChanConn Layers
 // All ChanConn objects are ChannleInterfaces
-type ChannelInterface interface {
+type PacketInterface interface {
 	Active() bool
-	Send(*packetchan.ChanPacket) error
+	Send([]byte) error
 	RecvChan() <-chan *packetchan.ChanPacket
 	Reset() error
-	//Stats() TrackerData
 }

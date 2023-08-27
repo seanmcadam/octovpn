@@ -2,6 +2,7 @@ package channel
 
 import (
 	"log"
+	"time"
 
 	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/octolib/counter"
@@ -25,7 +26,7 @@ func NewChannel(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStruct
 		cx:      ctx,
 		channel: ci,
 		counter: counter.NewCounter64(ctx),
-		tracker: tracker.NewTracker(ctx),
+		tracker: tracker.NewTracker(ctx, time.Second),
 		recvch:  make(chan *packetchan.ChanPacket, 16),
 	}
 

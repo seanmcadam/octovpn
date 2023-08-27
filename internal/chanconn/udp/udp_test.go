@@ -9,7 +9,7 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
 
-func TestNewTCP(t *testing.T) {
+func TestNewUdp(t *testing.T) {
 
 	cx := ctx.NewContext()
 
