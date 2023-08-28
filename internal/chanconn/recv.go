@@ -24,17 +24,17 @@ func (cs *ChanconnStruct) goRecv() {
 			}
 
 			switch packet.GetType() {
-			case packetconn.PACKET_TYPE_CHAN:
+			case packetconn.CONN_TYPE_CHAN:
 				cs.recvch <- packet.GetPayload().(*packetchan.ChanPacket)
 
-			case packetconn.PACKET_TYPE_PING64:
-				pong, err := packetconn.NewPacket(packetconn.PACKET_TYPE_PONG64, packet.GetPayload())
+			case packetconn.CONN_TYPE_PING64:
+				pong, err := packetconn.NewPacket(packetconn.CONN_TYPE_PONG64, packet.GetPayload())
 				if err != nil {
 					log.Errorf("NewPacket() PONG64 Err:%s", err)
 				}
 				cs.send(pong)
 
-			case packetconn.PACKET_TYPE_PONG64:
+			case packetconn.CONN_TYPE_PONG64:
 				cs.pinger.Pongch <- packet.GetPayload().(counter.Counter64)
 
 			default:

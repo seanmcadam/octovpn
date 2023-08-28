@@ -8,27 +8,27 @@ import (
 )
 
 func TestCompilerCheck(t *testing.T) {
-	_, _ = NewPacket(PACKET_TYPE_RAW, nil)
+	_, _ = NewPacket(CONN_TYPE_RAW, nil)
 }
 
 func TestNewPacket(t *testing.T) {
 
 	nodata := []byte("")
-	cp, err := NewPacket(PACKET_TYPE_RAW, nodata)
+	cp, err := NewPacket(CONN_TYPE_RAW, nodata)
 	if err != errors.ErrConnPayloadLength {
 		t.Error("Zero Payload did not return error")
 	}
 
 	data := []byte("data")
 
-	cp, err = NewPacket(PACKET_TYPE_RAW, data)
+	cp, err = NewPacket(CONN_TYPE_RAW, data)
 	if err != nil {
 		t.Fatalf("Err:%s", err)
 	}
 
 	log.Infof("Size ConnPacket:%d", cp.GetSize())
 
-	if cp.GetType() != PACKET_TYPE_RAW {
+	if cp.GetType() != CONN_TYPE_RAW {
 		t.Error("Packet Type is not correct")
 	}
 

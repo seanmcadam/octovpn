@@ -23,7 +23,7 @@ func TestNewTCPSrv(t *testing.T) {
 		Auth:  "",
 	}
 
-	New(cx, config, tcpsrv.New)
+	NewConn(cx, config, tcpsrv.New)
 
 	cx.Cancel()
 }
@@ -40,7 +40,7 @@ func TestNewTCPCli(t *testing.T) {
 		Auth:  "",
 	}
 
-	New(cx, config, tcpcli.New)
+	NewConn(cx, config, tcpcli.New)
 
 	cx.Cancel()
 }
@@ -57,7 +57,7 @@ func TestNewUDPSrv(t *testing.T) {
 		Auth:  "",
 	}
 
-	New(cx, config, udpsrv.New)
+	NewConn(cx, config, udpsrv.New)
 
 	cx.Cancel()
 
@@ -75,7 +75,7 @@ func TestNewUDPCli(t *testing.T) {
 		Auth:  "",
 	}
 
-	New(cx, config, udpcli.New)
+	NewConn(cx, config, udpcli.New)
 
 	cx.Cancel()
 }

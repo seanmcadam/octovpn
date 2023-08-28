@@ -13,7 +13,9 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/netlib"
 )
 
-func NewUdpLoop(ctx *ctx.Ctx) (srv interfaces.ConnInterface, cli interfaces.ConnInterface, err error) {
+// NewUdpLoop()
+// Returns a pair of connected UDP sockets as a
+func NewUdpConnLoop(ctx *ctx.Ctx) (srv interfaces.ConnInterface, cli interfaces.ConnInterface, err error) {
 
 	udpconfig := &settings.NetworkStruct{
 		Name:  "LoopbackUDP",
@@ -36,7 +38,7 @@ func NewUdpLoop(ctx *ctx.Ctx) (srv interfaces.ConnInterface, cli interfaces.Conn
 	return srv, cli, err
 }
 
-func NewTcpLoop(ctx *ctx.Ctx) (loop1 interfaces.ConnInterface, loop2 interfaces.ConnInterface, err error) {
+func NewTcpConnLoop(ctx *ctx.Ctx) (loop1 interfaces.ConnInterface, loop2 interfaces.ConnInterface, err error) {
 
 	config := &settings.NetworkStruct{
 		Name:  "LoopbackTCP",

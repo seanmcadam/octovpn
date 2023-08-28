@@ -16,31 +16,31 @@ const typeStart int = 1   // +1
 const lengthStart int = 2 // +2
 const payloadStart int = ConnOverhead
 
-type PacketSig uint8     // 1
-type PacketType uint8    // 1
-type PacketLength uint16 // 2
+type ConnSig uint8     // 1
+type ConnType uint8    // 1
+type ConnLength uint16 // 2
 
-const ConnSigVal PacketSig = 0xAA
+const ConnSigVal ConnSig = 0xAA
 
 const (
-	PACKET_TYPE_RAW    PacketType = 0x00 // []byte
-	PACKET_TYPE_AUTH   PacketType = 0x01 // []byte  (payload conversion)
-	PACKET_TYPE_CHAN   PacketType = 0x02 // ChanPacket
-	PACKET_TYPE_PING64 PacketType = 0xE1 // []byte
-	PACKET_TYPE_PONG64 PacketType = 0xE2 // []byte
-	PACKET_TYPE_ERROR  PacketType = 0xFF // []byte
+	CONN_TYPE_RAW    ConnType = 0x00 // []byte
+	CONN_TYPE_AUTH   ConnType = 0x01 // []byte  (payload conversion)
+	CONN_TYPE_CHAN   ConnType = 0x02 // ChanConn
+	CONN_TYPE_PING64 ConnType = 0xE1 // []byte
+	CONN_TYPE_PONG64 ConnType = 0xE2 // []byte
+	CONN_TYPE_ERROR  ConnType = 0xFF // []byte
 )
 
 type ConnPacket struct {
-	pSig    PacketSig
-	pType   PacketType
-	pLength PacketLength
+	cSig    ConnSig
+	cType   ConnType
+	cLength ConnLength
 	payload interface{}
 }
 
-// NewPacket()
-// Packets coming from the low level connections
-func NewPacket(t PacketType, payload interface{}) (cp *ConnPacket, err error) {
+// NewConn()
+// Conns coming from the low level connections
+func NewConn(t ConnType, payload interface{}) (cp *ConnPacket, err error) {
 	var plen int
 
 	switch payload.(type) {
@@ -61,25 +61,25 @@ func NewPacket(t PacketType, payload interface{}) (cp *ConnPacket, err error) {
 	}
 
 	cp = &ConnPacket{
-		pSig:    ConnSigVal,
-		pType:   t,
-		pLength: PacketLength(plen),
+		cSig:    ConnSigVal,
+		cType:   t,
+		cLength: ConnLength(plen),
 		payload: payload,
 	}
 
 	return cp, nil
 }
 
-func (cp *ConnPacket) GetType() (t PacketType) {
-	return cp.pType
+func (cp *ConnPacket) GetType() (t ConnType) {
+	return cp.cType
 }
 
 func (cp *ConnPacket) GetSize() (l int) {
-	return int(cp.pLength) + ConnOverhead
+	return int(cp.cLength) + ConnOverhead
 }
 
-func (cp *ConnPacket) GetPayloadLength() (l PacketLength) {
-	return cp.pLength
+func (cp *ConnPacket) GetPayloadLength() (l ConnLength) {
+	return cp.cLength
 }
 
 func (cp *ConnPacket) GetPayload() (payload interface{}) {
@@ -91,8 +91,8 @@ func (cp *ConnPacket) GetPayload() (payload interface{}) {
 		payload = make([]byte, len(cp.payload.([]byte)))
 		copy(payload.([]byte), cp.payload.([]byte))
 
-	case *packetchan.ChanPacket:
-		payload = cp.payload.(*packetchan.ChanPacket).Copy()
+	case *packetchan.ChanConn:
+		payload = cp.payload.(*packetchan.ChanConn).Copy()
 
 	default:
 		log.Fatalf("Unhandled Type:%t", cp.payload)
@@ -102,64 +102,64 @@ func (cp *ConnPacket) GetPayload() (payload interface{}) {
 
 func (cp *ConnPacket) Copy() (copy *ConnPacket) {
 	copy = &ConnPacket{
-		pSig:    ConnSigVal,
-		pType:   cp.pType,
-		pLength: cp.pLength,
+		cSig:    ConnSigVal,
+		cType:   cp.cType,
+		cLength: cp.cLength,
 		payload: cp.GetPayload(),
 	}
 	return copy
 }
 
-func MakePacket(data []byte) (cp *ConnPacket, err error) {
+func MakeConn(data []byte) (cp *ConnPacket, err error) {
 
 	if len(data) < (ConnOverhead) {
-		log.Debugf("Short Packet data:%d < %d", len(data), ConnOverhead)
-		return nil, errors.ErrConnShortPacket
+		log.Debugf("Short Conn data:%d < %d", len(data), ConnOverhead)
+		return nil, errors.ErrConnShortConn
 	}
 
-	if PacketSig(data[sigStart]) != ConnSigVal {
+	if ConnSig(data[sigStart]) != ConnSigVal {
 		return nil, errors.ErrChanBadSig
 	}
 
 	cp = &ConnPacket{
-		pSig:    ConnSigVal,
-		pType:   PacketType(data[typeStart]),
-		pLength: PacketLength(binary.LittleEndian.Uint16(data[lengthStart : lengthStart+2])),
+		cSig:    ConnSigVal,
+		cType:   ConnType(data[typeStart]),
+		cLength: ConnLength(binary.LittleEndian.Uint16(data[lengthStart : lengthStart+2])),
 	}
 
-	var payloadlen PacketLength
+	var payloadlen ConnLength
 
-	switch cp.pType {
-	case PACKET_TYPE_RAW:
+	switch cp.cType {
+	case CONN_TYPE_RAW:
 		cp.payload = data[ConnOverhead:]
 
-	case PACKET_TYPE_CHAN:
+	case CONN_TYPE_CHAN:
 
-		ch, err := packetchan.MakePacket(data[ConnOverhead:])
+		ch, err := packetchan.MakeConn(data[ConnOverhead:])
 		if err != nil {
 			return nil, err
 		}
 
-		payloadlen = PacketLength(ch.GetSize())
+		payloadlen = ConnLength(ch.GetSize())
 		cp.payload = ch
 
-	case PACKET_TYPE_PING64:
+	case CONN_TYPE_PING64:
 		fallthrough
-	case PACKET_TYPE_PONG64:
+	case CONN_TYPE_PONG64:
 		if payloadlen != 8 {
 			log.Fatalf("Bad PING-PONG payload len:%d", payloadlen)
 		}
 		cp.payload = counter.Counter64(binary.LittleEndian.Uint64(data[ConnOverhead:]))
 
-	case PACKET_TYPE_AUTH:
+	case CONN_TYPE_AUTH:
 		fallthrough
 	default:
-		log.Debugf("Bad Packet type:%d", cp.pType)
-		return nil, errors.ErrConnBadPacket
+		log.Debugf("Bad Conn type:%d", cp.cType)
+		return nil, errors.ErrConnBadConn
 	}
 
-	if payloadlen != cp.pLength {
-		log.Debugf("Bad Packet length:%d != %d", payloadlen, uint16(cp.pLength))
+	if payloadlen != cp.cLength {
+		log.Debugf("Bad Conn length:%d != %d", payloadlen, uint16(cp.cLength))
 		return nil, errors.ErrConnPayloadLength
 	}
 
@@ -170,18 +170,18 @@ func (p *ConnPacket) ToByte() (b []byte) {
 	// Signature
 	b = append(b, byte(ConnSigVal))
 	// Type
-	b = append(b, byte(p.pType))
+	b = append(b, byte(p.cType))
 	// Length
 	len := make([]byte, 2)
-	binary.LittleEndian.PutUint16(len, uint16(p.pLength))
+	binary.LittleEndian.PutUint16(len, uint16(p.cLength))
 	b = append(b, len...)
 	// Payload
 	switch p.payload.(type) {
 	case nil:
 	case []byte:
 		b = append(b, p.payload.([]byte)...)
-	case *packetchan.ChanPacket:
-		b = append(b, p.payload.(*packetchan.ChanPacket).ToByte()...)
+	case *packetchan.ChanConn:
+		b = append(b, p.payload.(*packetchan.ChanConn).ToByte()...)
 	default:
 		log.Fatalf("Unhandled Type:%t", p.payload)
 	}
@@ -189,19 +189,19 @@ func (p *ConnPacket) ToByte() (b []byte) {
 	return b
 }
 
-func (p PacketType) String() string {
+func (p ConnType) String() string {
 	switch p {
-	case PACKET_TYPE_CHAN:
+	case CONN_TYPE_CHAN:
 		return "CHAN"
-	case PACKET_TYPE_AUTH:
+	case CONN_TYPE_AUTH:
 		return "AUTH"
-	case PACKET_TYPE_PING64:
+	case CONN_TYPE_PING64:
 		return "PING64"
-	case PACKET_TYPE_PONG64:
+	case CONN_TYPE_PONG64:
 		return "PONG64"
-	case PACKET_TYPE_RAW:
+	case CONN_TYPE_RAW:
 		return "RAW"
-	case PACKET_TYPE_ERROR:
+	case CONN_TYPE_ERROR:
 		return "ERROR"
 	default:
 		return fmt.Sprintf("UNKNOWN TYPE:%s", p.String())

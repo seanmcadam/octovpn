@@ -1,4 +1,4 @@
-package loopconn
+package loopchan
 
 import (
 	"reflect"
@@ -12,7 +12,7 @@ import (
 func TestNewUdpLoop_OpenClose(t *testing.T) {
 
 	cx := ctx.NewContext()
-	l1, l2, err := NewUdpConnLoop(cx)
+	l1, l2, err := NewUdpLoop(cx)
 
 	if err != nil {
 		t.Fatalf("UDP Error:%s", err)
@@ -33,9 +33,9 @@ func TestNewUdpLoop_SendRecv(t *testing.T) {
 
 	cx := ctx.NewContext()
 	data := []byte("data")
-	cp, err := packetconn.NewPacket(packetconn.CONN_TYPE_RAW, data)
+	cp, err := packetconn.NewPacket(packetconn.PACKET_TYPE_RAW, data)
 
-	srv, cli, err := NewUdpConnLoop(cx)
+	srv, cli, err := NewUdpLoop(cx)
 
 	if err != nil {
 		t.Fatalf("UDP Error:%s", err)

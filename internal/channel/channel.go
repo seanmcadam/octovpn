@@ -34,7 +34,7 @@ func NewChannel(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStruct
 	return cs, err
 }
 
-func (cs *ChannelStruct) Send(b []byte) error {
+func (cs *ChannelStruct) Send(cs []byte) error {
 	if !cs.channel.Active() {
 		return errors.ErrNetChannelDown
 	}

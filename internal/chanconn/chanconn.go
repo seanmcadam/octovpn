@@ -22,7 +22,7 @@ type ChanconnStruct struct {
 	pinger *pinger.Pinger64Struct
 }
 
-func New(ctx *ctx.Ctx, config *settings.NetworkStruct, confFunc NewConnFunc) (ci interfaces.ChannelInterface, err error) {
+func NewConn(ctx *ctx.Ctx, config *settings.NetworkStruct, confFunc NewConnFunc) (ci interfaces.ChannelInterface, err error) {
 
 	conn, err := confFunc(ctx, config)
 	if err != nil {

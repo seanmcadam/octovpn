@@ -10,7 +10,7 @@ import (
 func (cs *ChanconnStruct) Send(cp *packetchan.ChanPacket) error {
 
 	if cs.Active() {
-		packet, err := packetconn.NewPacket(packetconn.PACKET_TYPE_CHAN, cp)
+		packet, err := packetconn.NewPacket(packetconn.CONN_TYPE_CHAN, cp)
 		if err != nil {
 			return err
 		}
@@ -31,7 +31,7 @@ func (cs *ChanconnStruct) goSend() {
 			return
 
 		case count := <-cs.pinger.Pingch:
-			packet, err := packetconn.NewPacket(packetconn.PACKET_TYPE_PING64, count)
+			packet, err := packetconn.NewPacket(packetconn.CONN_TYPE_PING64, count)
 			if err != nil {
 				log.Errorf("NewPacket Err:%s", err)
 				continue
