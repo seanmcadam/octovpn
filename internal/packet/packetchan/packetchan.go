@@ -100,6 +100,17 @@ func (cp *ChanPacket) CopyAck() (ack interfaces.PacketInterface) {
 	return ack
 }
 
+func (cp *ChanPacket) CopyPong64() (ack interfaces.PacketInterface) {
+	ack = &ChanPacket{
+		cSig:         packet.CHAN_SIGV1,
+		cType:        packet.CHAN_TYPE_PONG64,
+		cPayloadSize: 0,
+		cCounter:     cp.Counter32(),
+		cPayload:     nil,
+	}
+	return ack
+}
+
 func MakePacket(data []byte) (cp *ChanPacket, err error) {
 
 	if len(data) < (Overhead) {

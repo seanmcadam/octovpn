@@ -3,14 +3,15 @@ package udp
 import (
 	"io"
 
+	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/packet/packetconn"
 	"github.com/seanmcadam/octovpn/octolib/log"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
 // Send()
-func (u *UdpStruct) Send(packet *packetconn.ConnPacket) (err error) {
+func (u *UdpStruct) Send(packet interfaces.PacketInterface) (err error) {
 
-	go func(p *packetconn.ConnPacket) {
+	go func(p interfaces.PacketInterface) {
 		u.sendch <- p
 	}(packet)
 	return err
@@ -37,10 +38,10 @@ func (u *UdpStruct) goSend() {
 
 }
 
-func (u *UdpStruct) sendpacket(packet *packetconn.ConnPacket) {
+func (u *UdpStruct) sendpacket(packet interfaces.PacketInterface) {
 	var l int
 	var err error
-	packetlen := int(packet.GetPayloadLength()) + packetconn.ConnOverhead
+	packetlen := int(packet.PayloadSize()) + packetconn.Overhead
 	if u.srv {
 		l, err = u.conn.WriteToUDP(packet.ToByte(), u.addr)
 	} else {

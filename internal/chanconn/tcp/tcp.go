@@ -3,15 +3,15 @@ package tcp
 import (
 	"net"
 
+	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
 type TcpStruct struct {
 	cx     *ctx.Ctx
 	conn   *net.TCPConn
-	sendch chan *packetconn.ConnPacket
-	recvch chan *packetconn.ConnPacket
+	sendch chan interfaces.PacketInterface
+	recvch chan interfaces.PacketInterface
 }
 
 func NewTCP(ctx *ctx.Ctx, conn *net.TCPConn) (tcp *TcpStruct) {
@@ -19,8 +19,8 @@ func NewTCP(ctx *ctx.Ctx, conn *net.TCPConn) (tcp *TcpStruct) {
 	tcp = &TcpStruct{
 		cx:     ctx,
 		conn:   conn,
-		sendch: make(chan *packetconn.ConnPacket),
-		recvch: make(chan *packetconn.ConnPacket),
+		sendch: make(chan interfaces.PacketInterface),
+		recvch: make(chan interfaces.PacketInterface),
 	}
 
 	tcp.run()

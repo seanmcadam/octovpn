@@ -3,10 +3,11 @@ package packetsite
 import (
 	"encoding/binary"
 
+	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/packet"
+	"github.com/seanmcadam/octovpn/internal/packet/packetchan"
 	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
-	"github.com/seanmcadam/octovpn/octolib/packet"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
 )
 
 const sigStart int = 0
@@ -55,15 +56,15 @@ func (cp *SitePacket) Type() (t packet.PacketType) {
 	return cp.sType
 }
 
-func (cp *SitePacket) Size() (l int) {
-	return int(cp.sPayloadSize) + Overhead
+func (cp *SitePacket) Size() packet.PacketSize {
+	return packet.PacketSize(int(cp.sPayloadSize) + Overhead)
 }
 
 func (cp *SitePacket) PayloadSize() (l packet.PacketPayloadSize) {
 	return cp.sPayloadSize
 }
 
-func (cp *SitePacket) Counter32() (packet.PacketCounter32) {
+func (cp *SitePacket) Counter32() packet.PacketCounter32 {
 	return 0
 }
 
@@ -85,10 +86,30 @@ func (cp *SitePacket) Payload() (payload interface{}) {
 	return payload
 }
 
-func (cp *SitePacket) Copy() (copy *SitePacket) {
+func (cp *SitePacket) Copy() (copy interfaces.PacketInterface) {
 	copy = &SitePacket{
 		sSig:         packet.SITE_SIGV1,
 		sType:        cp.sType,
+		sPayloadSize: cp.sPayloadSize,
+		sPayload:     cp.Payload(),
+	}
+	return copy
+}
+
+func (cp *SitePacket) CopyAck() (copy interfaces.PacketInterface) {
+	copy = &SitePacket{
+		sSig:         packet.SITE_SIGV1,
+		sType:        packet.SITE_TYPE_ACK,
+		sPayloadSize: cp.sPayloadSize,
+		sPayload:     cp.Payload(),
+	}
+	return copy
+}
+
+func (cp *SitePacket) CopyPong64() (copy interfaces.PacketInterface) {
+	copy = &SitePacket{
+		sSig:         packet.SITE_SIGV1,
+		sType:        packet.SITE_TYPE_PONG64,
 		sPayloadSize: cp.sPayloadSize,
 		sPayload:     cp.Payload(),
 	}

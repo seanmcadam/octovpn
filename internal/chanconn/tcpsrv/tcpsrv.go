@@ -9,7 +9,6 @@ import (
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
 type TcpServerStruct struct {
@@ -20,7 +19,7 @@ type TcpServerStruct struct {
 	tcpaddr     *net.TCPAddr
 	tcpconn     *tcp.TcpStruct
 	tcpconnch   chan *tcp.TcpStruct
-	recvch      chan *packetconn.ConnPacket
+	recvch      chan interfaces.PacketInterface
 }
 
 // NewTcpServer()
@@ -35,7 +34,7 @@ func New(cx *ctx.Ctx, config *settings.NetworkStruct) (tcpserver interfaces.Conn
 		tcpaddr:     nil,
 		tcpconn:     nil,
 		tcpconnch:   make(chan *tcp.TcpStruct),
-		recvch:      make(chan *packetconn.ConnPacket, 16),
+		recvch:      make(chan interfaces.PacketInterface, 16),
 	}
 
 	// Recheck this each time, the IP could change or rotate

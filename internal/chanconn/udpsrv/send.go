@@ -1,14 +1,14 @@
 package udpsrv
 
 import (
+	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/octolib/errors"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
 // Send()
-func (u *UdpServerStruct) Send(co *packetconn.ConnPacket) (err error) {
+func (u *UdpServerStruct) Send(co interfaces.PacketInterface) (err error) {
 
-	if co.GetSize() > int(u.config.GetMtu()) {
+	if uint16(co.Size()) > u.config.GetMtu() {
 		return errors.ErrNetPacketTooBig
 	}
 

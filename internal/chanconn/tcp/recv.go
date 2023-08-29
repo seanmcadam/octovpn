@@ -3,11 +3,12 @@ package tcp
 import (
 	"io"
 
+	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/octolib/log"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
+	"github.com/seanmcadam/octovpn/internal/packet/packetconn"
 )
 
-func (t *TcpStruct) RecvChan() <-chan *packetconn.ConnPacket {
+func (t *TcpStruct) RecvChan() <-chan interfaces.PacketInterface {
 
 	if t == nil {
 		log.FFatal("Nil struct pointer")

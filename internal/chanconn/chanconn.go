@@ -4,10 +4,9 @@ import (
 	"time"
 
 	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/pinger"
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
-	"github.com/seanmcadam/octovpn/octolib/pinger"
 )
 
 const PingFreq = 1 * time.Second
@@ -18,7 +17,7 @@ type NewConnFunc func(*ctx.Ctx, *settings.NetworkStruct) (interfaces.ConnInterfa
 type ChanconnStruct struct {
 	cx     *ctx.Ctx
 	conn   interfaces.ConnInterface
-	recvch chan *packetchan.ChanPacket
+	recvch chan interfaces.PacketInterface
 	pinger *pinger.Pinger64Struct
 }
 
@@ -32,7 +31,7 @@ func NewConn(ctx *ctx.Ctx, config *settings.NetworkStruct, confFunc NewConnFunc)
 	cs := &ChanconnStruct{
 		cx:     ctx,
 		conn:   conn,
-		recvch: make(chan *packetchan.ChanPacket, 16),
+		recvch: make(chan interfaces.PacketInterface, 16),
 		pinger: pinger.NewPinger64(ctx, PingFreq, PingTimeout),
 	}
 

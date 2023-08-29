@@ -1,9 +1,9 @@
 package tcpcli
 
 import (
-	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
+	"github.com/seanmcadam/octovpn/interfaces"
 )
 
-func (t *TcpClientStruct) RecvChan() <-chan *packetconn.ConnPacket {
+func (t *TcpClientStruct) RecvChan() <-chan interfaces.PacketInterface {
 	return t.tcpconn.RecvChan()
 }

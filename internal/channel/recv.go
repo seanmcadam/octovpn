@@ -3,8 +3,9 @@ package channel
 import (
 	"log"
 
-	"github.com/seanmcadam/octovpn/octolib/counter"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
+	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/counter"
+	"github.com/seanmcadam/octovpn/internal/packet"
 )
 
 func (cs *ChannelStruct) goRecv() {
@@ -21,26 +22,26 @@ func (cs *ChannelStruct) goRecv() {
 	}
 }
 
-func (cs *ChannelStruct) recv(data *packetchan.ChanPacket) {
-	t := data.GetType()
+func (cs *ChannelStruct) recv(data interfaces.PacketInterface) {
+	t := data.Type()
 	switch t {
-	case packetchan.CHAN_TYPE_DATA:
+	case packet.CHAN_TYPE_PARENT:
 
-		cs.channel.Send(data.CopyDataToAck())
+		cs.channel.Send(data.CopyAck())
 		cs.tracker.Recv(data.Copy())
 		cs.recvch <- data
 
-	case packetchan.CHAN_TYPE_ACK:
-		cs.tracker.Ack(counter.Counter64(data.GetCounter()))
+	case packet.CHAN_TYPE_ACK:
+		cs.tracker.Ack(counter.Counter32(data.Counter32()))
 
-	case packetchan.CHAN_TYPE_NAK:
-		cs.tracker.Nak(counter.Counter64(data.GetCounter()))
+	case packet.CHAN_TYPE_NAK:
+		cs.tracker.Nak(counter.Counter32(data.Counter32()))
 
-	case packetchan.CHAN_TYPE_ERROR:
+	case packet.CHAN_TYPE_ERROR:
 		log.Fatalf("Unhandled CHAN TYPE ERROR")
-	case packetchan.CHAN_TYPE_PING:
+	case packet.CHAN_TYPE_PING64:
 		log.Fatalf("Unhandled CHAN TYPE PING")
-	case packetchan.CHAN_TYPE_PONG:
+	case packet.CHAN_TYPE_PONG64:
 		log.Fatalf("Unhandled CHAN TYPE PONG")
 	default:
 		log.Fatalf("Unhandled CHAN TYPE:%d", t)

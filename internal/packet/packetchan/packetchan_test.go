@@ -3,7 +3,7 @@ package packetchan
 import (
 	"testing"
 
-	"github.com/seanmcadam/internal/packet"
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 

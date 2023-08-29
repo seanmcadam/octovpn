@@ -74,7 +74,7 @@ func (ns *NetworkStruct) GetPort() (p netlib.NetworkPort) {
 func (ns *NetworkStruct) GetMtu() uint16 {
 	if ns.mtu == nil {
 		if ns.Mtu == "" {
-			ns.Mtu = fmt.Sprintf("%d",netlib.DefaultMaxPacketSize)
+			ns.Mtu = fmt.Sprintf("%d", netlib.DefaultMaxPacketSize)
 		}
 		val, err := strconv.ParseUint(ns.Mtu, 10, 16)
 		if err != nil {

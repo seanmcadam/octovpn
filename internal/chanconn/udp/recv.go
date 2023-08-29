@@ -5,12 +5,13 @@ import (
 	"net"
 	"reflect"
 
+	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/packet/packetconn"
 	"github.com/seanmcadam/octovpn/octolib/log"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
 // Recv()
-func (u *UdpStruct) RecvChan() <-chan *packetconn.ConnPacket {
+func (u *UdpStruct) RecvChan() <-chan interfaces.PacketInterface {
 	return u.recvch
 }
 

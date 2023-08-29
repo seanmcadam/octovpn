@@ -1,13 +1,14 @@
 package chanconn
 
 import (
-	"github.com/seanmcadam/octovpn/octolib/counter"
+	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/counter"
+	"github.com/seanmcadam/octovpn/internal/packet"
+	"github.com/seanmcadam/octovpn/internal/packet/packetchan"
 	"github.com/seanmcadam/octovpn/octolib/log"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
-func (cs *ChanconnStruct) RecvChan() <-chan *packetchan.ChanPacket {
+func (cs *ChanconnStruct) RecvChan() <-chan interfaces.PacketInterface {
 	return cs.recvch
 }
 
@@ -17,28 +18,30 @@ func (cs *ChanconnStruct) goRecv() {
 		case <-cs.cx.DoneChan():
 			return
 
-		case packet := <-cs.conn.RecvChan():
-			if packet == nil {
+		case p := <-cs.conn.RecvChan():
+			if p == nil {
 				log.Debug("Got nil packet")
 				return
 			}
 
-			switch packet.GetType() {
-			case packetconn.CONN_TYPE_CHAN:
-				cs.recvch <- packet.GetPayload().(*packetchan.ChanPacket)
-
-			case packetconn.CONN_TYPE_PING64:
-				pong, err := packetconn.NewPacket(packetconn.CONN_TYPE_PONG64, packet.GetPayload())
+			switch p.Type() {
+			case packet.CONN_TYPE_PARENT:
+				payload, err := packetchan.MakePacket(p.Payload().([]byte))
 				if err != nil {
-					log.Errorf("NewPacket() PONG64 Err:%s", err)
+					log.Errorf("packetchan.MakePacket() Err:%s", err)
+					continue
 				}
-				cs.send(pong)
 
-			case packetconn.CONN_TYPE_PONG64:
-				cs.pinger.Pongch <- packet.GetPayload().(counter.Counter64)
+				cs.recvch <- payload
+
+			case packet.CONN_TYPE_PING64:
+				cs.send(p.CopyPong64())
+
+			case packet.CONN_TYPE_PONG64:
+				cs.pinger.Pongch <- p.Payload().(counter.Counter64)
 
 			default:
-				log.Fatalf("Unhandled Packet Type:%d", packet.GetType())
+				log.Fatalf("Unhandled Packet Type:%d", p.Type())
 			}
 		}
 	}

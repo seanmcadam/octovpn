@@ -3,8 +3,8 @@ package tracker
 import (
 	"time"
 
-	"github.com/seanmcadam/octovpn/interfaces/ipacket"
-	"github.com/seanmcadam/octovpn/octolib/counter"
+	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/counter"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
@@ -20,7 +20,7 @@ const DefaultTrackerChanDepth = 64
 const MaintTimeoutDuration = 5 * time.Second
 
 type PacketTracker struct {
-	packet ipacket.PacketInterface
+	packet interfaces.PacketInterface
 	tm     time.Time
 }
 
@@ -54,7 +54,7 @@ type TrackerStruct struct {
 	nak    map[counter.Counter32]*CounterTracker
 }
 
-func newPacketTracker(d ipacket.PacketInterface) (p *PacketTracker) {
+func newPacketTracker(d interfaces.PacketInterface) (p *PacketTracker) {
 	p = &PacketTracker{
 		packet: d,
 		tm:     time.Now(),
@@ -93,11 +93,11 @@ func NewTracker(ctx *ctx.Ctx, freq time.Duration) (t *TrackerStruct) {
 }
 
 // For acting on the onject to be serialized with Send, Recv, Ack, and Nak
-func (t *TrackerStruct) Send(packet ipacket.PacketInterface) {
+func (t *TrackerStruct) Send(packet interfaces.PacketInterface) {
 	t.sendch <- newPacketTracker(packet)
 }
 
-func (t *TrackerStruct) Recv(packet ipacket.PacketInterface) {
+func (t *TrackerStruct) Recv(packet interfaces.PacketInterface) {
 	t.sendch <- newPacketTracker(packet)
 }
 

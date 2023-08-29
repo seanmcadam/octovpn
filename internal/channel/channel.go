@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"github.com/seanmcadam/octovpn/interfaces"
-	"github.com/seanmcadam/octovpn/octolib/counter"
+	"github.com/seanmcadam/octovpn/internal/counter"
+	"github.com/seanmcadam/octovpn/internal/packet"
+	"github.com/seanmcadam/octovpn/internal/packet/packetchan"
+	"github.com/seanmcadam/octovpn/internal/tracker"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/errors"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
-	"github.com/seanmcadam/octovpn/octolib/tracker"
 )
 
 type ChannelStruct struct {
@@ -17,7 +18,7 @@ type ChannelStruct struct {
 	channel interfaces.ChannelInterface
 	counter *counter.Counter64Struct
 	tracker *tracker.TrackerStruct
-	recvch  chan *packetchan.ChanPacket
+	recvch  chan interfaces.PacketInterface
 }
 
 func NewChannel(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStruct, err error) {
@@ -27,19 +28,19 @@ func NewChannel(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStruct
 		channel: ci,
 		counter: counter.NewCounter64(ctx),
 		tracker: tracker.NewTracker(ctx, time.Second),
-		recvch:  make(chan *packetchan.ChanPacket, 16),
+		recvch:  make(chan interfaces.PacketInterface, 16),
 	}
 
 	go cs.goRecv()
 	return cs, err
 }
 
-func (cs *ChannelStruct) Send(cs []byte) error {
+func (cs *ChannelStruct) Send(sp interfaces.PacketInterface) error {
 	if !cs.channel.Active() {
 		return errors.ErrNetChannelDown
 	}
 
-	packet, err := packetchan.NewPacket(packetchan.CHAN_TYPE_DATA, b)
+	packet, err := packetchan.NewPacket(packet.CHAN_TYPE_PARENT, sp)
 	if err != nil {
 		log.Fatalf("NewPacket Err:%s", err)
 	}
@@ -48,7 +49,7 @@ func (cs *ChannelStruct) Send(cs []byte) error {
 	return cs.channel.Send(packet)
 }
 
-func (cs *ChannelStruct) RecvChan() <-chan *packetchan.ChanPacket {
+func (cs *ChannelStruct) RecvChan() <-chan interfaces.PacketInterface {
 	return cs.recvch
 }
 

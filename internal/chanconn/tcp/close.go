@@ -1,10 +1,5 @@
 package tcp
 
-// Close()
-//func (t *TcpStruct) Close() {
-//	log.Debugf("TCP Close() called")
-//	close(t.Closech)
-//}
 
 func (t *TcpStruct) DoneChan() <-chan struct{} {
 	return t.cx.DoneChan()

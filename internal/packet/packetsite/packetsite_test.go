@@ -3,9 +3,9 @@ package packetsite
 import (
 	"testing"
 
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
-	"github.com/seanmcadam/octovpn/octolib/packet"
 )
 
 func TestCompilerCheck(t *testing.T) {

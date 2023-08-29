@@ -1,11 +1,5 @@
 package udp
 
-// Close()
-//func (u *UdpStruct) Close() {
-//	log.Debugf("UDP Close() called")
-//	close(u.Closech)
-//}
-
 func (u *UdpStruct) DoneChan() <-chan struct{} {
 	return u.cx.DoneChan()
 }

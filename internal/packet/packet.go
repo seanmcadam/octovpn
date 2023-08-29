@@ -1,7 +1,7 @@
 package packet
 
 import (
-	"github.com/seanmcadam/octovpn/octolib/counter"
+	"github.com/seanmcadam/octovpn/internal/counter"
 )
 
 const SizePacketSig int = 1

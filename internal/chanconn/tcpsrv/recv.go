@@ -1,9 +1,9 @@
 package tcpsrv
 
 import (
-	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
+	"github.com/seanmcadam/octovpn/interfaces"
 )
 
-func (t *TcpServerStruct) RecvChan() <-chan *packetconn.ConnPacket {
+func (t *TcpServerStruct) RecvChan() <-chan interfaces.PacketInterface {
 	return t.tcpconn.RecvChan()
 }

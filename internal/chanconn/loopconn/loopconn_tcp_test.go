@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"github.com/seanmcadam/octovpn/octolib/ctx"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
+	"github.com/seanmcadam/octovpn/internal/packet"
+	"github.com/seanmcadam/octovpn/internal/packet/packetconn"
 )
 
 func TestNewTcpLoop_OpenClose(t *testing.T) {
@@ -35,7 +36,7 @@ func TestNewTcpLoop_SendRecv(t *testing.T) {
 	cx := ctx.NewContext()
 
 	data := []byte("data")
-	cp, err := packetconn.NewPacket(packetconn.CONN_TYPE_RAW, data)
+	cp, err := packetconn.NewPacket(packet.CONN_TYPE_RAW, data)
 	if err != nil {
 		t.Fatalf("NewPacket Err:%s", err)
 	}
@@ -78,7 +79,7 @@ func TestNewTcpLoop_SendRecvReset(t *testing.T) {
 	cx := ctx.NewContext()
 
 	data := []byte("data")
-	cp, err := packetconn.NewPacket(packetconn.CONN_TYPE_RAW, data)
+	cp, err := packetconn.NewPacket(packet.CONN_TYPE_RAW, data)
 	if err != nil {
 		t.Fatalf("NewPacket Err:%s", err)
 	}

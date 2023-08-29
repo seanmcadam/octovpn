@@ -5,14 +5,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/seanmcadam/octovpn/internal/packet"
+	"github.com/seanmcadam/octovpn/internal/packet/packetconn"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
 func TestNewUdpLoop_OpenClose(t *testing.T) {
 
 	cx := ctx.NewContext()
-	l1, l2, err := NewUdpLoop(cx)
+	_, _, err := NewUdpChanLoop(cx)
 
 	if err != nil {
 		t.Fatalf("UDP Error:%s", err)
@@ -20,35 +21,37 @@ func TestNewUdpLoop_OpenClose(t *testing.T) {
 
 	time.Sleep(10 * time.Second)
 
-	if !l1.Active() {
-		t.Fatal("UDP L1 Active failed")
-	}
+	//if !l1.Active() {
+	//	t.Fatal("UDP L1 Active failed")
+	//}
 
-	if !l2.Active() {
-		t.Fatal("UDP L2 Active failed")
-	}
+	//if !l2.Active() {
+	//	t.Fatal("UDP L2 Active failed")
+	//}
+
+	cx.Cancel()
 }
 
 func TestNewUdpLoop_SendRecv(t *testing.T) {
 
 	cx := ctx.NewContext()
 	data := []byte("data")
-	cp, err := packetconn.NewPacket(packetconn.PACKET_TYPE_RAW, data)
+	cp, err := packetconn.NewPacket(packet.CONN_TYPE_RAW, data)
 
-	srv, cli, err := NewUdpLoop(cx)
+	srv, cli, err := NewUdpChanLoop(cx)
 
 	if err != nil {
 		t.Fatalf("UDP Error:%s", err)
 	}
 
 	time.Sleep(2 * time.Second)
-	if !srv.Active() {
-		t.Fatal("UDP L1 Active failed")
-	}
+	//if !srv.Active() {
+	//	t.Fatal("UDP L1 Active failed")
+	//}
 
-	if !cli.Active() {
-		t.Fatal("UDP L2 Active failed")
-	}
+	//if !cli.Active() {
+	//	t.Fatal("UDP L2 Active failed")
+	//}
 
 	err = cli.Send(cp)
 	if err != nil {

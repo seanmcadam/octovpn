@@ -3,14 +3,15 @@ package tcp
 import (
 	"io"
 
+	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/packet/packetconn"
 	"github.com/seanmcadam/octovpn/octolib/log"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
 // Send()
-func (t *TcpStruct) Send(packet *packetconn.ConnPacket) (err error) {
+func (t *TcpStruct) Send(packet interfaces.PacketInterface) (err error) {
 
-	go func(p *packetconn.ConnPacket) {
+	go func(p interfaces.PacketInterface) {
 		t.sendch <- p
 	}(packet)
 	return err
@@ -36,10 +37,10 @@ func (t *TcpStruct) goSend() {
 	}
 }
 
-func (t *TcpStruct) sendpacket(packet *packetconn.ConnPacket) {
+func (t *TcpStruct) sendpacket(packet interfaces.PacketInterface) {
 	var l int
 	var err error
-	packetlen := int(packet.GetPayloadLength()) + packetconn.ConnOverhead
+	packetlen := int(packet.PayloadSize()) + packetconn.Overhead
 	l, err = t.conn.Write(packet.ToByte())
 
 	if err != nil {

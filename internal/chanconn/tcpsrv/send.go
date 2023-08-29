@@ -1,14 +1,14 @@
 package tcpsrv
 
 import (
+	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/octolib/errors"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetconn"
 )
 
 // Send()
-func (t *TcpServerStruct) Send(co *packetconn.ConnPacket) (err error) {
+func (t *TcpServerStruct) Send(co interfaces.PacketInterface) (err error) {
 
-	if co.GetSize() > int(t.config.GetMtu()) {
+	if uint16(co.Size()) > t.config.GetMtu() {
 		return errors.ErrNetPacketTooBig
 	}
 

@@ -3,11 +3,11 @@ package packetconn
 import (
 	"encoding/binary"
 
-	"github.com/seanmcadam/octovpn/interfaces/ipacket"
+	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/packet"
+	"github.com/seanmcadam/octovpn/internal/packet/packetchan"
 	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
-	"github.com/seanmcadam/octovpn/octolib/packet"
-	"github.com/seanmcadam/octovpn/octolib/packet/packetchan"
 )
 
 const sigStart int = 0
@@ -91,7 +91,7 @@ func (cp *ConnPacket) Payload() (payload interface{}) {
 	return payload
 }
 
-func (cp *ConnPacket) Copy() (copy ipacket.PacketInterface) {
+func (cp *ConnPacket) Copy() (copy interfaces.PacketInterface) {
 	copy = &ConnPacket{
 		cSig:         packet.CONN_SIGV1,
 		cType:        cp.cType,
@@ -101,7 +101,7 @@ func (cp *ConnPacket) Copy() (copy ipacket.PacketInterface) {
 	return copy
 }
 
-func (cp *ConnPacket) CopyPong64() (copy ipacket.PacketInterface) {
+func (cp *ConnPacket) CopyPong64() (copy interfaces.PacketInterface) {
 	copy = &ConnPacket{
 		cSig:         packet.CONN_SIGV1,
 		cType:        packet.CONN_TYPE_PONG64,
@@ -111,7 +111,7 @@ func (cp *ConnPacket) CopyPong64() (copy ipacket.PacketInterface) {
 	return copy
 }
 
-func (cp *ConnPacket) CopyAck() (copy ipacket.PacketInterface) {
+func (cp *ConnPacket) CopyAck() (copy interfaces.PacketInterface) {
 	copy = &ConnPacket{
 		cSig:         packet.CONN_SIGV1,
 		cType:        packet.CONN_TYPE_ACK,
