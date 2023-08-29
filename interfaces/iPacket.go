@@ -1,12 +1,17 @@
 package interfaces
 
-import "github.com/seanmcadam/octovpn/octolib/packet/packetchan"
+import "github.com/seanmcadam/octovpn/internal/packet"
 
 // Interface between the Channel and ChanConn Layers
 // All ChanConn objects are ChannleInterfaces
 type PacketInterface interface {
-	Active() bool
-	Send([]byte) error
-	RecvChan() <-chan *packetchan.ChanPacket
-	Reset() error
+	Type() packet.PacketType
+	Size() packet.PacketSize
+	PayloadSize() packet.PacketPayloadSize
+	Counter32() packet.PacketCounter32
+	Payload() interface{}
+	Copy() PacketInterface
+	CopyAck() PacketInterface
+	CopyPong64() PacketInterface
+	ToByte() []byte
 }

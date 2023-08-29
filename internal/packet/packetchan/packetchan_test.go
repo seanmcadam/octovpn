@@ -3,34 +3,35 @@ package packetchan
 import (
 	"testing"
 
+	"github.com/seanmcadam/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 func TestCompilerCheck(t *testing.T) {
-	_, _ = NewPacket(CHAN_TYPE_ERROR, nil)
+	_, _ = NewPacket(packet.CHAN_TYPE_RAW, nil)
 }
 
 func TestNewPacket(t *testing.T) {
 
-	cp, err := NewPacket(CHAN_TYPE_ERROR, []byte(""))
+	cp, err := NewPacket(packet.CHAN_TYPE_ERROR, []byte(""))
 	if err != nil {
 		t.Errorf("Zero Payload Err:%s", err)
 	}
 
 	data := []byte("data")
 
-	cp, err = NewPacket(CHAN_TYPE_DATA, data)
+	cp, err = NewPacket(packet.CHAN_TYPE_RAW, data)
 	if err != nil {
 		t.Fatalf("Err:%s", err)
 	}
 
-	log.Infof("Size ConnPacket:%d", cp.GetSize())
+	log.Infof("Size ConnPacket:%d", cp.Size())
 
-	if cp.GetType() != CHAN_TYPE_DATA {
+	if cp.Type() != packet.CHAN_TYPE_RAW {
 		t.Error("Packet Type is not correct")
 	}
 
-	if cp.GetPayloadLength() != ChanLength(len(data)) {
+	if cp.PayloadSize() != packet.PacketPayloadSize(len(data)) {
 		t.Error("Payload Length is not correct")
 	}
 
@@ -39,7 +40,7 @@ func TestNewPacket(t *testing.T) {
 		t.Errorf("MakePacket DATA Err:%s", err)
 	}
 
-	ackcp := cp.CopyDataToAck()
+	ackcp := cp.CopyAck()
 	_, err = MakePacket(ackcp.ToByte())
 	if err != nil {
 		t.Errorf("MakePacket ACK Err:%s", err)

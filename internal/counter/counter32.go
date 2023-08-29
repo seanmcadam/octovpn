@@ -7,42 +7,42 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
-type Counter64 uint64
+type Counter32 uint32
 
-type Counter64Struct struct {
+type Counter32Struct struct {
 	cx      *ctx.Ctx
-	CountCh chan Counter64
+	CountCh chan Counter32
 }
 
-func (c Counter64) ToByte() (b []byte) {
+func (c Counter32) ToByte() (b []byte) {
 	b = make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, uint64(c))
+	binary.LittleEndian.PutUint32(b, uint32(c))
 	return b
 }
 
-func NewCounter64(ctx *ctx.Ctx) (c *Counter64Struct) {
-	c = &Counter64Struct{
+func NewCounter32(ctx *ctx.Ctx) (c *Counter32Struct) {
+	c = &Counter32Struct{
 		cx:      ctx,
-		CountCh: make(chan Counter64, 5),
+		CountCh: make(chan Counter32, 5),
 	}
 	go c.goCount()
 	return c
 }
 
-func (c *Counter64Struct) GetCountCh() (ch chan Counter64) {
+func (c *Counter32Struct) GetCountCh() (ch chan Counter32) {
 	return c.CountCh
 }
 
 // goCounter()
 // Generates a UniqueID (int) and returns via supplied channel
 // Runs forever
-func (c *Counter64Struct) goCount() {
+func (c *Counter32Struct) goCount() {
 
-	log.GDebug("Start")
-	defer log.GDebug("Stop")
+	log.GDebug("Counter32 Start")
+	defer log.GDebug("Counter32 Stop")
 	defer c.emptych()
 
-	var counter Counter64 = 1
+	var counter Counter32 = 1
 	for {
 		select {
 		case c.CountCh <- counter:
@@ -53,7 +53,7 @@ func (c *Counter64Struct) goCount() {
 	}
 }
 
-func (c *Counter64Struct) emptych() {
+func (c *Counter32Struct) emptych() {
 	for {
 		select {
 		case <-c.CountCh:
