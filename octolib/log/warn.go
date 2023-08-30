@@ -13,6 +13,8 @@ func Warn(v ...any) {
 	x = append(x,"WRN:")
 	x = append(x, FileLine(2)+":")
 	x = append(x, v)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Print(x...)
 }
 
@@ -25,6 +27,8 @@ func Warnf(format string, v ...any) {
 	format = "WRN:%s:" + format
 	x = append(x, FileLine(2))
 	x = append(x, v...)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Printf(format, x...)
 }
 
@@ -37,5 +41,7 @@ func Warnln(v ...any) {
 	x = append(x,"WRN:")
 	x = append(x, FileLine(2)+":")
 	x = append(x, v)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Println(v...)
 }

@@ -13,6 +13,8 @@ func Info(v ...any) {
 	x = append(x,"INF:")
 	x = append(x, FileLine(2)+":")
 	x = append(x, v)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Print(x...)
 }
 
@@ -25,6 +27,8 @@ func Infof(format string, v ...any) {
 	format = "INF:%s:" + format
 	x = append(x, FileLine(2))
 	x = append(x, v...)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Printf(format, x...)
 }
 
@@ -37,5 +41,7 @@ func Infoln(v ...any) {
 	x = append(x,"INF:")
 	x = append(x, FileLine(2)+":")
 	x = append(x, v)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Println(v...)
 }

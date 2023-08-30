@@ -12,6 +12,14 @@ import (
 
 // Recv()
 func (u *UdpStruct) RecvChan() <-chan interfaces.PacketInterface {
+	if u == nil {
+		log.FatalStack("nil UdpStruct")
+		return nil
+	}
+	if u.recvch == nil {
+		log.Error("Nil recvch pointer")
+		return nil
+	}
 	return u.recvch
 }
 

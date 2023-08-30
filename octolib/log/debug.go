@@ -36,6 +36,8 @@ func Debugf(format string, v ...any) {
 	format = "DBG:%s:" + format
 	x = append(x, FileLine(2))
 	x = append(x, v...)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Printf(format, x...)
 }
 
@@ -46,6 +48,8 @@ func GDebugf(format string, v ...any) {
 	x = append(x, gid)
 	x = append(x, FileLine(2))
 	x = append(x, v...)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Printf(format, x...)
 }
 
@@ -56,6 +60,8 @@ func Debugln(v ...any) {
 	x = append(x, "DBG:")
 	x = append(x, FileLine(2)+":")
 	x = append(x, v)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Println(v...)
 }
 
@@ -66,5 +72,7 @@ func GDebugln(v ...any) {
 	x = append(x, gid)
 	x = append(x, FileLine(2)+":")
 	x = append(x, v)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Println(v...)
 }

@@ -11,11 +11,11 @@ import (
 func (t *TcpStruct) RecvChan() <-chan interfaces.PacketInterface {
 
 	if t == nil {
-		log.FFatal("Nil struct pointer")
+		log.FatalStack("nil TcpStruct")
 		return nil
 	}
 	if t.recvch == nil {
-		log.FFatal("Nil recvch pointer")
+		log.Error("Nil recvch pointer")
 		return nil
 	}
 

@@ -1,6 +1,5 @@
 package log
 
-
 import (
 	"bytes"
 	"fmt"
@@ -13,11 +12,9 @@ import (
 // The parameter (a ...int) indicate the depth of the call stack that the file and line should taken from
 //
 
-//
 // GidFileLine()
 // Returns [GID|Filename:line#]:
 // Useful for pointing out error message locations
-//
 func GidFileLine(a ...int) string {
 	var depth int = 1
 
@@ -41,11 +38,9 @@ func GidFileLine(a ...int) string {
 	return ret
 }
 
-//
 // FileLine()
 // Returns [filename:Line#]
 // Useful for pointing out error message locations
-//
 func FileLine(a ...int) string {
 	var depth = 1
 
@@ -66,11 +61,9 @@ func FileLine(a ...int) string {
 	return "[" + f[len(f)-1] + ":" + lineno + "]:"
 }
 
-//
 // FileLineFunc()
 // Returns [Filename:line#:funcname()]:
 // Useful for pointing out error message locations
-//
 func FileLineFunc(a ...int) string {
 	var depth int = 1
 
@@ -105,11 +98,9 @@ func FileLineFunc(a ...int) string {
 	return ret
 }
 
-//
 // GidFileLineFunc()
 // Returns [GID|Filename:line#:funcname()]:
 // Useful for pointing out error message locations
-//
 func GidFileLineFunc(a ...int) string {
 	var depth int = 1
 
@@ -146,11 +137,9 @@ func GidFileLineFunc(a ...int) string {
 	return ret
 }
 
-//
 // func getGID()
 // Returns the current threads GID
 // Handy to see which GIDs are producing logs
-//
 func getGID() uint64 {
 	b := make([]byte, 64)
 	b = b[:runtime.Stack(b, false)]
@@ -159,3 +148,23 @@ func getGID() uint64 {
 	n, _ := strconv.ParseUint(string(b), 10, 64)
 	return n
 }
+
+// getStack()
+func getStack(depth uint8) (ret []string) {
+
+	pc := make([]uintptr, 20) // Adjust the size as needed
+	n := runtime.Callers(0, pc)
+
+	var j int = 0
+	for i := depth; i < uint8(n); i++ {
+		funcPtr := runtime.FuncForPC(pc[i])
+		if funcPtr != nil {
+			file, line := funcPtr.FileLine(pc[i])
+			j++
+			ret = append(ret, fmt.Sprintf("%d:[%s|%d]%s()\n", j, file, line, funcPtr.Name()))
+		}
+	}
+	return ret
+	//return reverseArray(ret)
+}
+

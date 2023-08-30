@@ -13,6 +13,8 @@ func FFatal(v ...any) {
 	x = append(x,"ERR:")
 	x = append(x, FileLine(2)+":")
 	x = append(x, v)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Fatal(x...)
 }
 
@@ -25,6 +27,8 @@ func FFatalf(format string, v ...any) {
 	format = "ERR:%s:" + format
 	x = append(x, FileLine(2))
 	x = append(x, v...)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Fatalf(format, x...)
 }
 
@@ -37,5 +41,7 @@ func FFatalln(v ...any) {
 	x = append(x,"ERR:")
 	x = append(x, FileLine(2)+":")
 	x = append(x, v)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Fatalln(v...)
 }

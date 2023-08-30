@@ -9,6 +9,14 @@ import (
 )
 
 func (cs *ChanconnStruct) RecvChan() <-chan interfaces.PacketInterface {
+	if cs == nil {
+		log.FatalStack("nil ChanconnStruct")
+		return nil
+	}
+	if cs.recvch == nil {
+		log.Error("Nil recvch pointer")
+		return nil
+	}
 	return cs.recvch
 }
 

@@ -13,6 +13,8 @@ func Error(v ...any) {
 	x = append(x,"ERR:")
 	x = append(x, FileLine(2)+":")
 	x = append(x, v)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Print(x...)
 }
 
@@ -25,6 +27,8 @@ func Errorf(format string, v ...any) {
 	format = "ERR:%s:" + format
 	x = append(x, FileLine(2))
 	x = append(x, v...)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Printf(format, x...)
 }
 
@@ -37,5 +41,7 @@ func Errorln(v ...any) {
 	x = append(x,"ERR:")
 	x = append(x, FileLine(2)+":")
 	x = append(x, v)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Println(v...)
 }
