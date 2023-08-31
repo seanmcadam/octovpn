@@ -16,6 +16,8 @@ func Debug(v ...any) {
 	x = append(x, "DBG:")
 	x = append(x, FileLine(2)+":")
 	x = append(x, v)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Print(x...)
 }
 
@@ -26,6 +28,8 @@ func GDebug(v ...any) {
 	x = append(x, gid)
 	x = append(x, FileLine(2)+":")
 	x = append(x, v)
+	logLock.Lock()
+	defer logLock.Unlock()
 	systemlog.Print(x...)
 }
 

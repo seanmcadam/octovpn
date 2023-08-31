@@ -28,26 +28,33 @@ type ConnPacket struct {
 // NewConn()
 // Conns coming from the low level connections
 func NewPacket(t packet.PacketType, payload interface{}) (cp *ConnPacket, err error) {
-	var plen int
 
-	log.Debug("TODO validate Type with Payload")
+	var plen packet.PacketPayloadSize
 
-	switch payload.(type) {
-	case nil:
-		plen = 0
-	case []byte:
-		plen = len(payload.([]byte))
-		//	case *packetchan.ChanPacket:
-		//		plen = payload.(*packetchan.ChanPacket).PayloadSize()
+	switch t {
+	case packet.CONN_TYPE_PARENT:
+		if p, ok := payload.(*packetchan.ChanPacket); !ok {
+			log.Errorf("Bad Payload Type Err:%t", payload)
+			return nil, errors.ErrConnPayloadType
+		} else {
+			plen = p.PayloadSize()
+		}
+	case packet.CONN_TYPE_RAW:
+		if p, ok := payload.([]byte); !ok {
+			log.Errorf("Bad Payload Type Err:%t", payload)
+			return nil, errors.ErrConnPayloadType
+		} else {
+			plen = packet.PacketPayloadSize(len(p))
+		}
 	default:
-		log.Errorf("Bad Payload Type:%t", payload)
+		log.Errorf("Unhandled Type Err:%s", t)
 		return nil, errors.ErrConnPayloadType
 	}
 
 	cp = &ConnPacket{
 		cSig:         packet.CONN_SIGV1,
 		cType:        t,
-		cPayloadSize: packet.PacketPayloadSize(plen),
+		cPayloadSize: plen,
 		cPayload:     payload,
 	}
 
@@ -86,7 +93,7 @@ func (cp *ConnPacket) Payload() (payload interface{}) {
 		payload = cp.cPayload.(*packetchan.ChanPacket).Copy()
 
 	default:
-		log.Fatalf("Unhandled Type:%t", cp.cPayload)
+		log.FFatalf("Unhandled Type:%t", cp.cPayload)
 	}
 	return payload
 }
@@ -148,9 +155,7 @@ func (p *ConnPacket) ToByte() (b []byte) {
 	// Type
 	b = append(b, byte(p.cType))
 	// Length
-	len := make([]byte, 2)
-	binary.LittleEndian.PutUint16(len, uint16(p.cPayloadSize))
-	b = append(b, len...)
+	b = append(b, p.cPayloadSize.ToByte()...)
 	// Payload
 	switch p.cPayload.(type) {
 	case nil:
@@ -159,7 +164,7 @@ func (p *ConnPacket) ToByte() (b []byte) {
 	case *packetchan.ChanPacket:
 		b = append(b, p.cPayload.(*packetchan.ChanPacket).ToByte()...)
 	default:
-		log.Fatalf("Unhandled Type:%t", p.cPayload)
+		log.FFatalf("Unhandled Type:%t", p.cPayload)
 	}
 
 	return b

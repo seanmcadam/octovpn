@@ -81,7 +81,7 @@ func (cp *SitePacket) Payload() (payload interface{}) {
 		payload = cp.sPayload.(*packetchan.ChanPacket).Copy()
 
 	default:
-		log.Fatalf("Unhandled Type:%t", cp.sPayload)
+		log.FFatalf("Unhandled Type:%t", cp.sPayload)
 	}
 	return payload
 }
@@ -143,9 +143,7 @@ func (s *SitePacket) ToByte() (b []byte) {
 	// Type
 	b = append(b, byte(s.sType))
 	// Length
-	len := make([]byte, 2)
-	binary.LittleEndian.PutUint16(len, uint16(s.sPayloadSize))
-	b = append(b, len...)
+	b = append(b, s.sPayloadSize.ToByte()...)
 	// Payload
 	switch s.sPayload.(type) {
 	case nil:
@@ -154,7 +152,7 @@ func (s *SitePacket) ToByte() (b []byte) {
 	case *packetchan.ChanPacket:
 		b = append(b, s.sPayload.(*packetchan.ChanPacket).ToByte()...)
 	default:
-		log.Fatalf("Unhandled Type:%t", s.sPayload)
+		log.FFatalf("Unhandled Type:%t", s.sPayload)
 	}
 
 	return b

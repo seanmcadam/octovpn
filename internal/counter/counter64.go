@@ -11,25 +11,25 @@ type Counter64 uint64
 
 type Counter64Struct struct {
 	cx      *ctx.Ctx
-	CountCh chan Counter64
+	CountCh chan *Counter64
 }
 
-func (c Counter64) ToByte() (b []byte) {
+func (c *Counter64) ToByte() (b []byte) {
 	b = make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, uint64(c))
+	binary.LittleEndian.PutUint64(b, uint64(*c))
 	return b
 }
 
 func NewCounter64(ctx *ctx.Ctx) (c *Counter64Struct) {
 	c = &Counter64Struct{
 		cx:      ctx,
-		CountCh: make(chan Counter64, 5),
+		CountCh: make(chan *Counter64, 5),
 	}
 	go c.goCount()
 	return c
 }
 
-func (c *Counter64Struct) GetCountCh() (ch chan Counter64) {
+func (c *Counter64Struct) GetCountCh() (ch chan *Counter64) {
 	return c.CountCh
 }
 
@@ -45,7 +45,7 @@ func (c *Counter64Struct) goCount() {
 	var counter Counter64 = 1
 	for {
 		select {
-		case c.CountCh <- counter:
+		case c.CountCh <- &counter:
 			counter += 1
 		case <-c.cx.DoneChan():
 			return

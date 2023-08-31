@@ -1,6 +1,7 @@
 package pinger
 
 import (
+	"encoding/binary"
 	"fmt"
 	"time"
 
@@ -9,14 +10,37 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
+type Ping64 counter.Counter64
+type Pong64 counter.Counter64
+
+func NewPong64(pong []byte) *Pong64 {
+	if len(pong) < 8 {
+		log.FatalfStack("Not enough pong data:%0x", pong)
+	}
+	p := Pong64(binary.LittleEndian.Uint64(pong))
+	return &p
+}
+
+func (p *Ping64) ToByte() (ping []byte) {
+	ping = make([]byte, 4)
+	binary.LittleEndian.PutUint64(ping, uint64(*p))
+	return ping
+}
+
+func (p *Pong64) ToByte() (pong []byte) {
+	pong = make([]byte, 4)
+	binary.LittleEndian.PutUint64(pong, uint64(*p))
+	return pong
+}
+
 type Pinger64Struct struct {
 	cx      *ctx.Ctx
 	active  bool
 	freq    time.Duration
 	timeout time.Duration
 	counter *counter.Counter64Struct
-	Pingch  chan counter.Counter64
-	Pongch  chan counter.Counter64
+	Pingch  chan *Ping64
+	Pongch  chan *Pong64
 	Errorch chan error
 }
 
@@ -27,8 +51,8 @@ func NewPinger64(ctx *ctx.Ctx, freq time.Duration, timeout time.Duration) (p *Pi
 		freq:    freq,
 		timeout: timeout,
 		counter: counter.NewCounter64(ctx),
-		Pingch:  make(chan counter.Counter64),
-		Pongch:  make(chan counter.Counter64),
+		Pingch:  make(chan *Ping64),
+		Pongch:  make(chan *Pong64),
 		Errorch: make(chan error),
 	}
 
@@ -48,7 +72,7 @@ func (p *Pinger64Struct) TurnOff() {
 }
 
 func (p *Pinger64Struct) goRun() {
-	pingmap := make(map[counter.Counter64]time.Time)
+	pingmap := make(map[Ping64]time.Time)
 	tick := time.NewTicker(p.freq)
 	tickch := tick.C
 	countch := p.counter.GetCountCh()
@@ -64,22 +88,25 @@ func (p *Pinger64Struct) goRun() {
 		select {
 		case <-tickch:
 			if p.active {
-				c := <-countch
-				p.Pingch <- c
-				pingmap[c] = time.Now()
+				var c *counter.Counter64
+				var d Ping64
+				c = <-countch
+				d = Ping64(*c)
+				p.Pingch <- &d
+				pingmap[d] = time.Now()
 			}
 
 		case pong := <-p.Pongch:
-			if t, ok := pingmap[pong]; ok {
-				delete(pingmap, pong)
+			if t, ok := pingmap[Ping64(*pong)]; ok {
+				delete(pingmap, Ping64(*pong))
 				dur := time.Since(t)
 				if dur > p.timeout {
-					log.Warnf("Ping Timeout: %d", pong)
-					p.Errorch <- fmt.Errorf("Ping Timeout: %d", pong)
+					log.Warnf("Ping Timeout: %d", *pong)
+					p.Errorch <- fmt.Errorf("Ping Timeout: %d", *pong)
 				}
 			} else {
-				log.Warnf("Ping Missing: %d", pong)
-				p.Errorch <- fmt.Errorf("Ping Missing: %d", pong)
+				log.Warnf("Ping Missing: %d", *pong)
+				p.Errorch <- fmt.Errorf("Ping Missing: %d", *pong)
 			}
 
 		case <-p.cx.DoneChan():
@@ -87,7 +114,7 @@ func (p *Pinger64Struct) goRun() {
 		}
 
 		// Scan the ping table
-		expired := []counter.Counter64{}
+		expired := []Ping64{}
 		for count, t := range pingmap {
 			dur := time.Since(t)
 			if dur > p.timeout {

@@ -139,21 +139,20 @@ func (cp *ChanPacket) ToByte() (b []byte) {
 	// Type
 	b = append(b, byte(cp.cType))
 	// Length
-	len := make([]byte, 2)
-	binary.LittleEndian.PutUint16(len, uint16(cp.cPayloadSize))
-	b = append(b, len...)
+	b = append(b, cp.cPayloadSize.ToByte()...)
 	// Count
-	count := make([]byte, 8)
-	binary.LittleEndian.PutUint32(count, uint32(cp.cCounter))
-	b = append(b, count...)
+	b = append(b, cp.Counter32().ToByte()...)
 	// Payload
 	switch cp.cPayload.(type) {
 	case nil:
 	case []byte:
 		b = append(b, cp.cPayload.([]byte)...)
 	default:
-		log.Fatalf("Unhandled Type:%t", cp.cPayload)
+		log.FFatalf("Unhandled Type:%t", cp.cPayload)
 	}
 
+	if len(b) != int(cp.Size()) {
+		log.FatalfStack("Packet to Byte Size mismatch %d, %d", len(b), cp.Size())
+	}
 	return b
 }

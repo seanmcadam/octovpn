@@ -8,11 +8,10 @@ import (
 func (t *TcpServerStruct) RecvChan() <-chan interfaces.PacketInterface {
 
 	if t == nil {
-		log.FatalStack("nil TcpStruct")
+		log.FatalStack("nil TcpServerStruct")
 		return nil
 	}
-	if t.recvch == nil {
-		log.Error("Nil recvch pointer")
+	if t.tcpconn == nil {
 		return nil
 	}
 

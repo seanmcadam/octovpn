@@ -11,25 +11,25 @@ type Counter32 uint32
 
 type Counter32Struct struct {
 	cx      *ctx.Ctx
-	CountCh chan Counter32
+	CountCh chan *Counter32
 }
 
-func (c Counter32) ToByte() (b []byte) {
-	b = make([]byte, 8)
-	binary.LittleEndian.PutUint32(b, uint32(c))
+func (c *Counter32) ToByte() (b []byte) {
+	b = make([]byte, 4)
+	binary.LittleEndian.PutUint32(b, uint32(*c))
 	return b
 }
 
 func NewCounter32(ctx *ctx.Ctx) (c *Counter32Struct) {
 	c = &Counter32Struct{
 		cx:      ctx,
-		CountCh: make(chan Counter32, 5),
+		CountCh: make(chan *Counter32, 5),
 	}
 	go c.goCount()
 	return c
 }
 
-func (c *Counter32Struct) GetCountCh() (ch chan Counter32) {
+func (c *Counter32Struct) GetCountCh() (ch chan *Counter32) {
 	return c.CountCh
 }
 
@@ -45,7 +45,7 @@ func (c *Counter32Struct) goCount() {
 	var counter Counter32 = 1
 	for {
 		select {
-		case c.CountCh <- counter:
+		case c.CountCh <- &counter:
 			counter += 1
 		case <-c.cx.DoneChan():
 			return
