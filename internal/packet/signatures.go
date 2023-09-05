@@ -1,387 +1,346 @@
 package packet
 
-import "github.com/seanmcadam/octovpn/octolib/log"
+type PacketSigType uint32
+type PacketSize8FieldType uint8
+type PacketSize16FieldType uint16
+type PacketSizeType uint16
+type PacketWidth uint8
 
-type PacketSigType uint16
-type PacketFields uint32
+const (
+	PacketWidth0        PacketWidth    = 0
+	PacketWidth32       PacketWidth    = 32
+	PacketWidth64       PacketWidth    = 64
+	PacketSigSize       PacketSizeType = 4
+	PacketSize8Size     PacketSizeType = 1
+	PacketSize16Size    PacketSizeType = 2
+	PacketCounter32Size PacketSizeType = 4
+	PacketCounter64Size PacketSizeType = 8
+	PacketAck32Size     PacketSizeType = 4
+	PacketAck64Size     PacketSizeType = 8
+	PacketNak32Size     PacketSizeType = 4
+	PacketNak64Size     PacketSizeType = 8
+	PacketPing32Size    PacketSizeType = 4
+	PacketPing64Size    PacketSizeType = 8
+	PacketPong32Size    PacketSizeType = 4
+	PacketPong64Size    PacketSizeType = 8
+)
+
+//type PacketFields uint32
+//type PacketIDString []byte
+//type PacketAuthString []byte
 
 //
 // Layout of the PacketSigType
 // This provides the ability to & values from certain columns
-// 0xVLDP
-// //||||
-// //|||l__ Packet info (counts, pings, acks, higher layer data)
-// //||l___ Data packets (IP,Eth,Routing, app messaging)
-// //|l____ Which Layer did the packet originate
+// 0xA B CD EF GH
+// //| |  |  |  |
+// //| |  |  |  l__ Packet info (counts, pings, acks, higher layer data)
+// //| |  |  l___ Data packets (IP,Eth,Routing, app messaging)
+// //| |  l____ Which Layer did the packet originate
+// //| l____ What size are the 32/64 bit fields
 // //l_____ What Version is this packet (V1 for now)
-//
+// //
+// //
 
 // Layout of the Field Bits
 // Predefined fiels that should be present in a packet
-// 0xABCDEFGH
-// //|\||\|||
-// //| \| \||
-// //|  |  \| Data Structure pointers (ie *RouterStruct)
-// //|  | Single Value object (ping,pong,counter)
-// //| Single Value Modifier or raw []byte values in stead of objects
+// 0xA BCD EFGH
+// //| \|| \|||
+// //|  \|  \||
+// //|   |   \| Data Structure pointers (ie *RouterStruct, raw []byte)
+// //|   | Single Value object (ping,pong,counter,id,auth)
+// //| Size Modifier
+
+//
+// Order of Fields
+// Sig
+// Size
+// Counters
+// Ping/Pongs | ID | Auth
+// Payloads (all of them)
+// Raw
+
 const (
-	Field_Sig           PacketFields  = 0x00000001
-	Field_Payload       PacketFields  = 0x00000010
-	Field_Router        PacketFields  = 0x00000020
-	Field_IPV6          PacketFields  = 0x00000040
-	Field_IPV4          PacketFields  = 0x00000080
-	Field_Eth           PacketFields  = 0x00000100
-	Field_Auth          PacketFields  = 0x00000200
-	Field_ID            PacketFields  = 0x00000400
-	field_Counter       PacketFields  = 0x00010000
-	field_Ping          PacketFields  = 0x00020000
-	field_Pong          PacketFields  = 0x00040000
-	field_32            PacketFields  = 0x10000000
-	field_64            PacketFields  = 0x20000000
-	Field_Raw           PacketFields  = 0x80000000
-	Field_Counter32     PacketFields  = field_Counter | field_32
-	Field_Counter64     PacketFields  = field_Counter | field_64
-	Field_Ping32        PacketFields  = field_Ping | field_32
-	Field_Ping64        PacketFields  = field_Ping | field_64
-	Field_Pong32        PacketFields  = field_Pong | field_32
-	Field_Pong64        PacketFields  = field_Pong | field_64
-	FieldSize_Sig       uint8         = 2
-	FieldSize_Counter32 uint8         = 4
-	FieldSize_Counter64 uint8         = 8
-	FieldSize_Ping32    uint8         = 4
-	FieldSize_Pong32    uint8         = 4
-	FieldSize_Ping64    uint8         = 8
-	FieldSize_Pong64    uint8         = 8
-	Packet_VERSION      PacketSigType = 0xF000
-	Packet_LAYER        PacketSigType = 0x0F00
-	Packet_TYPE         PacketSigType = 0x00FF
-	Packet_VER1         PacketSigType = 0x1000
-	Packet_VER2         PacketSigType = 0x2000
-	Packet_VER3         PacketSigType = 0x4000
-	Packet_VER4         PacketSigType = 0x8000
-	// Add more Layers here
-	Packet_ROUT PacketSigType = 0x0800
-	Packet_SITE PacketSigType = 0x0400
-	Packet_CHAN PacketSigType = 0x0200
-	Packet_CONN PacketSigType = 0x0100
-	// Add more packet types here
-	Packet_PARENT    PacketSigType = 0x0000
-	Packet_RAW       PacketSigType = 0x0001
-	Packet_AUTH      PacketSigType = 0x0002
-	Packet_ACK       PacketSigType = 0x0003
-	Packet_NAK       PacketSigType = 0x0004
-	Packet_PING32    PacketSigType = 0x0005
-	Packet_PONG32    PacketSigType = 0x0006
-	Packet_PING64    PacketSigType = 0x0007
-	Packet_PONG64    PacketSigType = 0x0008
-	Packet_COUNTER32 PacketSigType = 0x0009
-	Packet_COUNTER64 PacketSigType = 0x000A
-	Packet_ID        PacketSigType = 0x000B
-	Packet_ERROR     PacketSigType = 0x000F
-	// Add more data types here
-	Packet_IPV4   PacketSigType = 0x0010
-	Packet_IPV6   PacketSigType = 0x0020
-	Packet_ETH    PacketSigType = 0x0030
-	Packet_ROUTER PacketSigType = 0x0040
+	MASK_VERSION    PacketSigType = 0xF0000000
+	MASK_SIZE       PacketSigType = 0x0F000000
+	MASK_WIDTH_64_32 PacketSigType = 0x0C000000
+	MASK_SIZE_16_8  PacketSigType = 0x03000000
+	MASK_LAYER      PacketSigType = 0x00FF0000
+	MASK_FIELDS     PacketSigType = 0x0000FF00
+	MASK_DATA       PacketSigType = 0x000000FF
+	VERSION_1       PacketSigType = 0x10000000
+	VERSION_2       PacketSigType = 0x20000000 // Could double the packet size for ceratin layers
+	VERSION_3       PacketSigType = 0x40000000 // Could mix and match versions in differet layers
+	SIZE_8          PacketSigType = 0x01000000
+	SIZE_16         PacketSigType = 0x02000000
+	WIDTH_32         PacketSigType = 0x04000000
+	WIDTH_64         PacketSigType = 0x08000000
 
-	Packet_ROUTE_RAW       = Packet_VER1 | Packet_ROUT | Packet_RAW
-	Packet_ROUTE_RAW_SIZE  = FieldSize_Sig
-	Packet_ROUTE_RAW_FIELD = Field_Sig | Field_Payload
+	LAYER_ROUTER PacketSigType = 0x00080000
+	LAYER_SITE   PacketSigType = 0x00040000
+	LAYER_CHAN   PacketSigType = 0x00020000
+	LAYER_CONN   PacketSigType = 0x00010000
 
-	Packet_ROUTE_AUTH       = Packet_VER1 | Packet_ROUT | Packet_AUTH
-	Packet_ROUTE_AUTH_SIZE  = FieldSize_Sig
-	Packet_ROUTE_AUTH_FIELD = Field_Sig | Field_Payload
+	FIELD_SIG     PacketSigType = 0x00000100 // This data... put in for completeness
+	FIELD_SIZE    PacketSigType = 0x00000200 // Requires SIZE_8/16
+	FIELD_COUNTER PacketSigType = 0x00000400 // Requires WIDTH_32/64
+	FIELD_ACK     PacketSigType = 0x00000800 // Requires WIDTH_32/64
+	FIELD_NAK     PacketSigType = 0x00001000 // Requires WIDTH_32/64
+	MASK_CAN      PacketSigType = FIELD_COUNTER | FIELD_ACK | FIELD_NAK
+	FIELD_PING    PacketSigType = 0x00002000 // Requires WIDTH_32/64
+	FIELD_PONG    PacketSigType = 0x00004000 // Requires WIDTH_32/64
+	MASK_PINGPONG PacketSigType = FIELD_PING | FIELD_PONG
+	FIELD_DATA    PacketSigType = 0x00008000 // data size provided with Size()
 
-	Packet_ROUTE_ROUTER       = Packet_VER1 | Packet_ROUT | Packet_ROUTER
-	Packet_ROUTE_ROUTER_SIZE  = FieldSize_Sig
-	Packet_ROUTE_ROUTER_FIELD = Field_Sig | Field_Router
+	DATA_PACKET PacketSigType = 0x00000001
+	DATA_RAW    PacketSigType = 0x00000002
+	DATA_AUTH   PacketSigType = 0x00000004
+	DATA_ID     PacketSigType = 0x00000008
+	DATA_IPV4   PacketSigType = 0x00000010
+	DATA_IPV6   PacketSigType = 0x00000020
+	DATA_ETH    PacketSigType = 0x00000030
+	DATA_ROUTER PacketSigType = 0x00000040
+	DATA_ERROR  PacketSigType = 0x000000FF
 
-	Packet_ROUTE_ETH       = Packet_VER1 | Packet_ROUT | Packet_ETH
-	Packet_ROUTE_ETH_SIZE  = FieldSize_Sig
-	Packet_ROUTE_ETH_FIELD = Field_Sig | Field_Eth
+	SIG_ROUTE = VERSION_1 | LAYER_ROUTER | FIELD_SIG | FIELD_SIZE | FIELD_DATA
+	SIG_SITE  = VERSION_1 | LAYER_SITE | FIELD_SIG | FIELD_SIZE
+	SIG_CHAN  = VERSION_1 | LAYER_CHAN | FIELD_SIG | FIELD_SIZE
+	SIG_CONN  = VERSION_1 | LAYER_CONN | FIELD_SIG | FIELD_SIZE
 
-	Packet_ROUTE_IPV4       = Packet_VER1 | Packet_ROUT | Packet_IPV4
-	Packet_ROUTE_IPV4_SIZE  = FieldSize_Sig
-	Packet_ROUTE_IPV4_FIELD = Field_Sig | Field_IPV4
+	//
+	// ROUTE
+	//
 
-	Packet_ROUTE_IPV6       = Packet_VER1 | Packet_ROUT | Packet_IPV6
-	Packet_ROUTE_IPV6_SIZE  = FieldSize_Sig
-	Packet_ROUTE_IPV6_FIELD = Field_Sig | Field_IPV6
+	SIG_ROUTE_AUTH   = SIG_ROUTE | DATA_AUTH | SIZE_8
+	SIG_ROUTE_RAW    = SIG_ROUTE | DATA_RAW | SIZE_16
+	SIG_ROUTE_ETH    = SIG_ROUTE | DATA_ETH | SIZE_16
+	SIG_ROUTE_IPV4   = SIG_ROUTE | DATA_IPV4 | SIZE_16
+	SIG_ROUTE_IPV6   = SIG_ROUTE | DATA_IPV6 | SIZE_16
+	SIG_ROUTE_ROUTER = SIG_ROUTE | DATA_ROUTER | SIZE_16
 
-	Packet_SITE_RAW       = Packet_VER1 | Packet_SITE | Packet_RAW
-	Packet_SITE_RAW_SIZE  = FieldSize_Sig
-	Packet_SITE_RAW_FIELD = Field_Sig | Field_Payload
-
-	Packet_SITE_PARENT       = Packet_VER1 | Packet_SITE | Packet_PARENT
-	Packet_SITE_PARENT_SIZE  = FieldSize_Sig
-	Packet_SITE_PARENT_FIELD = Field_Sig | Field_Payload
-
-	Packet_SITE_AUTH       = Packet_VER1 | Packet_SITE | Packet_AUTH
-	Packet_SITE_AUTH_SIZE  = FieldSize_Sig
-	Packet_SITE_AUTH_FIELD = Field_Sig | Field_Payload
-
-	Packet_SITE_ID       = Packet_VER1 | Packet_SITE | Packet_ID
-	Packet_SITE_ID_SIZE  = FieldSize_Sig
-	Packet_SITE_ID_FIELD = Field_Sig | Field_Payload
-
-	Packet_CHAN_RAW       = Packet_VER1 | Packet_CHAN | Packet_RAW
-	Packet_CHAN_RAW_SIZE  = FieldSize_Sig + FieldSize_Counter64
-	Packet_CHAN_RAW_FIELD = Field_Sig | Field_Payload | Field_Counter64
-
-	Packet_CHAN_PARENT       = Packet_VER1 | Packet_CHAN | Packet_PARENT
-	Packet_CHAN_PARENT_SIZE  = FieldSize_Sig + FieldSize_Counter64
-	Packet_CHAN_PARENT_FIELD = Field_Sig | Field_Payload | Field_Counter64
-
-	Packet_CHAN_ACK       = Packet_VER1 | Packet_CHAN | Packet_ACK
-	Packet_CHAN_ACK_SIZE  = FieldSize_Sig + FieldSize_Counter64
-	Packet_CHAN_ACK_FIELD = Field_Sig | Field_Counter64
-
-	Packet_CHAN_NAK       = Packet_VER1 | Packet_CHAN | Packet_NAK
-	Packet_CHAN_NAK_SIZE  = FieldSize_Sig + FieldSize_Counter64
-	Packet_CHAN_NAK_FIELD = Field_Sig | Field_Counter64
-
-	Packet_CONN_RAW       = Packet_VER1 | Packet_CONN | Packet_RAW
-	Packet_CONN_RAW_SIZE  = FieldSize_Sig
-	Packet_CONN_RAW_FIELD = Field_Sig | Field_Payload
-
-	Packet_CONN_PARENT       = Packet_VER1 | Packet_CONN | Packet_PARENT
-	Packet_CONN_PARENT_SIZE  = FieldSize_Sig
-	Packet_CONN_PARENT_FIELD = Field_Sig | Field_Payload
-
-	Packet_CONN_AUTH       = Packet_VER1 | Packet_CONN | Packet_AUTH
-	Packet_CONN_AUTH_SIZE  = FieldSize_Sig
-	Packet_CONN_AUTH_FIELD = Field_Sig | Field_Payload
-
-	Packet_CONN_PING64       = Packet_VER1 | Packet_CONN | Packet_PING64
-	Packet_CONN_PING64_SIZE  = FieldSize_Sig + FieldSize_Ping64
-	Packet_CONN_PING64_FIELD = Field_Sig | Field_Ping64
-
-	Packet_CONN_PONG64       = Packet_VER1 | Packet_CONN | Packet_PONG64
-	Packet_CONN_PONG64_SIZE  = FieldSize_Sig + FieldSize_Pong64
-	Packet_CONN_PONG64_FIELD = Field_Sig | Field_Pong64
+	//
+	// SITE
+	//
+	SIG_SITE_32_RAW    = SIG_SITE | FIELD_DATA | FIELD_COUNTER | DATA_RAW | WIDTH_32 | SIZE_16
+	SIG_SITE_32_PACKET = SIG_SITE | FIELD_DATA | FIELD_COUNTER | DATA_PACKET | WIDTH_32 | SIZE_16
+	SIG_SITE_32_AUTH   = SIG_SITE | FIELD_DATA | FIELD_COUNTER | DATA_AUTH | WIDTH_32 | SIZE_16
+	SIG_SITE_32_ID     = SIG_SITE | FIELD_DATA | FIELD_COUNTER | DATA_ID | WIDTH_32 | SIZE_16
+	SIG_SITE_32_ACK    = SIG_SITE | FIELD_ACK | WIDTH_32 | SIZE_16
+	SIG_SITE_32_NAK    = SIG_SITE | FIELD_NAK | WIDTH_32 | SIZE_16
+	SIG_SITE_64_RAW    = SIG_SITE | FIELD_DATA | FIELD_COUNTER | DATA_RAW | WIDTH_64 | SIZE_16
+	SIG_SITE_64_PACKET = SIG_SITE | FIELD_DATA | FIELD_COUNTER | DATA_PACKET | WIDTH_64 | SIZE_16
+	SIG_SITE_64_AUTH   = SIG_SITE | FIELD_DATA | FIELD_COUNTER | DATA_AUTH | WIDTH_64 | SIZE_16
+	SIG_SITE_64_ID     = SIG_SITE | FIELD_DATA | FIELD_COUNTER | DATA_ID | WIDTH_64 | SIZE_16
+	SIG_SITE_64_ACK    = SIG_SITE | FIELD_ACK | WIDTH_64 | SIZE_16
+	SIG_SITE_64_NAK    = SIG_SITE | FIELD_NAK | WIDTH_64 | SIZE_16
+	//
+	// CHAN
+	//
+	SIG_CHAN_32_RAW    = SIG_CHAN | FIELD_DATA | FIELD_COUNTER | DATA_RAW | WIDTH_32 | SIZE_16
+	SIG_CHAN_32_PACKET = SIG_CHAN | FIELD_DATA | FIELD_COUNTER | DATA_PACKET | WIDTH_32 | SIZE_16
+	SIG_CHAN_32_PING   = SIG_CHAN | FIELD_PING | FIELD_COUNTER | WIDTH_32 | SIZE_8
+	SIG_CHAN_32_PONG   = SIG_CHAN | FIELD_PONG | FIELD_COUNTER | WIDTH_32 | SIZE_8
+	SIG_CHAN_32_ACK    = SIG_CHAN | FIELD_ACK | WIDTH_32 | SIZE_8
+	SIG_CHAN_32_NAK    = SIG_CHAN | FIELD_NAK | WIDTH_32 | SIZE_8
+	SIG_CHAN_64_RAW    = SIG_CHAN | FIELD_DATA | FIELD_COUNTER | DATA_RAW | WIDTH_64 | SIZE_16
+	SIG_CHAN_64_PACKET = SIG_CHAN | FIELD_DATA | FIELD_COUNTER | DATA_PACKET | WIDTH_64 | SIZE_16
+	SIG_CHAN_64_PING   = SIG_CHAN | FIELD_PING | FIELD_COUNTER | WIDTH_64 | SIZE_8
+	SIG_CHAN_64_PONG   = SIG_CHAN | FIELD_PONG | FIELD_COUNTER | WIDTH_64 | SIZE_8
+	SIG_CHAN_64_ACK    = SIG_CHAN | FIELD_ACK | WIDTH_64 | SIZE_8
+	SIG_CHAN_64_NAK    = SIG_CHAN | FIELD_NAK | WIDTH_64 | SIZE_8
+	//
+	// CHAN
+	//
+	SIG_CONN_32_RAW    = SIG_CONN | FIELD_DATA | FIELD_COUNTER | DATA_RAW | WIDTH_32 | SIZE_16
+	SIG_CONN_32_PACKET = SIG_CONN | FIELD_DATA | FIELD_COUNTER | DATA_PACKET | WIDTH_32 | SIZE_16
+	SIG_CONN_32_PING   = SIG_CONN | FIELD_PING | FIELD_COUNTER | WIDTH_32 | SIZE_8
+	SIG_CONN_32_PONG   = SIG_CONN | FIELD_PONG | FIELD_COUNTER | WIDTH_32 | SIZE_8
+	SIG_CONN_32_AUTH   = SIG_CONN | FIELD_DATA | FIELD_COUNTER | DATA_AUTH | WIDTH_32 | SIZE_16
+	SIG_CONN_32_ID     = SIG_CONN | FIELD_DATA | FIELD_COUNTER | DATA_ID | WIDTH_32 | SIZE_16
+	SIG_CONN_64_RAW    = SIG_CONN | FIELD_DATA | FIELD_COUNTER | DATA_RAW | WIDTH_64 | SIZE_16
+	SIG_CONN_64_PACKET = SIG_CONN | FIELD_DATA | FIELD_COUNTER | DATA_PACKET | WIDTH_64 | SIZE_16
+	SIG_CONN_64_PING   = SIG_CONN | FIELD_PING | FIELD_COUNTER | WIDTH_64 | SIZE_8
+	SIG_CONN_64_PONG   = SIG_CONN | FIELD_PONG | FIELD_COUNTER | WIDTH_64 | SIZE_8
+	SIG_CONN_64_AUTH   = SIG_CONN | FIELD_DATA | FIELD_COUNTER | DATA_AUTH | WIDTH_64 | SIZE_16
+	SIG_CONN_64_ID     = SIG_CONN | FIELD_DATA | FIELD_COUNTER | DATA_ID | WIDTH_64 | SIZE_16
 )
 
-var PacketFieldTypes map[PacketFields]string
-
-func init() {
-	PacketFieldTypes = make(map[PacketFields]string, 12)
-	PacketFieldTypes[Field_Sig] = "PacketSigType"
-	PacketFieldTypes[Field_Payload] = "*PacketStruct"
-	PacketFieldTypes[Field_Router] = "[]byte"
-	PacketFieldTypes[Field_IPV6] = "[]byte"
-	PacketFieldTypes[Field_IPV4] = "[]byte"
-	PacketFieldTypes[Field_Eth] = "[]byte"
-	PacketFieldTypes[Field_Counter32] = "*counter.Counter32"
-	PacketFieldTypes[Field_Counter64] = "*counter.Counter64"
-	PacketFieldTypes[Field_Ping32] = "*pinger.Ping32"
-	PacketFieldTypes[Field_Ping64] = "*pinger.Ping64"
-	PacketFieldTypes[Field_Pong32] = "*pinger.Pong32"
-	PacketFieldTypes[Field_Pong64] = "*pinger.Pong64"
-	PacketFieldTypes[Field_Raw] = "[]byte"
-
+func (p PacketSigType) Size8() bool {
+	return (p & SIZE_8) != 0
+}
+func (p PacketSigType) Size16() bool {
+	return (p & SIZE_16) != 0
+}
+func (p PacketSigType) Width0() bool {
+	return (p & (WIDTH_32|WIDTH_64)) == 0
+}
+func (p PacketSigType) Width32() bool {
+	return (p & WIDTH_32) != 0
+}
+func (p PacketSigType) Width64() bool {
+	return (p & WIDTH_64) != 0
 }
 func (p PacketSigType) V1() bool {
-	return ((p & Packet_VERSION) ^ Packet_VER1) == 0
+	return (p & VERSION_1) != 0
 }
+
 func (p PacketSigType) GetLayer() PacketSigType {
-	return (p & Packet_LAYER)
+	return (p & MASK_LAYER)
 }
 
 func (p PacketSigType) RouterLayer() bool {
-	return (p&Packet_LAYER)^Packet_ROUT == 0
+	return (p & LAYER_ROUTER) != 0
 }
 func (p PacketSigType) SiteLayer() bool {
-	return (p&Packet_LAYER)^Packet_SITE == 0
+	return (p & LAYER_SITE) != 0
 }
 func (p PacketSigType) ChanLayer() bool {
-	return (p&Packet_LAYER)^Packet_CHAN == 0
+	return (p & LAYER_CHAN) != 0
 }
 func (p PacketSigType) ConnLayer() bool {
-	return (p&Packet_LAYER)^Packet_CONN == 0
+	return (p & LAYER_CONN) != 0
 }
 
-func (p PacketSigType) Parent() bool {
-	return p&Packet_TYPE == 0
+func (p PacketSigType) Packet() bool {
+	return (p & DATA_PACKET) != 0
 }
 func (p PacketSigType) Raw() bool {
-	return (p&Packet_TYPE)^Packet_RAW == 0
+	return (p & DATA_RAW) != 0
 }
 func (p PacketSigType) Auth() bool {
-	return (p&Packet_TYPE)^Packet_AUTH == 0
+	return (p & DATA_AUTH) != 0
 }
 func (p PacketSigType) Ack() bool {
-	return (p&Packet_TYPE)^Packet_ACK == 0
+	return (p & FIELD_ACK) != 0
 }
 func (p PacketSigType) Nak() bool {
-	return (p&Packet_TYPE)^Packet_NAK == 0
+	return (p & FIELD_NAK) != 0
 }
-func (p PacketSigType) Counter32() bool {
-	return (p&Packet_TYPE)^Packet_COUNTER32 == 0
+func (p PacketSigType) Counter() bool {
+	return (p & FIELD_COUNTER) != 0
 }
-func (p PacketSigType) Counter64() bool {
-	return (p&Packet_TYPE)^Packet_COUNTER64 == 0
+func (p PacketSigType) Ping() bool {
+	return (p & FIELD_PING) != 0
 }
-func (p PacketSigType) Ping32() bool {
-	return (p&Packet_TYPE)^Packet_PING32 == 0
-}
-func (p PacketSigType) Pong32() bool {
-	return (p&Packet_TYPE)^Packet_PONG32 == 0
-}
-func (p PacketSigType) Ping64() bool {
-	return (p&Packet_TYPE)^Packet_PING64 == 0
-}
-func (p PacketSigType) Pong64() bool {
-	return (p&Packet_TYPE)^Packet_PONG64 == 0
-}
-func (p PacketSigType) Error() bool {
-	return (p&Packet_TYPE)^Packet_ERROR == 0
+func (p PacketSigType) Pong() bool {
+	return (p & FIELD_PONG) != 0
 }
 func (p PacketSigType) ID() bool {
-	return (p&Packet_TYPE)^Packet_ID == 0
+	return (p & DATA_ID) != 0
 }
 func (p PacketSigType) IPV4() bool {
-	return (p&Packet_TYPE)^Packet_IPV4 == 0
+	return (p & DATA_IPV4) != 0
 }
 func (p PacketSigType) IPV6() bool {
-	return (p&Packet_TYPE)^Packet_IPV6 == 0
+	return (p & DATA_IPV6) != 0
 }
 func (p PacketSigType) Eth() bool {
-	return (p&Packet_TYPE)^Packet_ETH == 0
+	return (p & DATA_ETH) != 0
 }
 func (p PacketSigType) Router() bool {
-	return (p&Packet_TYPE)^Packet_ROUTER == 0
+	return (p & DATA_ROUTER) != 0
 }
 
-func (f PacketFields) PayloadSize() bool {
-	return uint32(f&Field_Payload) > 0
-}
-func (f PacketFields) RouterSize() bool {
-	return uint32(f&Field_Router) > 0
-}
-func (f PacketFields) IPV6Size() bool {
-	return uint32(f&Field_IPV6) > 0
-}
-func (f PacketFields) IPV4Size() bool {
-	return uint32(f&Field_IPV4) > 0
-}
-func (f PacketFields) EthSize() bool {
-	return uint32(f&Field_Eth) > 0
-}
-func (f PacketFields) Counter32() bool {
-	return uint32(f&Field_Counter32) > 0
-}
-func (f PacketFields) Counter64() bool {
-	return uint32(f&Field_Counter64) > 0
-}
-func (f PacketFields) Ping32() bool {
-	return uint32(f&Field_Ping32) > 0
-}
-func (f PacketFields) Ping64() bool {
-	return uint32(f&Field_Ping64) > 0
-}
-func (f PacketFields) Pong32() bool {
-	return uint32(f&Field_Pong32) > 0
-}
-func (f PacketFields) Pong64() bool {
-	return uint32(f&Field_Pong64) > 0
-}
+func (f PacketSigType) String() string {
 
-func (f PacketSigType) String() (name string) {
-	switch f {
-	case Packet_VERSION:
-		name = "VERSION"
-	case Packet_LAYER:
-		name = "LAYER"
-	case Packet_VER1:
-		name = "VER1"
-	case Packet_VER2:
-		name = "VER2"
-	case Packet_VER3:
-		name = "VER3"
-	case Packet_VER4:
-		name = "VER4"
-	case Packet_ROUT:
-		name = "ROUT"
-	case Packet_SITE:
-		name = "SITE"
-	case Packet_CHAN:
-		name = "CHAN"
-	case Packet_CONN:
-		name = "CONN"
-	case Packet_PARENT:
-		name = "PARENT"
-	case Packet_RAW:
-		name = "RAW"
-	case Packet_AUTH:
-		name = "AUTH"
-	case Packet_ACK:
-		name = "ACK"
-	case Packet_NAK:
-		name = "NAK"
-	case Packet_COUNTER32:
-		name = "COUNTER32"
-	case Packet_COUNTER64:
-		name = "COUNTER64"
-	case Packet_PING32:
-		name = "PING32"
-	case Packet_PONG32:
-		name = "PONG32"
-	case Packet_PING64:
-		name = "PING64"
-	case Packet_PONG64:
-		name = "PONG64"
-	case Packet_ID:
-		name = "ID"
-	case Packet_ERROR:
-		name = "ERROR"
-	case Packet_IPV4:
-		name = "IPV4"
-	case Packet_IPV6:
-		name = "IPV6"
-	case Packet_ETH:
-		name = "ETH"
-	case Packet_ROUTER:
-		name = "ROUTER"
-	case Packet_ROUTE_RAW:
-		name = "ROUTE_RAW"
-	case Packet_ROUTE_AUTH:
-		name = "ROUTE_AUTH"
-	case Packet_ROUTE_ROUTER:
-		name = "ROUTE_ROUTER"
-	case Packet_ROUTE_ETH:
-		name = "ROUTE_ETH"
-	case Packet_ROUTE_IPV4:
-		name = "ROUTE_IPV4"
-	case Packet_ROUTE_IPV6:
-		name = "ROUTE_IPV6"
-	case Packet_SITE_RAW:
-		name = "SITE_RAW"
-	case Packet_SITE_PARENT:
-		name = "SITE_PARENT"
-	case Packet_SITE_AUTH:
-		name = "SITE_AUTH"
-	case Packet_SITE_ID:
-		name = "SITE_ID"
-	case Packet_CHAN_RAW:
-		name = "CHAN_RAW"
-	case Packet_CHAN_PARENT:
-		name = "CHAN_PARENT"
-	case Packet_CHAN_ACK:
-		name = "CHAN_ACK"
-	case Packet_CHAN_NAK:
-		name = "CHAN_NAK"
-	case Packet_CONN_RAW:
-		name = "CHAN_RAW"
-	case Packet_CONN_PARENT:
-		name = "CHAN_PARENT"
-	case Packet_CONN_AUTH:
-		name = "CHAN_AUTH"
-	case Packet_CONN_PING64:
-		name = "CHAN_PING64"
-	case Packet_CONN_PONG64:
-		name = "CHAN_PONG64"
-	default:
-		log.FatalfStack("Unhandled Type:%04X", uint16(f))
+	var name = []byte("")
+
+	if (f & MASK_VERSION) == MASK_VERSION {
+		name = append(name, []byte("MASK_VERSION ")...)
+	} else {
+		name = append(name, []byte("ERR-MASK_VERSION ")...)
 	}
-	return name
+	if (f & MASK_SIZE) == MASK_SIZE {
+		name = append(name, []byte("MASK_SIZE")...)
+	}
+	if (f & MASK_WIDTH_64_32) == MASK_WIDTH_64_32 {
+		name = append(name, []byte("MASK_WIDTH_64_32")...)
+	}
+	if (f & MASK_SIZE_16_8) == MASK_SIZE_16_8 {
+		name = append(name, []byte("MASK_SIZE_16_8")...)
+	}
+	if (f & MASK_LAYER) == MASK_LAYER {
+		name = append(name, []byte("MASK_LAYER")...)
+	}
+	if (f & MASK_FIELDS) == MASK_FIELDS {
+		name = append(name, []byte("MASK_FIELDS")...)
+	}
+	if (f & MASK_DATA) == MASK_DATA {
+		name = append(name, []byte("DATA_ERROR")...)
+	}
+
+	if (f & MASK_VERSION) == VERSION_1 {
+		name = append(name, []byte("VERSION_1 ")...)
+	}
+
+	if (f & MASK_WIDTH_64_32) == WIDTH_64 {
+		name = append(name, []byte("WIDTH_64 ")...)
+	} else if (f & MASK_WIDTH_64_32) == WIDTH_32 {
+		name = append(name, []byte("WIDTH_32 ")...)
+	}
+
+	if (f & MASK_SIZE_16_8) == SIZE_16 {
+		name = append(name, []byte("SIZE_16 ")...)
+	} else if (f & MASK_SIZE_16_8) == SIZE_8 {
+		name = append(name, []byte("SIZE_8 ")...)
+	}
+
+	if (f & MASK_LAYER) == LAYER_CONN {
+		name = append(name, []byte("CONN ")...)
+	} else if (f & MASK_LAYER) == LAYER_CHAN {
+		name = append(name, []byte("CHAN ")...)
+	} else if (f & MASK_LAYER) == LAYER_SITE {
+		name = append(name, []byte("SITE ")...)
+	} else if (f & MASK_LAYER) == LAYER_ROUTER {
+		name = append(name, []byte("ROUTER ")...)
+	} else {
+		name = append(name, []byte("ERR-LAYER ")...)
+	}
+
+	if (f & FIELD_SIG) > 0 {
+		name = append(name, []byte("SIG ")...)
+	}
+	if (f & FIELD_SIZE) > 0 {
+		name = append(name, []byte("SIZE ")...)
+	}
+	if (f & FIELD_COUNTER) > 0 {
+		name = append(name, []byte("COUNTER ")...)
+	}
+	if (f & FIELD_ACK) > 0 {
+		name = append(name, []byte("ACK ")...)
+	}
+	if (f & FIELD_NAK) > 0 {
+		name = append(name, []byte("NAK ")...)
+	}
+	if (f & FIELD_PING) > 0 {
+		name = append(name, []byte("PING ")...)
+	}
+	if (f & FIELD_PONG) > 0 {
+		name = append(name, []byte("PONG ")...)
+	}
+	if (f & FIELD_DATA) > 0 {
+		name = append(name, []byte("DATA ")...)
+	}
+
+	if (f & DATA_PACKET) > 0 {
+		name = append(name, []byte("PACKET ")...)
+	} else if (f & DATA_RAW) > 0 {
+		name = append(name, []byte("RAW ")...)
+	} else if (f & DATA_AUTH) > 0 {
+		name = append(name, []byte("AUTH ")...)
+	} else if (f & DATA_ID) > 0 {
+		name = append(name, []byte("ID ")...)
+	} else if (f & DATA_IPV4) > 0 {
+		name = append(name, []byte("IPV4 ")...)
+	} else if (f & DATA_IPV6) > 0 {
+		name = append(name, []byte("IPV6 ")...)
+	} else if (f & DATA_ETH) > 0 {
+		name = append(name, []byte("ETH ")...)
+	} else if (f & DATA_ROUTER) > 0 {
+		name = append(name, []byte("ROUTER ")...)
+	} else if (f & DATA_ERROR) > 0 {
+		name = append(name, []byte("ROUTER ")...)
+	}
+
+	return string(name)
 }

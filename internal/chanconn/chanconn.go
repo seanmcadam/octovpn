@@ -5,6 +5,7 @@ import (
 
 	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/counter"
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/internal/pinger"
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
@@ -18,9 +19,9 @@ type NewConnFunc func(*ctx.Ctx, *settings.NetworkStruct) (interfaces.ConnInterfa
 type ChanconnStruct struct {
 	cx      *ctx.Ctx
 	conn    interfaces.ConnInterface
-	recvch  chan interfaces.PacketInterface
-	pinger  *pinger.Pinger64Struct
-	counter *counter.Counter32Struct
+	recvch  chan *packet.PacketStruct
+	pinger  pinger.PingerStruct
+	counter counter.CounterStruct
 }
 
 func NewConn(ctx *ctx.Ctx, config *settings.NetworkStruct, confFunc NewConnFunc) (ci interfaces.ChannelInterface, err error) {
@@ -33,8 +34,8 @@ func NewConn(ctx *ctx.Ctx, config *settings.NetworkStruct, confFunc NewConnFunc)
 	cs := &ChanconnStruct{
 		cx:      ctx,
 		conn:    conn,
-		recvch:  make(chan interfaces.PacketInterface, 16),
-		pinger:  pinger.NewPinger64(ctx, PingFreq, PingTimeout),
+		recvch:  make(chan *packet.PacketStruct, 16),
+		pinger:  pinger.NewPinger32(ctx, PingFreq, PingTimeout),
 		counter: counter.NewCounter32(ctx),
 	}
 

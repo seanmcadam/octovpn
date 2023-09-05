@@ -5,56 +5,145 @@ import (
 	"math/rand"
 	"net"
 	"testing"
+	"time"
 
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
 
-func TestNewUdp(t *testing.T) {
-
+func TestNewUdp_basic(t *testing.T) {
 	cx := ctx.NewContext()
+	defer cx.Cancel()
 
-	conn1, conn2, err := createPairedConnections()
+	_, _, err := connection(cx)
 	if err != nil {
-		t.Errorf("Error:%s", err)
+		t.Errorf("Err:%s", err)
+		return
+	}
+}
+
+func TestNewUdp_send_over_cli(t *testing.T) {
+	cx := ctx.NewContext()
+	defer cx.Cancel()
+	srv, cli, err := connection(cx)
+	if err != nil {
+		t.Error(err)
 		return
 	}
 
-	defer conn1.Close()
-	defer conn2.Close()
+	p, err := packet.Testpacket()
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
-	go handleConnection(conn1, "Connection 1")
-	go handleConnection(conn2, "Connection 2")
+	cli.Send(p)
 
-	udp1 := NewUDPCli(cx, conn1)
-	udp2 := NewUDPSrv(cx, conn2)
-
-	_ = udp1
-	_ = udp2
-
-	cx.Cancel()
+	select {
+	case r := <-srv.RecvChan():
+		if r == nil {
+			t.Error("Recieved nil")
+			return
+		}
+	case <-time.After(2 * time.Second):
+		t.Error("Recieve timeout")
+		return
+	}
 
 }
 
-func createPairedConnections() (*net.UDPConn, *net.UDPConn, error) {
+func TestNewUdp_send_over_cli_srv(t *testing.T) {
+	cx := ctx.NewContext()
+	defer cx.Cancel()
+	srv, cli, err := connection(cx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	p, err := packet.Testpacket()
+	if err != nil {
+		t.Error(err)
+	}
+
+	cli.Send(p)
+	select {
+	case r := <-srv.RecvChan():
+		if r == nil {
+			t.Error("Recieved nil")
+			return
+		}
+		err = packet.Validatepackets(p, r)
+		if r == nil {
+			t.Error("Recieved nil")
+			return
+		}
+	case <-time.After(2 * time.Second):
+		t.Error("Recieve timeout")
+		return
+	}
+
+	srv.Send(p)
+	select {
+	case r := <-cli.RecvChan():
+		if r == nil {
+			t.Error("Recieved nil")
+			return
+		}
+		err = packet.Validatepackets(p, r)
+	case <-time.After(2 * time.Second):
+		t.Error("Recieve timeout")
+	}
+
+}
+
+//-----------------------------------------------------------------------------
+
+
+// -
+//
+// -
+func connection(cx *ctx.Ctx) (srvconn *UdpStruct, cliconn *UdpStruct, err error) {
+
+	srv, cli, err := createPairedConnections()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	//go handleConnection(srv, "Srv Connection")
+	//go handleConnection(cli, "Cli Connection")
+
+	cliconn = NewUDPCli(cx, cli)
+	srvconn = NewUDPSrv(cx, srv)
+
+	return srvconn, cliconn, err
+
+}
+
+// -
+//
+// -
+func createPairedConnections() (srv *net.UDPConn, cli *net.UDPConn, err error) {
 	port := getRandomPort()
 
 	addr := &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: port}
 
-	conn1, err := net.DialUDP("udp", nil, addr)
+	srv, err = net.ListenUDP("udp", addr)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	conn2, err := net.ListenUDP("udp", addr)
+	cli, err = net.DialUDP("udp", nil, addr)
 	if err != nil {
-		conn1.Close()
 		return nil, nil, err
 	}
 
 	fmt.Printf("Connections established on port %d\n", port)
-	return conn1, conn2, nil
+	return srv, cli, nil
 }
 
+// -
+//
+// -
 func handleConnection(conn *net.UDPConn, name string) {
 	defer conn.Close()
 
@@ -72,6 +161,9 @@ func handleConnection(conn *net.UDPConn, name string) {
 	}
 }
 
+// -
+//
+// -
 func getRandomPort() int {
 	return rand.Intn(60000) + 1025
 }

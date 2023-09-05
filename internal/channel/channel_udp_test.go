@@ -43,13 +43,13 @@ func TestNewChannel_Udp(t *testing.T) {
 
 	// Create Channels
 
-	chanServ, err := NewChannel(cx, serv)
+	chanServ, err := NewChannel32(cx, serv)
 	if err != nil {
 		t.Fatalf("NewChannel Server error:%s", err)
 	}
 	_ = chanServ
 
-	chanClient, err := NewChannel(cx, client)
+	chanClient, err := NewChannel32(cx, client)
 	if err != nil {
 		t.Fatalf("NewChannel Client error:%s", err)
 	}

@@ -1,17 +1,15 @@
 package chanconn
 
 import (
-	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/packet"
-	"github.com/seanmcadam/octovpn/internal/packet/packetconn"
 	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
-func (cs *ChanconnStruct) Send(cp interfaces.PacketInterface) error {
+func (cs *ChanconnStruct) Send(cp *packet.PacketStruct) error {
 
 	if cs.Active() {
-		packet, err := packetconn.NewPacket(packet.CONN_TYPE_PARENT, cp)
+		packet, err := packet.NewPacket(packet.SIG_CONN_32_PACKET, cp)
 		if err != nil {
 			return err
 		}
@@ -21,9 +19,10 @@ func (cs *ChanconnStruct) Send(cp interfaces.PacketInterface) error {
 	return errors.ErrNetChannelDown
 }
 
-func (cs *ChanconnStruct) send(packet interfaces.PacketInterface) error {
-	return cs.conn.Send(packet)
+func (cs *ChanconnStruct) send(p *packet.PacketStruct) error {
+	return cs.conn.Send(p)
 }
+
 func (cs *ChanconnStruct) goSend() {
 
 	for {
@@ -31,8 +30,8 @@ func (cs *ChanconnStruct) goSend() {
 		case <-cs.cx.DoneChan():
 			return
 
-		case count := <-cs.pinger.Pingch:
-			packet, err := packetconn.NewPacket(packet.CONN_TYPE_PING64, count)
+		case count := <-cs.pinger.GetPingChan():
+			packet, err := packet.NewPacket(packet.SIG_CONN_32_PING, count)
 			if err != nil {
 				log.Errorf("NewPacket Err:%s", err)
 				continue

@@ -3,12 +3,11 @@ package tcp
 import (
 	"io"
 
-	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
-	"github.com/seanmcadam/octovpn/internal/packet/packetconn"
 )
 
-func (t *TcpStruct) RecvChan() <-chan interfaces.PacketInterface {
+func (t *TcpStruct) RecvChan() <-chan *packet.PacketStruct {
 
 	if t == nil {
 		log.FatalStack("nil TcpStruct")
@@ -44,7 +43,7 @@ func (t *TcpStruct) goRecv() {
 
 		buf = buf[:l]
 
-		packet, err := packetconn.MakePacket(buf)
+		packet, err := packet.MakePacket(buf)
 		if err != nil {
 			log.Errorf("TCP MakePacket() Err:%s", err)
 			continue

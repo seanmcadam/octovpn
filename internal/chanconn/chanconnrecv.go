@@ -1,14 +1,11 @@
 package chanconn
 
 import (
-	"github.com/seanmcadam/octovpn/interfaces"
-	"github.com/seanmcadam/octovpn/internal/counter"
 	"github.com/seanmcadam/octovpn/internal/packet"
-	"github.com/seanmcadam/octovpn/internal/packet/packetchan"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
-func (cs *ChanconnStruct) RecvChan() <-chan interfaces.PacketInterface {
+func (cs *ChanconnStruct) RecvChan() <-chan *packet.PacketStruct {
 	if cs == nil {
 		log.FatalStack("nil ChanconnStruct")
 		return nil
@@ -32,24 +29,36 @@ func (cs *ChanconnStruct) goRecv() {
 				return
 			}
 
-			switch p.Type() {
-			case packet.CONN_TYPE_PARENT:
-				payload, err := packetchan.MakePacket(p.Payload().([]byte))
-				if err != nil {
-					log.Errorf("packetchan.MakePacket() Err:%s", err)
-					continue
+			switch p.Sig() {
+			case packet.SIG_CONN_32_PACKET:
+			case packet.SIG_CONN_64_PACKET:
+				if p.Packet() == nil {
+					log.FatalfStack("nil Packet(): %v", p)
 				}
+				cs.recvch <- p.Packet()
 
-				cs.recvch <- payload
+			case packet.SIG_CONN_32_AUTH:
+			case packet.SIG_CONN_64_AUTH:
+				log.Fatal("Unhandled Sig")
 
-			case packet.CONN_TYPE_PING64:
-				cs.send(p.CopyPong64())
+			case packet.SIG_CONN_32_PING:
+			case packet.SIG_CONN_64_PING:
+				pong, err := p.CopyPong()
+				if err != nil {
+					log.FatalfStack("CopyPong() Err:%s", err)
+				}
+				cs.send(pong)
 
-			case packet.CONN_TYPE_PONG64:
-				cs.pinger.Pongch <- p.Payload().(counter.Counter64)
+			case packet.SIG_CONN_32_PONG:
+			case packet.SIG_CONN_64_PONG:
+				cs.pinger.RecvPong(p.Pong())
+
+			case packet.SIG_CHAN_32_RAW:
+			case packet.SIG_CHAN_64_RAW:
+				log.Debug("Discarded Sig")
 
 			default:
-				log.Fatalf("Unhandled Packet Type:%d", p.Type())
+				log.Fatalf("Unhandled Packet Type:%d", p.Sig())
 			}
 		}
 	}

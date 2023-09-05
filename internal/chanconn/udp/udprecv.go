@@ -5,13 +5,12 @@ import (
 	"net"
 	"reflect"
 
-	"github.com/seanmcadam/octovpn/interfaces"
-	"github.com/seanmcadam/octovpn/internal/packet/packetconn"
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 // Recv()
-func (u *UdpStruct) RecvChan() <-chan interfaces.PacketInterface {
+func (u *UdpStruct) RecvChan() <-chan *packet.PacketStruct {
 	if u == nil {
 		log.FatalStack("nil UdpStruct")
 		return nil
@@ -57,7 +56,7 @@ func (u *UdpStruct) goRecv() {
 
 		buf = buf[:l]
 
-		packet, err := packetconn.MakePacket(buf)
+		packet, err := packet.MakePacket(buf)
 		if err != nil {
 			log.Errorf("UDP MakePacket() Err:%s", err)
 			continue

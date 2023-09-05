@@ -6,21 +6,43 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
 
-func TestNewCounter64(t *testing.T) {
+func TestNewCounter_interface32(t *testing.T) {
+	var count Counter
 	cx := ctx.NewContext()
-	c := NewCounter64(cx)
-	count := <-c.GetCountCh()
+	c32 := NewCounter32(cx)
+
+	width32 := c32.Width()
+	if width32 != CounterWidth32 {
+		t.Fatal("Size mismatch")
+	}
+
+	var c CounterStruct = c32
+	count = <-c.GetCountCh()
+	count = <-c.GetCountCh()
+	count = <-c.GetCountCh()
+	count = <-c.GetCountCh()
 	_ = count.ToByte()
 	cx.Cancel()
 
 }
 
-func TestNewCounter32(t *testing.T) {
+func TestNewCounter_interface64(t *testing.T) {
+	var count Counter
 	cx := ctx.NewContext()
-	c := NewCounter32(cx)
-	count := <-c.GetCountCh()
-	_ = count.ToByte()
+	c64 := NewCounter64(cx)
 
+	width64 := c64.Width()
+	if width64 != CounterWidth64 {
+		t.Fatal("Size mismatch")
+	}
+
+	var c CounterStruct = c64
+	count = <-c.GetCountCh()
+	count = <-c.GetCountCh()
+	count = <-c.GetCountCh()
+	count = <-c.GetCountCh()
+	_ = count.ToByte()
 	cx.Cancel()
 
 }
+

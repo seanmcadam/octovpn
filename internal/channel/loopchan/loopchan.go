@@ -37,12 +37,12 @@ func NewUdpChanLoop(ctx *ctx.Ctx) (srv *channel.ChannelStruct, cli *channel.Chan
 		log.Fatalf("NewConn() Err:%s", err)
 	}
 
-	srv, err = channel.NewChannel(ctx, connsrv)
+	srv, err = channel.NewChannel32(ctx, connsrv)
 	if err != nil {
 		log.Fatalf("NewUdpChanLoop Err:%s", err)
 	}
 
-	cli, err = channel.NewChannel(ctx, conncli)
+	cli, err = channel.NewChannel32(ctx, conncli)
 	if err != nil {
 		log.Fatalf("NewUdpChanLoop Err:%s", err)
 	}
@@ -70,12 +70,12 @@ func NewTcpChanLoop(ctx *ctx.Ctx) (srv *channel.ChannelStruct, cli *channel.Chan
 		log.Fatalf("NewConn() Err:%s", err)
 	}
 
-	srv, err = channel.NewChannel(ctx, connsrv)
+	srv, err = channel.NewChannel32(ctx, connsrv)
 	if err != nil {
 		log.Fatalf("NewUdpChanLoop Err:%s", err)
 	}
 
-	cli, err = channel.NewChannel(ctx, conncli)
+	cli, err = channel.NewChannel32(ctx, conncli)
 	if err != nil {
 		log.Fatalf("NewUdpChanLoop Err:%s", err)
 	}

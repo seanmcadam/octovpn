@@ -1,9 +1,7 @@
 package udpcli
 
-import (
-	"github.com/seanmcadam/octovpn/interfaces"
-)
+import "github.com/seanmcadam/octovpn/internal/packet"
 
-func (u *UdpClientStruct) RecvChan() <-chan interfaces.PacketInterface {
+func (u *UdpClientStruct) RecvChan() <-chan *packet.PacketStruct {
 	return u.udpconn.RecvChan()
 }

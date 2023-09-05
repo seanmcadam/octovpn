@@ -3,8 +3,8 @@ package tracker
 import (
 	"time"
 
-	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/counter"
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
@@ -20,23 +20,23 @@ const DefaultTrackerChanDepth = 64
 const MaintTimeoutDuration = 5 * time.Second
 
 type PacketTracker struct {
-	packet interfaces.PacketInterface
+	packet *packet.PacketStruct
 	tm     time.Time
 }
 
 type CounterTracker struct {
-	counter counter.Counter32
+	counter counter.Counter
 	tm      time.Time
 }
 
 type DataTracker struct {
 	interval    time.Duration
-	sendbytes   int32
-	recvbytes   int32
-	sendpackets int32
-	recvpackets int32
-	ackcount    int32
-	naccount    int32
+	sendbytes   uint64
+	recvbytes   uint64
+	sendpackets uint64
+	recvpackets uint64
+	ackcount    uint64
+	naccount    uint64
 }
 
 type TrackerStruct struct {
@@ -47,14 +47,14 @@ type TrackerStruct struct {
 	sendch chan *PacketTracker
 	ackch  chan *CounterTracker
 	nakch  chan *CounterTracker
-	recv   map[counter.Counter32]*PacketTracker
-	sent   map[counter.Counter32]*PacketTracker
-	acknak map[counter.Counter32]*PacketTracker
-	ack    map[counter.Counter32]*CounterTracker
-	nak    map[counter.Counter32]*CounterTracker
+	recv   map[counter.Counter]*PacketTracker
+	sent   map[counter.Counter]*PacketTracker
+	acknak map[counter.Counter]*PacketTracker
+	ack    map[counter.Counter]*CounterTracker
+	nak    map[counter.Counter]*CounterTracker
 }
 
-func newPacketTracker(d interfaces.PacketInterface) (p *PacketTracker) {
+func newPacketTracker(d *packet.PacketStruct) (p *PacketTracker) {
 	p = &PacketTracker{
 		packet: d,
 		tm:     time.Now(),
@@ -62,7 +62,7 @@ func newPacketTracker(d interfaces.PacketInterface) (p *PacketTracker) {
 	return p
 }
 
-func newCounterTracker(c counter.Counter32) (p *CounterTracker) {
+func newCounterTracker(c counter.Counter) (p *CounterTracker) {
 	p = &CounterTracker{
 		counter: c,
 		tm:      time.Now(),
@@ -80,11 +80,11 @@ func NewTracker(ctx *ctx.Ctx, freq time.Duration) (t *TrackerStruct) {
 		sendch: make(chan *PacketTracker, DefaultTrackerChanDepth),
 		ackch:  make(chan *CounterTracker, DefaultTrackerChanDepth),
 		nakch:  make(chan *CounterTracker, DefaultTrackerChanDepth),
-		recv:   make(map[counter.Counter32]*PacketTracker, DefaultTrackerDataDepth),
-		sent:   make(map[counter.Counter32]*PacketTracker, DefaultTrackerDataDepth),
-		acknak: make(map[counter.Counter32]*PacketTracker, DefaultTrackerDataDepth),
-		ack:    make(map[counter.Counter32]*CounterTracker, DefaultTrackerDataDepth),
-		nak:    make(map[counter.Counter32]*CounterTracker, DefaultTrackerDataDepth),
+		recv:   make(map[counter.Counter]*PacketTracker, DefaultTrackerDataDepth),
+		sent:   make(map[counter.Counter]*PacketTracker, DefaultTrackerDataDepth),
+		acknak: make(map[counter.Counter]*PacketTracker, DefaultTrackerDataDepth),
+		ack:    make(map[counter.Counter]*CounterTracker, DefaultTrackerDataDepth),
+		nak:    make(map[counter.Counter]*CounterTracker, DefaultTrackerDataDepth),
 	}
 
 	go t.goRun()
@@ -93,19 +93,19 @@ func NewTracker(ctx *ctx.Ctx, freq time.Duration) (t *TrackerStruct) {
 }
 
 // For acting on the onject to be serialized with Send, Recv, Ack, and Nak
-func (t *TrackerStruct) Send(packet interfaces.PacketInterface) {
-	t.sendch <- newPacketTracker(packet)
+func (t *TrackerStruct) Send(p *packet.PacketStruct) {
+	t.sendch <- newPacketTracker(p)
 }
 
-func (t *TrackerStruct) Recv(packet interfaces.PacketInterface) {
-	t.sendch <- newPacketTracker(packet)
+func (t *TrackerStruct) Recv(p *packet.PacketStruct) {
+	t.sendch <- newPacketTracker(p)
 }
 
-func (t *TrackerStruct) Ack(counter counter.Counter32) {
+func (t *TrackerStruct) Ack(counter counter.Counter) {
 	t.ackch <- newCounterTracker(counter)
 }
 
-func (t *TrackerStruct) Nak(counter counter.Counter32) {
+func (t *TrackerStruct) Nak(counter counter.Counter) {
 	t.nakch <- newCounterTracker(counter)
 }
 
@@ -141,7 +141,7 @@ func (t *TrackerStruct) goRun() {
 // Take an interface (some sort of packet) and push the data into
 // Tracker for latency, loss and bandwith calc
 func (t *TrackerStruct) sendHandler(pt *PacketTracker) {
-	count := counter.Counter32(pt.packet.Counter32())
+	count := counter.Counter(pt.packet.Counter())
 	t.sent[count] = pt
 	t.acknak[count] = pt
 }
@@ -149,7 +149,7 @@ func (t *TrackerStruct) sendHandler(pt *PacketTracker) {
 // rev()
 // track recieved packets for bandwidth
 func (t *TrackerStruct) recvHandler(pt *PacketTracker) {
-	count := counter.Counter32(pt.packet.Counter32())
+	count := counter.Counter(pt.packet.Counter())
 	t.recv[count] = pt
 }
 
@@ -182,13 +182,13 @@ func (tracker *TrackerStruct) maint() {
 	}
 
 	for count, pt := range tracker.sent {
-		dt.sendbytes += int32(pt.packet.PayloadSize())
+		dt.sendbytes += uint64(pt.packet.Size())
 		dt.sendpackets++
 		delete(tracker.sent, count)
 	}
 
 	for count, pt := range tracker.recv {
-		dt.recvbytes += int32(pt.packet.PayloadSize())
+		dt.recvbytes += uint64(pt.packet.Size())
 		dt.recvpackets++
 		delete(tracker.recv, count)
 	}

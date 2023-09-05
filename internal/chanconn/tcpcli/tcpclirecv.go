@@ -1,11 +1,11 @@
 package tcpcli
 
 import (
-	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
-func (t *TcpClientStruct) RecvChan() <-chan interfaces.PacketInterface {
+func (t *TcpClientStruct) RecvChan() <-chan *packet.PacketStruct {
 
 	if t == nil {
 		log.FatalStack("nil TcpClientStruct")

@@ -3,17 +3,16 @@ package tcp
 import (
 	"io"
 
-	"github.com/seanmcadam/octovpn/interfaces"
-	"github.com/seanmcadam/octovpn/internal/packet/packetconn"
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 // Send()
-func (t *TcpStruct) Send(packet interfaces.PacketInterface) (err error) {
+func (t *TcpStruct) Send(p *packet.PacketStruct) (err error) {
 
-	go func(p interfaces.PacketInterface) {
+	go func(p *packet.PacketStruct) {
 		t.sendch <- p
-	}(packet)
+	}(p)
 	return err
 
 }
@@ -37,23 +36,20 @@ func (t *TcpStruct) goSend() {
 	}
 }
 
-func (t *TcpStruct) sendpacket(packet interfaces.PacketInterface) {
-	var l int
-	var err error
-	packetlen := int(packet.PayloadSize()) + packetconn.Overhead
-	l, err = t.conn.Write(packet.ToByte())
-
+func (t *TcpStruct) sendpacket(p *packet.PacketStruct) {
+	raw := p.ToByte()
+	l, err := t.conn.Write(raw)
 	if err != nil {
 		if err != io.EOF {
-			log.Errorf("TCP Write() Error:%s", err)
+			log.Errorf("TCP Write() Error:%s, Closing Connection", err)
 		}
 		t.cx.Done()
 	}
-
-	if l != packetlen {
-		log.Errorf("TCP Write() Length Error:%d != %d", l, packetlen)
+	if l != len(raw) {
+		log.Errorf("TCP Write() Send length:%d, Closing Connection", l, len(raw))
 		t.cx.Done()
 	}
+
 }
 
 func (t *TcpStruct) emptysend() {

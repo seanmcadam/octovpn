@@ -3,17 +3,16 @@ package udp
 import (
 	"io"
 
-	"github.com/seanmcadam/octovpn/interfaces"
-	"github.com/seanmcadam/octovpn/internal/packet/packetconn"
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 // Send()
-func (u *UdpStruct) Send(packet interfaces.PacketInterface) (err error) {
+func (u *UdpStruct) Send(p *packet.PacketStruct) (err error) {
 
-	go func(p interfaces.PacketInterface) {
+	go func(p *packet.PacketStruct) {
 		u.sendch <- p
-	}(packet)
+	}(p)
 	return err
 
 }
@@ -38,14 +37,14 @@ func (u *UdpStruct) goSend() {
 
 }
 
-func (u *UdpStruct) sendpacket(packet interfaces.PacketInterface) {
+func (u *UdpStruct) sendpacket(p *packet.PacketStruct) {
 	var l int
 	var err error
-	packetlen := int(packet.PayloadSize()) + packetconn.Overhead
+	raw := p.ToByte()
 	if u.srv {
-		l, err = u.conn.WriteToUDP(packet.ToByte(), u.addr)
+		l, err = u.conn.WriteToUDP(raw, u.addr)
 	} else {
-		l, err = u.conn.Write(packet.ToByte())
+		l, err = u.conn.Write(raw)
 	}
 
 	if err != nil {
@@ -55,8 +54,8 @@ func (u *UdpStruct) sendpacket(packet interfaces.PacketInterface) {
 		u.cx.Cancel()
 	}
 
-	if l != packetlen {
-		log.Errorf("UDP Write() Length Error:%d != %d", l, packetlen)
+	if l != len(raw) {
+		log.Errorf("UDP Write() Length Error:%d != %d", l, len(raw))
 		u.cx.Cancel()
 	}
 }

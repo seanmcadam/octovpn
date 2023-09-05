@@ -1,7 +1,6 @@
 package pinger
 
 import (
-	"encoding/binary"
 	"fmt"
 	"time"
 
@@ -10,55 +9,61 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
-type Ping32 counter.Counter32
-type Pong32 counter.Counter32
-
-func NewPong32(pong []byte) *Pong32 {
-	if len(pong) < 4 {
-		log.FatalfStack("Not enough pong data:%0x", pong)
-	}
-	p := Pong32(binary.LittleEndian.Uint32(pong))
-	return &p
-}
-
-func (p *Ping32) ToByte() (ping []byte) {
-	ping = make([]byte, 4)
-	binary.LittleEndian.PutUint32(ping, uint32(*p))
-	return ping
-}
-
-func (p *Pong32) ToByte() (pong []byte) {
-	pong = make([]byte, 4)
-	binary.LittleEndian.PutUint32(pong, uint32(*p))
-	return pong
-}
+type Ping32 counter.Counter
+type Pong32 counter.Counter
 
 type Pinger32Struct struct {
 	cx      *ctx.Ctx
 	active  bool
 	freq    time.Duration
 	timeout time.Duration
-	counter *counter.Counter32Struct
-	Pingch  chan *Ping32
-	Pongch  chan *Pong32
+	counter counter.CounterStruct
+	pingch  chan Ping
+	pongch  chan Pong
 	Errorch chan error
 }
 
-func NewPinger32(ctx *ctx.Ctx, freq time.Duration, timeout time.Duration) (p *Pinger32Struct) {
-	p = &Pinger32Struct{
+func NewBytePing32(b []byte) (p Ping) {
+	if len(b) != 4 {
+		log.FatalfStack("Count data len:%d, :%0x", len(b), b)
+	}
+
+	c := counter.NewByteCounter32(b)
+	p = counter.Counter(c)
+	return p
+
+}
+
+func NewBytePong32(b []byte) (p Pong) {
+	if len(b) != 8 {
+		log.FatalfStack("Count data len:%d, :%0x", len(b), b)
+	}
+
+	c := counter.NewByteCounter64(b)
+	p = counter.Counter(c)
+	return p
+
+}
+
+func NewPinger32(ctx *ctx.Ctx, freq time.Duration, timeout time.Duration) (p PingerStruct) {
+	p32 := &Pinger32Struct{
 		cx:      ctx,
 		active:  false,
 		freq:    freq,
 		timeout: timeout,
 		counter: counter.NewCounter32(ctx),
-		Pingch:  make(chan *Ping32),
-		Pongch:  make(chan *Pong32),
+		pingch:  make(chan Ping),
+		pongch:  make(chan Pong),
 		Errorch: make(chan error),
 	}
 
-	go p.goRun()
-
+	go p32.goRun()
+	p = p32
 	return p
+}
+
+func (p *Pinger32Struct) Width() (s PingWidth) {
+	return PingWidth32
 }
 
 func (p *Pinger32Struct) TurnOn() {
@@ -67,6 +72,13 @@ func (p *Pinger32Struct) TurnOn() {
 
 func (p *Pinger32Struct) TurnOff() {
 	p.active = false
+}
+
+func (p *Pinger32Struct) RecvPong(pong Pong) {
+	p.pongch <- pong
+}
+func (p *Pinger32Struct) GetPingChan() <- chan Ping {
+	return p.pingch
 }
 
 func (p *Pinger32Struct) goRun() {
@@ -79,32 +91,33 @@ func (p *Pinger32Struct) goRun() {
 	defer log.GDebug("Pinger Stop")
 
 	defer tick.Stop()
-	defer close(p.Pingch)
+	defer close(p.pingch)
 	defer close(p.Errorch)
 
 	for {
 		select {
 		case <-tickch:
 			if p.active {
-				var c *counter.Counter32
+				var c counter.Counter
 				var d Ping32
 				c = <-countch
-				d = Ping32(*c)
-				p.Pingch <- &d
-				pingmap[d] = time.Now()
+				p32 := Ping32(c)
+				pingmap[p32] = time.Now()
+				d = p32
+				p.pingch <- d
 			}
 
-		case pong := <-p.Pongch:
-			if t, ok := pingmap[Ping32(*pong)]; ok {
-				delete(pingmap, Ping32(*pong))
+		case pong := <-p.pongch:
+			if t, ok := pingmap[Ping32(pong)]; ok {
+				delete(pingmap, Ping32(pong))
 				dur := time.Since(t)
 				if dur > p.timeout {
-					log.Warnf("Ping Timeout: %d", *pong)
-					p.Errorch <- fmt.Errorf("Ping Timeout: %d", *pong)
+					log.Warnf("Ping Timeout: %d", pong)
+					p.Errorch <- fmt.Errorf("Ping Timeout: %d", pong)
 				}
 			} else {
-				log.Warnf("Ping Missing: %d", *pong)
-				p.Errorch <- fmt.Errorf("Ping Missing: %d", *pong)
+				log.Warnf("Ping Missing: %d", pong)
+				p.Errorch <- fmt.Errorf("Ping Missing: %d", pong)
 			}
 
 		case <-p.cx.DoneChan():
@@ -125,4 +138,13 @@ func (p *Pinger32Struct) goRun() {
 			delete(pingmap, count)
 		}
 	}
+}
+
+func (ps *Pinger32Struct) NewPong(pong []byte) (p Pong) {
+	if len(pong) != 4 {
+		log.FatalfStack("Not enough pong data:%0x", pong)
+	}
+	p32 := ps.counter.NewByteCounter(pong)
+	p = p32
+	return p
 }

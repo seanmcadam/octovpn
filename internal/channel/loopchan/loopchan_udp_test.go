@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/seanmcadam/octovpn/internal/packet"
-	"github.com/seanmcadam/octovpn/internal/packet/packetconn"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
 
@@ -36,7 +35,7 @@ func TestNewUdpLoop_SendRecv(t *testing.T) {
 
 	cx := ctx.NewContext()
 	data := []byte("data")
-	cp, err := packetconn.NewPacket(packet.CONN_TYPE_RAW, data)
+	cp, err := packet.NewPacket(packet.SIG_CONN_32_RAW, data)
 
 	srv, cli, err := NewUdpChanLoop(cx)
 

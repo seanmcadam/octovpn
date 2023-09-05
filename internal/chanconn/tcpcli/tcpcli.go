@@ -7,7 +7,7 @@ import (
 
 	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/chanconn/tcp"
-	"github.com/seanmcadam/octovpn/internal/packet/packetconn"
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
@@ -19,7 +19,7 @@ type TcpClientStruct struct {
 	address string
 	tcpaddr *net.TCPAddr
 	tcpconn *tcp.TcpStruct
-	recvch  chan *packetconn.ConnPacket
+	recvch  chan *packet.PacketStruct
 }
 
 func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpclient interfaces.ConnInterface, err error) {
@@ -30,7 +30,7 @@ func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpclient interfaces.Con
 		address: fmt.Sprintf("%s:%d", config.GetHost(), config.GetPort()),
 		tcpaddr: nil,
 		tcpconn: nil,
-		recvch:  make(chan *packetconn.ConnPacket),
+		recvch:  make(chan *packet.PacketStruct),
 	}
 
 	// Do an initial check and fail if it fails

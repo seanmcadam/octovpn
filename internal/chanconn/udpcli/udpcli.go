@@ -7,6 +7,7 @@ import (
 
 	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/chanconn/udp"
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
@@ -18,7 +19,7 @@ type UdpClientStruct struct {
 	address string
 	udpaddr *net.UDPAddr
 	udpconn *udp.UdpStruct
-	recvch  chan interfaces.PacketInterface
+	recvch  chan *packet.PacketStruct
 }
 
 func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpclient interfaces.ConnInterface, err error) {
@@ -29,7 +30,7 @@ func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpclient interfaces.Con
 		address: fmt.Sprintf("%s:%d", config.GetHost(), config.GetPort()),
 		udpaddr: nil,
 		udpconn: nil,
-		recvch:  make(chan interfaces.PacketInterface, 16),
+		recvch:  make(chan *packet.PacketStruct, 16),
 	}
 
 	// Do an initial check and fail if it fails

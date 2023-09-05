@@ -1,12 +1,12 @@
 package tcpcli
 
 import (
-	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/errors"
 )
 
 // Send()
-func (t *TcpClientStruct) Send(co interfaces.PacketInterface) (err error) {
+func (t *TcpClientStruct) Send(co *packet.PacketStruct) (err error) {
 
 	if uint16(co.Size()) > t.config.GetMtu() {
 		return errors.ErrNetPacketTooBig

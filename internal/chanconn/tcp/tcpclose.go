@@ -1,11 +1,10 @@
 package tcp
 
-
 func (t *TcpStruct) DoneChan() <-chan struct{} {
 	return t.cx.DoneChan()
 }
 
-func (t *TcpStruct) Cancel(){
+func (t *TcpStruct) Cancel() {
 	t.cx.Cancel()
 }
 

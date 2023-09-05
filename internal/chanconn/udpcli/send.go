@@ -1,12 +1,12 @@
 package udpcli
 
 import (
-	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/errors"
 )
 
 // Send()
-func (u *UdpClientStruct) Send(co interfaces.PacketInterface) (err error) {
+func (u *UdpClientStruct) Send(co *packet.PacketStruct) (err error) {
 
 	if uint16(co.Size()) > u.config.GetMtu() {
 		return errors.ErrNetPacketTooBig

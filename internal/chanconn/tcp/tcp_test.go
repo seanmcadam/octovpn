@@ -5,33 +5,78 @@ import (
 	"math/rand"
 	"net"
 	"testing"
+	"time"
 
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
 
-func TestNewTCP(t *testing.T) {
-
+func TestNewTCP_basic(t *testing.T) {
 	cx := ctx.NewContext()
+	defer cx.Cancel()
+}
 
-	conn1, conn2, err := createPairedConnections()
+func TestNewTCP_send(t *testing.T) {
+	cx := ctx.NewContext()
+	defer cx.Cancel()
+
+	srv, cli, err := connection(cx)
 	if err != nil {
-		t.Errorf("Error:%s", err)
+		t.Error(err)
+	}
+
+	p, err := packet.Testpacket()
+	if err != nil {
+		t.Error(err)
+	}
+
+	cli.Send(p)
+	select {
+	case r := <-srv.RecvChan():
+		if r == nil {
+			t.Error("Recieved nil")
+			return
+		}
+		err = packet.Validatepackets(p, r)
+		if r == nil {
+			t.Error("Recieved nil")
+			return
+		}
+	case <-time.After(2 * time.Second):
+		t.Error("Recieve timeout")
 		return
 	}
 
-	defer conn1.Close()
-	defer conn2.Close()
+	srv.Send(p)
+	select {
+	case r := <-cli.RecvChan():
+		if r == nil {
+			t.Error("Recieved nil")
+			return
+		}
+		err = packet.Validatepackets(p, r)
+	case <-time.After(2 * time.Second):
+		t.Error("Recieve timeout")
+	}
 
-	go handleConnection(conn1, "Connection 1")
-	go handleConnection(conn2, "Connection 2")
+}
 
-	tcp1 := NewTCP(cx, conn1)
-	tcp2 := NewTCP(cx, conn2)
+//-----------------------------------------------------------------------------
 
-	_ = tcp1
-	_ = tcp2
+// -
+//
+// -
+func connection(cx *ctx.Ctx) (srvconn *TcpStruct, cliconn *TcpStruct, err error) {
 
-	cx.Cancel()
+	srv, cli, err := createPairedConnections()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	srvconn = NewTCP(cx, srv)
+	cliconn = NewTCP(cx, cli)
+
+	return srvconn, cliconn, err
 
 }
 

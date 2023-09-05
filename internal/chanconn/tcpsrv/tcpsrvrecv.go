@@ -1,11 +1,11 @@
 package tcpsrv
 
 import (
-	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
-func (t *TcpServerStruct) RecvChan() <-chan interfaces.PacketInterface {
+func (t *TcpServerStruct) RecvChan() <-chan *packet.PacketStruct {
 
 	if t == nil {
 		log.FatalStack("nil TcpServerStruct")

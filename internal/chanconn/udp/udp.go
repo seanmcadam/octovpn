@@ -3,7 +3,7 @@ package udp
 import (
 	"net"
 
-	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
@@ -13,8 +13,8 @@ type UdpStruct struct {
 	srv    bool
 	conn   *net.UDPConn
 	addr   *net.UDPAddr
-	sendch chan interfaces.PacketInterface
-	recvch chan interfaces.PacketInterface
+	sendch chan *packet.PacketStruct
+	recvch chan *packet.PacketStruct
 }
 
 func NewUDPSrv(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
@@ -26,8 +26,8 @@ func NewUDPSrv(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
 		srv:    true,
 		conn:   conn,
 		addr:   nil,
-		sendch: make(chan interfaces.PacketInterface),
-		recvch: make(chan interfaces.PacketInterface),
+		sendch: make(chan *packet.PacketStruct),
+		recvch: make(chan *packet.PacketStruct),
 	}
 
 	udp.run()
@@ -43,8 +43,8 @@ func NewUDPCli(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
 		srv:    false,
 		conn:   conn,
 		addr:   nil,
-		sendch: make(chan interfaces.PacketInterface),
-		recvch: make(chan interfaces.PacketInterface),
+		sendch: make(chan *packet.PacketStruct),
+		recvch: make(chan *packet.PacketStruct),
 	}
 
 	udp.run()
