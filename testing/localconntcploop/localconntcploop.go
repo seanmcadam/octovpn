@@ -5,7 +5,6 @@ import (
 
 	"github.com/seanmcadam/octovpn/internal/chanconn/loopconn"
 	"github.com/seanmcadam/octovpn/internal/packet"
-	"github.com/seanmcadam/octovpn/internal/packet/packetconn"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
@@ -26,13 +25,13 @@ func main() {
 	for {
 		select {
 		case srvdata := <-srvdatach:
-			p, err := packetconn.NewPacket(packet.CONN_TYPE_RAW, srvdata)
+			p, err := packet.NewPacket(packet.SIG_CHAN_32_RAW, srvdata)
 			if err != nil {
 				log.FatalStack("NewPacket Err:%s", err)
 			}
 			srv.Send(p)
 		case clidata := <-clidatach:
-			p, err := packetconn.NewPacket(packet.CONN_TYPE_RAW, clidata)
+			p, err := packet.NewPacket(packet.SIG_CHAN_32_RAW, clidata)
 			if err != nil {
 				log.FatalStack("NewPacket Err:%s", err)
 			}
