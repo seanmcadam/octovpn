@@ -42,37 +42,28 @@ const (
 // //
 // //
 
-// Layout of the Field Bits
-// Predefined fiels that should be present in a packet
-// 0xA BCD EFGH
-// //| \|| \|||
-// //|  \|  \||
-// //|   |   \| Data Structure pointers (ie *RouterStruct, raw []byte)
-// //|   | Single Value object (ping,pong,counter,id,auth)
-// //| Size Modifier
-
 //
 // Order of Fields
 // Sig
 // Size
 // Counters
-// Ping/Pongs | ID | Auth
+// Ping/Pongs 
 // Payloads (all of them)
 // Raw
 
 const (
-	MASK_VERSION    PacketSigType = 0xF0000000
-	MASK_SIZE       PacketSigType = 0x0F000000
+	MASK_VERSION     PacketSigType = 0xF0000000
+	MASK_SIZE        PacketSigType = 0x0F000000
 	MASK_WIDTH_64_32 PacketSigType = 0x0C000000
-	MASK_SIZE_16_8  PacketSigType = 0x03000000
-	MASK_LAYER      PacketSigType = 0x00FF0000
-	MASK_FIELDS     PacketSigType = 0x0000FF00
-	MASK_DATA       PacketSigType = 0x000000FF
-	VERSION_1       PacketSigType = 0x10000000
-	VERSION_2       PacketSigType = 0x20000000 // Could double the packet size for ceratin layers
-	VERSION_3       PacketSigType = 0x40000000 // Could mix and match versions in differet layers
-	SIZE_8          PacketSigType = 0x01000000
-	SIZE_16         PacketSigType = 0x02000000
+	MASK_SIZE_16_8   PacketSigType = 0x03000000
+	MASK_LAYER       PacketSigType = 0x00FF0000
+	MASK_FIELDS      PacketSigType = 0x0000FF00
+	MASK_DATA        PacketSigType = 0x000000FF
+	VERSION_1        PacketSigType = 0x10000000
+	VERSION_2        PacketSigType = 0x20000000 // Could double the packet size for ceratin layers
+	VERSION_3        PacketSigType = 0x40000000 // Could mix and match versions in differet layers
+	SIZE_8           PacketSigType = 0x01000000
+	SIZE_16          PacketSigType = 0x02000000
 	WIDTH_32         PacketSigType = 0x04000000
 	WIDTH_64         PacketSigType = 0x08000000
 
@@ -102,7 +93,7 @@ const (
 	DATA_ROUTER PacketSigType = 0x00000040
 	DATA_ERROR  PacketSigType = 0x000000FF
 
-	SIG_ROUTE = VERSION_1 | LAYER_ROUTER | FIELD_SIG | FIELD_SIZE | FIELD_DATA
+	SIG_ROUTE = VERSION_1 | LAYER_ROUTER | FIELD_SIG | FIELD_SIZE
 	SIG_SITE  = VERSION_1 | LAYER_SITE | FIELD_SIG | FIELD_SIZE
 	SIG_CHAN  = VERSION_1 | LAYER_CHAN | FIELD_SIG | FIELD_SIZE
 	SIG_CONN  = VERSION_1 | LAYER_CONN | FIELD_SIG | FIELD_SIZE
@@ -111,12 +102,12 @@ const (
 	// ROUTE
 	//
 
-	SIG_ROUTE_AUTH   = SIG_ROUTE | DATA_AUTH | SIZE_8
-	SIG_ROUTE_RAW    = SIG_ROUTE | DATA_RAW | SIZE_16
-	SIG_ROUTE_ETH    = SIG_ROUTE | DATA_ETH | SIZE_16
-	SIG_ROUTE_IPV4   = SIG_ROUTE | DATA_IPV4 | SIZE_16
-	SIG_ROUTE_IPV6   = SIG_ROUTE | DATA_IPV6 | SIZE_16
-	SIG_ROUTE_ROUTER = SIG_ROUTE | DATA_ROUTER | SIZE_16
+	SIG_ROUTE_AUTH   = SIG_ROUTE | FIELD_DATA | DATA_AUTH | SIZE_8
+	SIG_ROUTE_RAW    = SIG_ROUTE | FIELD_DATA | DATA_RAW | SIZE_16
+	SIG_ROUTE_ETH    = SIG_ROUTE | FIELD_DATA | DATA_ETH | SIZE_16
+	SIG_ROUTE_IPV4   = SIG_ROUTE | FIELD_DATA | DATA_IPV4 | SIZE_16
+	SIG_ROUTE_IPV6   = SIG_ROUTE | FIELD_DATA | DATA_IPV6 | SIZE_16
+	SIG_ROUTE_ROUTER = SIG_ROUTE | FIELD_DATA | DATA_ROUTER | SIZE_16
 
 	//
 	// SITE
@@ -125,14 +116,14 @@ const (
 	SIG_SITE_32_PACKET = SIG_SITE | FIELD_DATA | FIELD_COUNTER | DATA_PACKET | WIDTH_32 | SIZE_16
 	SIG_SITE_32_AUTH   = SIG_SITE | FIELD_DATA | FIELD_COUNTER | DATA_AUTH | WIDTH_32 | SIZE_16
 	SIG_SITE_32_ID     = SIG_SITE | FIELD_DATA | FIELD_COUNTER | DATA_ID | WIDTH_32 | SIZE_16
-	SIG_SITE_32_ACK    = SIG_SITE | FIELD_ACK | WIDTH_32 | SIZE_16
-	SIG_SITE_32_NAK    = SIG_SITE | FIELD_NAK | WIDTH_32 | SIZE_16
+	SIG_SITE_32_ACK    = SIG_SITE | FIELD_ACK | WIDTH_32 | SIZE_8
+	SIG_SITE_32_NAK    = SIG_SITE | FIELD_NAK | WIDTH_32 | SIZE_8
 	SIG_SITE_64_RAW    = SIG_SITE | FIELD_DATA | FIELD_COUNTER | DATA_RAW | WIDTH_64 | SIZE_16
 	SIG_SITE_64_PACKET = SIG_SITE | FIELD_DATA | FIELD_COUNTER | DATA_PACKET | WIDTH_64 | SIZE_16
 	SIG_SITE_64_AUTH   = SIG_SITE | FIELD_DATA | FIELD_COUNTER | DATA_AUTH | WIDTH_64 | SIZE_16
 	SIG_SITE_64_ID     = SIG_SITE | FIELD_DATA | FIELD_COUNTER | DATA_ID | WIDTH_64 | SIZE_16
-	SIG_SITE_64_ACK    = SIG_SITE | FIELD_ACK | WIDTH_64 | SIZE_16
-	SIG_SITE_64_NAK    = SIG_SITE | FIELD_NAK | WIDTH_64 | SIZE_16
+	SIG_SITE_64_ACK    = SIG_SITE | FIELD_ACK | WIDTH_64 | SIZE_8
+	SIG_SITE_64_NAK    = SIG_SITE | FIELD_NAK | WIDTH_64 | SIZE_8
 	//
 	// CHAN
 	//
@@ -172,7 +163,7 @@ func (p PacketSigType) Size16() bool {
 	return (p & SIZE_16) != 0
 }
 func (p PacketSigType) Width0() bool {
-	return (p & (WIDTH_32|WIDTH_64)) == 0
+	return (p & (WIDTH_32 | WIDTH_64)) == 0
 }
 func (p PacketSigType) Width32() bool {
 	return (p & WIDTH_32) != 0
@@ -181,13 +172,16 @@ func (p PacketSigType) Width64() bool {
 	return (p & WIDTH_64) != 0
 }
 func (p PacketSigType) V1() bool {
-	return (p & VERSION_1) != 0
+	x := (p & VERSION_1)
+	return x != 0
 }
 
+//
+// Layer
+//
 func (p PacketSigType) GetLayer() PacketSigType {
 	return (p & MASK_LAYER)
 }
-
 func (p PacketSigType) RouterLayer() bool {
 	return (p & LAYER_ROUTER) != 0
 }
@@ -201,15 +195,9 @@ func (p PacketSigType) ConnLayer() bool {
 	return (p & LAYER_CONN) != 0
 }
 
-func (p PacketSigType) Packet() bool {
-	return (p & DATA_PACKET) != 0
-}
-func (p PacketSigType) Raw() bool {
-	return (p & DATA_RAW) != 0
-}
-func (p PacketSigType) Auth() bool {
-	return (p & DATA_AUTH) != 0
-}
+//
+// Fileds
+//
 func (p PacketSigType) Ack() bool {
 	return (p & FIELD_ACK) != 0
 }
@@ -224,6 +212,22 @@ func (p PacketSigType) Ping() bool {
 }
 func (p PacketSigType) Pong() bool {
 	return (p & FIELD_PONG) != 0
+}
+func (p PacketSigType) Data() bool {
+	return (p & FIELD_DATA) != 0
+}
+
+//
+// Data
+//
+func (p PacketSigType) Packet() bool {
+	return (p & DATA_PACKET) != 0
+}
+func (p PacketSigType) Raw() bool {
+	return (p & DATA_RAW) != 0
+}
+func (p PacketSigType) Auth() bool {
+	return (p & DATA_AUTH) != 0
 }
 func (p PacketSigType) ID() bool {
 	return (p & DATA_ID) != 0
@@ -247,12 +251,12 @@ func (f PacketSigType) String() string {
 
 	if (f & MASK_VERSION) == MASK_VERSION {
 		name = append(name, []byte("MASK_VERSION ")...)
-	} else {
-		name = append(name, []byte("ERR-MASK_VERSION ")...)
-	}
+	} 
+
 	if (f & MASK_SIZE) == MASK_SIZE {
-		name = append(name, []byte("MASK_SIZE")...)
+		name = append(name, []byte("MASK_SIZE ")...)
 	}
+
 	if (f & MASK_WIDTH_64_32) == MASK_WIDTH_64_32 {
 		name = append(name, []byte("MASK_WIDTH_64_32")...)
 	}
@@ -286,40 +290,40 @@ func (f PacketSigType) String() string {
 	}
 
 	if (f & MASK_LAYER) == LAYER_CONN {
-		name = append(name, []byte("CONN ")...)
+		name = append(name, []byte("LCONN ")...)
 	} else if (f & MASK_LAYER) == LAYER_CHAN {
-		name = append(name, []byte("CHAN ")...)
+		name = append(name, []byte("LCHAN ")...)
 	} else if (f & MASK_LAYER) == LAYER_SITE {
-		name = append(name, []byte("SITE ")...)
+		name = append(name, []byte("LSITE ")...)
 	} else if (f & MASK_LAYER) == LAYER_ROUTER {
-		name = append(name, []byte("ROUTER ")...)
+		name = append(name, []byte("LROUTER ")...)
 	} else {
-		name = append(name, []byte("ERR-LAYER ")...)
+		name = append(name, []byte("LAYER-ERR ")...)
 	}
 
 	if (f & FIELD_SIG) > 0 {
-		name = append(name, []byte("SIG ")...)
+		name = append(name, []byte("FSIG ")...)
 	}
 	if (f & FIELD_SIZE) > 0 {
-		name = append(name, []byte("SIZE ")...)
+		name = append(name, []byte("SFIZE ")...)
 	}
 	if (f & FIELD_COUNTER) > 0 {
-		name = append(name, []byte("COUNTER ")...)
+		name = append(name, []byte("FCOUNTER ")...)
 	}
 	if (f & FIELD_ACK) > 0 {
-		name = append(name, []byte("ACK ")...)
+		name = append(name, []byte("FACK ")...)
 	}
 	if (f & FIELD_NAK) > 0 {
-		name = append(name, []byte("NAK ")...)
+		name = append(name, []byte("FNAK ")...)
 	}
 	if (f & FIELD_PING) > 0 {
-		name = append(name, []byte("PING ")...)
+		name = append(name, []byte("FPING ")...)
 	}
 	if (f & FIELD_PONG) > 0 {
-		name = append(name, []byte("PONG ")...)
+		name = append(name, []byte("FPONG ")...)
 	}
 	if (f & FIELD_DATA) > 0 {
-		name = append(name, []byte("DATA ")...)
+		name = append(name, []byte("FDATA ")...)
 	}
 
 	if (f & DATA_PACKET) > 0 {

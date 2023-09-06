@@ -52,6 +52,7 @@ type TrackerStruct struct {
 	acknak map[counter.Counter]*PacketTracker
 	ack    map[counter.Counter]*CounterTracker
 	nak    map[counter.Counter]*CounterTracker
+	dt     *DataTracker
 }
 
 func newPacketTracker(d *packet.PacketStruct) (p *PacketTracker) {
@@ -85,6 +86,15 @@ func NewTracker(ctx *ctx.Ctx, freq time.Duration) (t *TrackerStruct) {
 		acknak: make(map[counter.Counter]*PacketTracker, DefaultTrackerDataDepth),
 		ack:    make(map[counter.Counter]*CounterTracker, DefaultTrackerDataDepth),
 		nak:    make(map[counter.Counter]*CounterTracker, DefaultTrackerDataDepth),
+	}
+	t.dt = &DataTracker{
+		interval:    freq,
+		sendbytes:   0,
+		recvbytes:   0,
+		sendpackets: 0,
+		recvpackets: 0,
+		ackcount:    0,
+		naccount:    0,
 	}
 
 	go t.goRun()
@@ -171,36 +181,26 @@ func (tracker *TrackerStruct) maint() {
 
 	//log.Debug("Tracker maint running")
 
-	dt := &DataTracker{
-		interval:    tracker.freq,
-		sendbytes:   0,
-		recvbytes:   0,
-		sendpackets: 0,
-		recvpackets: 0,
-		ackcount:    0,
-		naccount:    0,
-	}
-
 	for count, pt := range tracker.sent {
-		dt.sendbytes += uint64(pt.packet.Size())
-		dt.sendpackets++
+		tracker.dt.sendbytes += uint64(pt.packet.Size())
+		tracker.dt.sendpackets++
 		delete(tracker.sent, count)
 	}
 
 	for count, pt := range tracker.recv {
-		dt.recvbytes += uint64(pt.packet.Size())
-		dt.recvpackets++
+		tracker.dt.recvbytes += uint64(pt.packet.Size())
+		tracker.dt.recvpackets++
 		delete(tracker.recv, count)
 	}
 
 	for count, ct := range tracker.ack {
-		dt.ackcount++
+		tracker.dt.ackcount++
 		_ = ct
 		_ = count
 	}
 
 	for count, ct := range tracker.nak {
-		dt.ackcount++
+		tracker.dt.ackcount++
 		_ = ct
 		_ = count
 	}
@@ -212,6 +212,6 @@ func (tracker *TrackerStruct) maint() {
 	// Calc Ack Count
 	// Calc Nak Count
 
-	log.Debugf("Data:%v", dt)
+	log.Debugf("Data:%v", tracker.dt)
 
 }

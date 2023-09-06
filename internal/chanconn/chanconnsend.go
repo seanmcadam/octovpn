@@ -9,7 +9,7 @@ import (
 func (cs *ChanconnStruct) Send(cp *packet.PacketStruct) error {
 
 	if cs.Active() {
-		packet, err := packet.NewPacket(packet.SIG_CONN_32_PACKET, cp)
+		packet, err := packet.NewPacket(packet.SIG_CONN_32_PACKET, cp, <-cs.counter.GetCountCh())
 		if err != nil {
 			return err
 		}

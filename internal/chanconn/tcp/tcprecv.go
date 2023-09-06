@@ -1,6 +1,7 @@
 package tcp
 
 import (
+	"bytes"
 	"io"
 
 	"github.com/seanmcadam/octovpn/internal/packet"
@@ -27,32 +28,60 @@ func (t *TcpStruct) goRecv() {
 	defer t.emptyrecv()
 
 	for {
-		buf := make([]byte, 2048)
+		var buffer bytes.Buffer
 
-		l, err := t.conn.Read(buf)
-		if err != nil {
-			if err != io.EOF {
-				log.Errorf("TCP Read() Error:%s", err)
+		tmp := make([]byte, 2048)
+
+		for {
+			n, err := t.conn.Read(tmp)
+			if err != nil {
+				if err == io.EOF {
+					log.Errorf("TCP Read() connection closed")
+				} else {
+					log.Errorf("TCP Read() Error:%s", err)
+				}
+				return
 			}
-			return
-		}
 
-		if t.closed() {
-			return
-		}
+			buffer.Write(tmp[:n])
 
-		buf = buf[:l]
+			if t.closed() {
+				return
+			}
 
-		packet, err := packet.MakePacket(buf)
-		if err != nil {
-			log.Errorf("TCP MakePacket() Err:%s", err)
-			continue
-		}
+			sig, length, err := packet.ReadPacketBuffer(buffer.Bytes()[:6])
+			//
+			// Error checking types here
+			//
+			if err != nil {
+				log.Errorf("TCP MakePacket() Err:%s", err)
+				continue
+			}
 
-		t.recvch <- packet
+			if !sig.ConnLayer(){
+				log.Errorf("Bad Layer Received")
+				continue
+			}
 
-		if t.closed() {
-			return
+			if buffer.Len() < int(length){
+				continue
+			}
+
+			p, err := packet.MakePacket(buffer.Next(int(length)))
+			if err != nil {
+				log.Errorf("MakePacket Err:%s", err)
+				continue
+			}
+
+			if p == nil {
+				log.FatalStack("Got Nil Packet")
+			}
+
+			t.recvch <- p
+
+			if t.closed() {
+				return
+			}
 		}
 	}
 }

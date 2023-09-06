@@ -24,6 +24,9 @@ func (cs *ChannelStruct) goRecv() {
 }
 
 func (cs *ChannelStruct) recv(p *packet.PacketStruct) {
+
+	p.DebugPacket("CHAN RECV")
+
 	t := p.Sig()
 	switch t {
 	case packet.SIG_CHAN_32_PACKET:
@@ -31,9 +34,13 @@ func (cs *ChannelStruct) recv(p *packet.PacketStruct) {
 	case packet.SIG_CHAN_64_PACKET:
 
 		copyack, err := p.CopyAck()
-		log.FatalfStack("CopyAck() Err:%s", err)
+		if err != nil {
+			log.FatalfStack("CopyAck() Err:%s", err)
+		}
 		copy, err := p.Copy()
-		log.FatalfStack("Copy() Err:%s", err)
+		if err != nil {
+			log.FatalfStack("Copy() Err:%s", err)
+		}
 
 		cs.channel.Send(copyack)
 		cs.tracker.Recv(copy)
@@ -42,10 +49,10 @@ func (cs *ChannelStruct) recv(p *packet.PacketStruct) {
 	case packet.SIG_CHAN_32_ACK:
 		fallthrough
 	case packet.SIG_CHAN_64_ACK:
-
 		cs.tracker.Ack(p.Counter())
 
 	case packet.SIG_CHAN_32_NAK:
+		fallthrough
 	case packet.SIG_CHAN_64_NAK:
 		cs.tracker.Nak(p.Counter())
 

@@ -1,28 +1,34 @@
 package channel
 
 import (
-	"log"
-
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/errors"
+	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
-func (cs *ChannelStruct) Send(sp *packet.PacketStruct) error {
+func (cs *ChannelStruct) Send(sp *packet.PacketStruct)(err error ){
 	var sig packet.PacketSigType
+	var p *packet.PacketStruct
+
 	if !cs.channel.Active() {
 		return errors.ErrNetChannelDown
 	}
 
-	if cs.Width() == 32 {
-		sig = packet.SIG_CHAN_32_PACKET
+	if sp.Sig().RouterLayer() {
+		if cs.Width() == 32 {
+			sig = packet.SIG_CHAN_32_PACKET
+		} else {
+			sig = packet.SIG_CHAN_32_PACKET
+		}
+
+		p, err = packet.NewPacket(sig, sp, <-cs.counter.GetCountCh())
+		if err != nil {
+			log.Fatalf("NewPacket Err:%s", err)
+		}
 	} else {
-		sig = packet.SIG_CHAN_32_PACKET
-	}
-	packet, err := packet.NewPacket(sig,sp)
-	if err != nil {
-		log.Fatalf("NewPacket Err:%s", err)
+		p = sp
 	}
 
-	// cs.tracker.Send(packet)
-	return cs.channel.Send(packet)
+	cs.tracker.Send(p)
+	return cs.channel.Send(p)
 }

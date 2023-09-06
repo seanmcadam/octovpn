@@ -56,13 +56,14 @@ func (u *UdpStruct) goRecv() {
 
 		buf = buf[:l]
 
-		packet, err := packet.MakePacket(buf)
+		p, err := packet.MakePacket(buf)
+		p.DebugPacket("UDP RECV")
 		if err != nil {
 			log.Errorf("UDP MakePacket() Err:%s", err)
 			continue
 		}
 
-		u.recvch <- packet
+		u.recvch <- p
 
 		if u.closed() {
 			return
