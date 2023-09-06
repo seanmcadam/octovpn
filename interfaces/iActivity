@@ -1,0 +1,9 @@
+package interfaces
+
+import "github.com/seanmcadam/octovpn/internal/packet"
+
+type ActivityInterface interface {
+	LinkIputCh() chan -> link.LinkState
+	SendCh() chan -> *packet.PacketStruct
+	RecvCh() chan -> *packet.PacketStruct
+}

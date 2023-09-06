@@ -9,6 +9,7 @@ import (
 	"github.com/seanmcadam/octovpn/internal/pinger"
 	"github.com/seanmcadam/octovpn/internal/tracker"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
+	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 type ChannelStruct struct {
@@ -19,6 +20,23 @@ type ChannelStruct struct {
 	counter counter.CounterStruct
 	tracker *tracker.TrackerStruct
 	recvch  chan *packet.PacketStruct
+}
+
+func (c *ChannelStruct) MaxLocalMtu() (size packet.PacketSizeType) {
+	size = packet.PacketSigSize + packet.PacketSize16Size
+	if c.width == packet.PacketWidth32 {
+		size += packet.PacketCounter32Size
+		size += packet.PacketPing32Size
+	if c.width == packet.PacketWidth64 {
+		size += packet.PacketCounter64Size
+		size += packet.PacketPing64Size
+	} else {
+		log.FatalfStack("CannedStruct:%v", c)
+	}
+
+	size += c.channel.MaxLocalMtu()
+
+	return size
 }
 
 func NewChannel32(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStruct, err error) {
