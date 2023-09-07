@@ -3,18 +3,19 @@ package link
 import (
 	"testing"
 	"time"
+
+	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
 
-//func (ls *LinkStateStruct) ToggleState(s LinkStateType) {
-//func (ls *LinkStateStruct) StateToggleCh() (newch chan LinkStateType) {
-//func (ls *LinkStateStruct) GetState() LinkStateType {
-
 func TestLinkState_compile(t *testing.T) {
-	_ = NewLinkState()
+	cx := ctx.NewContext()
+	_ = NewLinkState(cx)
+	cx.Cancel()
 }
 
 func TestLinkState_StateToggles(t *testing.T) {
-	ls := NewLinkState()
+	cx := ctx.NewContext()
+	ls := NewLinkState(cx)
 
 	if ls.GetState() != LinkStateNone {
 		t.Error("State not NONE")
@@ -32,10 +33,14 @@ func TestLinkState_StateToggles(t *testing.T) {
 		t.Error("State not Down")
 	}
 
+	cx.Cancel()
+
 }
 
 func TestLinkState_StateTogglesChannel(t *testing.T) {
-	ls := NewLinkState()
+	cx := ctx.NewContext()
+
+	ls := NewLinkState(cx)
 
 	ch := ls.StateToggleCh()
 	ls.ToggleState(LinkStateUp)
@@ -69,4 +74,5 @@ func TestLinkState_StateTogglesChannel(t *testing.T) {
 		t.Error("Timeout...")
 	}
 
+	cx.Cancel()
 }

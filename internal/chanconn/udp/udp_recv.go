@@ -5,6 +5,7 @@ import (
 	"net"
 	"reflect"
 
+	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
@@ -12,7 +13,6 @@ import (
 // Recv()
 func (u *UdpStruct) RecvChan() <-chan *packet.PacketStruct {
 	if u == nil {
-		log.FatalStack("nil UdpStruct")
 		return nil
 	}
 	if u.recvch == nil {
@@ -26,6 +26,7 @@ func (u *UdpStruct) RecvChan() <-chan *packet.PacketStruct {
 // Exit when closed
 func (u *UdpStruct) goRecv() {
 	defer u.emptyrecv()
+	defer u.link.ToggleState(link.LinkStateDown)
 
 	for {
 		buf := make([]byte, 2048)

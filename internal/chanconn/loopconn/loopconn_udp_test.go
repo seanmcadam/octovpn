@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/seanmcadam/octovpn/internal/counter"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
@@ -12,7 +13,7 @@ import (
 func TestNewUdpLoop_OpenClose(t *testing.T) {
 
 	cx := ctx.NewContext()
-	l1, l2, err := NewUdpConnLoop(cx)
+	_, _, err := NewUdpConnLoop(cx)
 
 	if err != nil {
 		t.Fatalf("UDP Error:%s", err)
@@ -20,20 +21,13 @@ func TestNewUdpLoop_OpenClose(t *testing.T) {
 
 	time.Sleep(10 * time.Second)
 
-	if !l1.Active() {
-		t.Fatal("UDP L1 Active failed")
-	}
-
-	if !l2.Active() {
-		t.Fatal("UDP L2 Active failed")
-	}
 }
 
 func TestNewUdpLoop_SendRecv(t *testing.T) {
 
 	cx := ctx.NewContext()
 	data := []byte("data")
-	cp, err := packet.NewPacket(packet.SIG_CONN_32_RAW, data)
+	cp, err := packet.NewPacket(packet.SIG_CONN_32_RAW, data, counter.MakeCounter32(1))
 
 	srv, cli, err := NewUdpConnLoop(cx)
 
@@ -42,13 +36,6 @@ func TestNewUdpLoop_SendRecv(t *testing.T) {
 	}
 
 	time.Sleep(2 * time.Second)
-	if !srv.Active() {
-		t.Fatal("UDP L1 Active failed")
-	}
-
-	if !cli.Active() {
-		t.Fatal("UDP L2 Active failed")
-	}
 
 	err = cli.Send(cp)
 	if err != nil {

@@ -2,6 +2,7 @@ package tcpsrv
 
 import (
 	"github.com/seanmcadam/octovpn/internal/chanconn/tcp"
+	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
@@ -17,12 +18,22 @@ func (t *TcpServerStruct) goListen() {
 
 		log.Debug("TCP New connection")
 		newconn := tcp.NewTCP(t.cx.NewWithCancel(), conn)
+		t.tcpconnch <- newconn
 
-		select {
-		case t.tcpconnch <- newconn:
-		case <-t.cx.DoneChan():
-			log.Debug("TCPSrv listener close ch")
-			return
+		t.link.ToggleState(link.LinkStateUp)
+
+		for {
+			tcplink := newconn.LinkToggleCh()
+			select {
+			case state := <-tcplink:
+				log.Debug("TCPSrv listener got State %v", state)
+				if state == link.LinkStateDown {
+					return
+				}
+			case <-t.cx.DoneChan():
+				log.Debug("TCPSrv listener close ch")
+				return
+			}
 		}
 	}
 }

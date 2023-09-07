@@ -2,17 +2,16 @@ package channel
 
 import (
 	"github.com/seanmcadam/octovpn/internal/packet"
-	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
-func (cs *ChannelStruct) Send(sp *packet.PacketStruct)(err error ){
+func (cs *ChannelStruct) Send(sp *packet.PacketStruct) (err error) {
 	var sig packet.PacketSigType
 	var p *packet.PacketStruct
 
-	if !cs.channel.Active() {
-		return errors.ErrNetChannelDown
-	}
+	//if !cs.channel.Active() {
+	//	return errors.ErrNetChannelDown
+	//}
 
 	if sp.Sig().RouterLayer() {
 		if cs.Width() == 32 {

@@ -24,7 +24,7 @@ func TestNewChannel_Tcp(t *testing.T) {
 
 	// Get Client and Server
 
-	serv, err := chanconn.NewConn(cx, config, tcpsrv.New)
+	serv, err := chanconn.NewConn32(cx, config, tcpsrv.New)
 	if err != nil {
 		t.Fatalf("tcpsrv New err:%s", err)
 	}
@@ -32,7 +32,7 @@ func TestNewChannel_Tcp(t *testing.T) {
 		t.Fatal("serv == nil")
 	}
 
-	client, err := chanconn.NewConn(cx, config, tcpcli.New)
+	client, err := chanconn.NewConn32(cx, config, tcpcli.New)
 	if err != nil {
 		t.Fatalf("tcpcli New err:%s", err)
 	}

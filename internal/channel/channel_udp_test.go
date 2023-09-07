@@ -25,7 +25,7 @@ func TestNewChannel_Udp(t *testing.T) {
 
 	// Get Client and Server
 
-	serv, err := chanconn.NewConn(cx, config, udpsrv.New)
+	serv, err := chanconn.NewConn32(cx, config, udpsrv.New)
 	if err != nil {
 		t.Fatalf("udpsrv New err:%s", err)
 	}
@@ -33,7 +33,7 @@ func TestNewChannel_Udp(t *testing.T) {
 		t.Fatal("serv == nil")
 	}
 
-	client, err := chanconn.NewConn(cx, config, udpcli.New)
+	client, err := chanconn.NewConn32(cx, config, udpcli.New)
 	if err != nil {
 		t.Fatalf("udpcli New err:%s", err)
 	}

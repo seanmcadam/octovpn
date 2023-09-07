@@ -6,6 +6,7 @@ import (
 
 	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/chanconn/tcp"
+	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
@@ -14,6 +15,7 @@ import (
 
 type TcpServerStruct struct {
 	cx          *ctx.Ctx
+	link        *link.LinkStateStruct
 	config      *settings.NetworkStruct
 	address     string
 	tcplistener *net.TCPListener
@@ -25,10 +27,11 @@ type TcpServerStruct struct {
 
 // NewTcpServer()
 // Returns a TcpServerStruct and error value
-func New(cx *ctx.Ctx, config *settings.NetworkStruct) (tcpserver interfaces.ConnInterface, err error) {
+func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpserver interfaces.ConnInterface, err error) {
 
 	t := &TcpServerStruct{
-		cx:          cx,
+		cx:          ctx,
+		link:        link.NewLinkState(ctx),
 		config:      config,
 		address:     fmt.Sprintf("%s:%d", config.GetHost(), config.GetPort()),
 		tcplistener: nil,
@@ -117,3 +120,13 @@ func (t *TcpServerStruct) emptyconn() {
 		}
 	}
 }
+
+
+
+func (t *TcpServerStruct) StateToggleCh() <- chan link.LinkStateType {
+	return t.link.StateToggleCh()
+}
+func (t *TcpServerStruct) GetState() link.LinkStateType {
+	return t.link.GetState()
+}
+

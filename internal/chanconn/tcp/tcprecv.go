@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 
+	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
@@ -26,6 +27,7 @@ func (t *TcpStruct) RecvChan() <-chan *packet.PacketStruct {
 // Exit when closed
 func (t *TcpStruct) goRecv() {
 	defer t.emptyrecv()
+	defer t.link.ToggleState(link.LinkStateDown)
 
 	for {
 		var buffer bytes.Buffer

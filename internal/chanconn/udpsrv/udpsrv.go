@@ -7,6 +7,7 @@ import (
 
 	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/chanconn/udp"
+	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
@@ -15,6 +16,7 @@ import (
 
 type UdpServerStruct struct {
 	cx      *ctx.Ctx
+	link    *link.LinkStateStruct
 	config  *settings.NetworkStruct
 	address string
 	udpaddr *net.UDPAddr
@@ -27,6 +29,7 @@ func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpserver interfaces.Con
 
 	u := &UdpServerStruct{
 		cx:      ctx,
+		link:    link.NewLinkState(ctx),
 		config:  config,
 		address: fmt.Sprintf("%s:%d", config.GetHost(), config.GetPort()),
 		udpaddr: nil,
@@ -87,13 +90,23 @@ func (u *UdpServerStruct) goRun() {
 		log.Info("New UDP Connection")
 
 		u.udpconn = udp.NewUDPSrv(u.cx.NewWithCancel(), conn)
+		u.link.ToggleState(link.LinkStateUp)
 		if u.udpconn == nil {
 			log.Error("udpconn == nil")
 			continue
 		}
 
 		for {
+			linkstate := u.udpconn.LinkToggleCh()
 			select {
+			case state := <-linkstate:
+				u.link.ToggleState(state)
+				if state == link.LinkStateDown {
+					log.Debug("UDPSrv Link Down")
+					u.udpconn = nil
+					break
+
+				}
 			case <-u.cx.DoneChan():
 				log.Debug("UDPSrv Closing Down")
 				return
@@ -105,3 +118,12 @@ func (u *UdpServerStruct) goRun() {
 		}
 	}
 }
+
+
+func (u *UdpServerStruct) StateToggleCh() <- chan link.LinkStateType {
+	return u.link.StateToggleCh()
+}
+func (u *UdpServerStruct) GetState() link.LinkStateType {
+	return u.link.GetState()
+}
+

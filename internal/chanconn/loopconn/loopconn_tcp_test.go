@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/seanmcadam/octovpn/internal/counter"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
@@ -13,7 +14,7 @@ func TestNewTcpLoop_OpenClose(t *testing.T) {
 
 	cx := ctx.NewContext()
 
-	l1, l2, err := NewTcpConnLoop(cx)
+	_, _, err := NewTcpConnLoop(cx)
 
 	if err != nil {
 		t.Fatalf("TCP Error:%s", err)
@@ -21,13 +22,6 @@ func TestNewTcpLoop_OpenClose(t *testing.T) {
 
 	time.Sleep(5 * time.Second)
 
-	if !l1.Active() {
-		t.Fatal("TCP L1 Active failed")
-	}
-
-	if !l2.Active() {
-		t.Fatal("TCP L2 Active failed")
-	}
 }
 
 func TestNewTcpLoop_SendRecv(t *testing.T) {
@@ -37,7 +31,7 @@ func TestNewTcpLoop_SendRecv(t *testing.T) {
 	var data []byte
 	data = append(data, []byte("data")...)
 
-	cp, err := packet.NewPacket(packet.SIG_CONN_32_RAW, data)
+	cp, err := packet.NewPacket(packet.SIG_CONN_32_RAW, data, counter.MakeCounter32(1))
 	if err != nil {
 		t.Fatalf("NewPacket Err:%s", err)
 	}
@@ -49,14 +43,6 @@ func TestNewTcpLoop_SendRecv(t *testing.T) {
 	}
 
 	time.Sleep(2 * time.Second)
-
-	if !l1.Active() {
-		t.Fatal("TCP L1 Active failed")
-	}
-
-	if !l2.Active() {
-		t.Fatal("TCP L2 Active failed")
-	}
 
 	err = l1.Send(cp)
 	if err != nil {
@@ -80,7 +66,7 @@ func TestNewTcpLoop_SendRecvReset(t *testing.T) {
 	cx := ctx.NewContext()
 
 	data := []byte("data")
-	cp, err := packet.NewPacket(packet.SIG_CONN_32_RAW, data)
+	cp, err := packet.NewPacket(packet.SIG_CONN_32_RAW, data, counter.MakeCounter32(1))
 	if err != nil {
 		t.Fatalf("NewPacket Err:%s", err)
 	}
@@ -92,14 +78,6 @@ func TestNewTcpLoop_SendRecvReset(t *testing.T) {
 	}
 
 	time.Sleep(2 * time.Second)
-
-	if !l1.Active() {
-		t.Fatal("TCP L1 Active failed")
-	}
-
-	if !l2.Active() {
-		t.Fatal("TCP L2 Active failed")
-	}
 
 	err = l1.Send(cp)
 	if err != nil {

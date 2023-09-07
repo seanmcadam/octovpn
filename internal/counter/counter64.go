@@ -83,15 +83,14 @@ func (c *Counter64Struct) GetCountCh() (ch <-chan Counter) {
 // Runs forever
 func (c *Counter64Struct) goCount() {
 
-	log.GDebug("Counter64 Start")
-	defer log.GDebug("Counter64 Stop")
 	defer c.emptych()
 
 	var counter Counter64 = 1
 	for {
+		counter += 1
+		localc := counter
 		select {
-		case c.CountCh <- &counter:
-			counter += 1
+		case c.CountCh <- &localc:
 		case <-c.cx.DoneChan():
 			return
 		}

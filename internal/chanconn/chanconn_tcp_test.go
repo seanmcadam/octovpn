@@ -25,7 +25,7 @@ func TestNewTCP_SetupSrv(t *testing.T) {
 		Auth:  "",
 	}
 
-	NewConn(cx, config, tcpsrv.New)
+	_, _ = NewConn32(cx, config, tcpsrv.New)
 
 }
 
@@ -42,7 +42,7 @@ func TestNewTCP_SetupCli(t *testing.T) {
 		Auth:  "",
 	}
 
-	NewConn(cx, config, tcpcli.New)
+	NewConn32(cx, config, tcpcli.New)
 
 }
 
@@ -55,7 +55,7 @@ func TestNewTCP_CliSrv(t *testing.T) {
 
 	p, err := packet.Testpacket()
 	if err != nil {
-		t.Errorf("Testpacket() Err:%s",err)
+		t.Errorf("Testpacket() Err:%s", err)
 	}
 
 	cli.Send(p)

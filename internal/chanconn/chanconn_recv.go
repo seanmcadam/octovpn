@@ -1,6 +1,7 @@
 package chanconn
 
 import (
+	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
@@ -18,8 +19,18 @@ func (cs *ChanconnStruct) RecvChan() <-chan *packet.PacketStruct {
 }
 
 func (cs *ChanconnStruct) goRecv() {
+	//cs.link.ToggleState(cs.conn.GetState())
 	for {
 		select {
+		case state := <-cs.conn.StateToggleCh():
+			if state == link.LinkStateDown {
+				cs.link.ToggleState(state)
+				return
+			}
+			if state == link.LinkStateClose {
+				return
+			}
+
 		case <-cs.cx.DoneChan():
 			return
 

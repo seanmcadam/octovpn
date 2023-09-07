@@ -5,6 +5,7 @@ import (
 
 	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/counter"
+	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/internal/pinger"
 	"github.com/seanmcadam/octovpn/internal/tracker"
@@ -14,6 +15,7 @@ import (
 
 type ChannelStruct struct {
 	cx      *ctx.Ctx
+	link    *link.LinkStateStruct
 	width   packet.PacketWidth
 	channel interfaces.ChannelInterface
 	pinger  pinger.PingerStruct
@@ -22,27 +24,11 @@ type ChannelStruct struct {
 	recvch  chan *packet.PacketStruct
 }
 
-func (c *ChannelStruct) MaxLocalMtu() (size packet.PacketSizeType) {
-	size = packet.PacketSigSize + packet.PacketSize16Size
-	if c.width == packet.PacketWidth32 {
-		size += packet.PacketCounter32Size
-		size += packet.PacketPing32Size
-	if c.width == packet.PacketWidth64 {
-		size += packet.PacketCounter64Size
-		size += packet.PacketPing64Size
-	} else {
-		log.FatalfStack("CannedStruct:%v", c)
-	}
-
-	size += c.channel.MaxLocalMtu()
-
-	return size
-}
-
 func NewChannel32(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStruct, err error) {
 
 	cs = &ChannelStruct{
 		cx:      ctx,
+		link:    link.NewLinkState(ctx),
 		width:   packet.PacketWidth32,
 		channel: ci,
 		pinger:  pinger.NewPinger32(ctx, 1, 2),
@@ -59,6 +45,7 @@ func NewChannel64(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStru
 
 	cs = &ChannelStruct{
 		cx:      ctx,
+		link:    link.NewLinkState(ctx),
 		width:   packet.PacketWidth64,
 		channel: ci,
 		pinger:  pinger.NewPinger64(ctx, 1, 2),
@@ -85,4 +72,22 @@ func (cs *ChannelStruct) Close() {
 
 func (cs *ChannelStruct) close() {
 	cs.cx.Cancel()
+}
+
+func (c *ChannelStruct) MaxLocalMtu() (size packet.PacketSizeType) {
+	size = packet.PacketSigSize + packet.PacketSize16Size
+	if c.width == packet.PacketWidth32 {
+		size += packet.PacketCounter32Size
+		size += packet.PacketPing32Size
+		if c.width == packet.PacketWidth64 {
+			size += packet.PacketCounter64Size
+			size += packet.PacketPing64Size
+		} else {
+			log.FatalfStack("CannedStruct:%v", c)
+		}
+
+		size += c.channel.MaxLocalMtu()
+
+	}
+	return size
 }

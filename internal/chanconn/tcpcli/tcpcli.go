@@ -7,6 +7,7 @@ import (
 
 	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/chanconn/tcp"
+	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
@@ -15,6 +16,7 @@ import (
 
 type TcpClientStruct struct {
 	cx      *ctx.Ctx
+	link    link.LinkStateStruct
 	config  *settings.NetworkStruct
 	address string
 	tcpaddr *net.TCPAddr
@@ -26,6 +28,7 @@ func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpclient interfaces.Con
 
 	t := &TcpClientStruct{
 		cx:      ctx,
+		link:    *link.NewLinkState(ctx),
 		config:  config,
 		address: fmt.Sprintf("%s:%d", config.GetHost(), config.GetPort()),
 		tcpaddr: nil,
@@ -95,12 +98,20 @@ TCPFOR:
 		if t.tcpconn == nil {
 			log.Fatal("tcpconn == nil")
 		}
+		t.link.ToggleState(link.LinkStateUp)
 
 		//closech := t.tcpconn.Closech
 
 	TCPCLOSE:
 		for {
+			tcplink := t.tcpconn.LinkToggleCh()
 			select {
+			case state := <-tcplink:
+				log.Debug("TCPCli Link Toggled Down")
+				if state == link.LinkStateDown {
+					t.link.ToggleState(link.LinkStateDown)
+					break TCPCLOSE
+				}
 			case <-t.cx.DoneChan():
 				log.Debug("TCPCli Closing Down")
 				return
@@ -113,3 +124,13 @@ TCPFOR:
 		}
 	}
 }
+
+
+
+func (t *TcpClientStruct) StateToggleCh() <- chan link.LinkStateType {
+	return t.link.StateToggleCh()
+}
+func (t *TcpClientStruct) GetState() link.LinkStateType {
+	return t.link.GetState()
+}
+

@@ -7,7 +7,7 @@ import (
 
 func (t *UdpServerStruct) RecvChan() <-chan *packet.PacketStruct {
 	if t.udpconn == nil {
-		log.Error("udpconn is nil")
+		log.ErrorStack("udpconn is nil")
 		return nil
 	}
 	return t.udpconn.RecvChan()

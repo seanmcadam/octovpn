@@ -3,6 +3,7 @@ package udp
 import (
 	"net"
 
+	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
@@ -10,6 +11,7 @@ import (
 
 type UdpStruct struct {
 	cx     *ctx.Ctx
+	link   link.LinkStateStruct
 	srv    bool
 	conn   *net.UDPConn
 	addr   *net.UDPAddr
@@ -23,6 +25,7 @@ func NewUDPSrv(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
 
 	udp = &UdpStruct{
 		cx:     ctx,
+		link:   *link.NewLinkState(ctx),
 		srv:    true,
 		conn:   conn,
 		addr:   nil,
@@ -60,7 +63,15 @@ func (u *UdpStruct) endpoint() (v string) {
 	return v
 }
 
+func (u *UdpStruct) LinkToggleCh() <-chan link.LinkStateType {
+	if u == nil{
+		return nil
+	}
+	return u.link.StateToggleCh()
+}
+
 func (u *UdpStruct) run() {
+	u.link.ToggleState(link.LinkStateUp)
 	go u.goRecv()
 	go u.goSend()
 }

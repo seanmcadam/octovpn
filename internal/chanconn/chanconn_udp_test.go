@@ -25,7 +25,7 @@ func TestNewUDP_SetupSrv(t *testing.T) {
 		Auth:  "",
 	}
 
-	NewConn(cx, config, udpsrv.New)
+	NewConn32(cx, config, udpsrv.New)
 
 }
 
@@ -42,7 +42,7 @@ func TestNewUDP_SetupCli(t *testing.T) {
 		Auth:  "",
 	}
 
-	NewConn(cx, config, udpcli.New)
+	NewConn32(cx, config, udpcli.New)
 
 }
 

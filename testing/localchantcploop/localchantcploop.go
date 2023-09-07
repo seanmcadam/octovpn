@@ -1,7 +1,7 @@
 package main
 
 import (
-	"math/rand"
+	"crypto/rand"
 	"time"
 
 	"github.com/seanmcadam/octovpn/internal/channel/loopchan"
@@ -63,7 +63,7 @@ func createDataGenerator(ctx *ctx.Ctx) (ch chan []byte) {
 }
 
 func generateRandomData() []byte {
-	size := 1 + rand.Intn(1500) // Generate random size between 1 and 1024
+	size := 1 + int(rand.Read(4))
 	data := make([]byte, size)
 	_, err := rand.Read(data)
 	if err != nil {
