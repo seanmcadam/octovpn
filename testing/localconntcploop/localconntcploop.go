@@ -4,8 +4,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/seanmcadam/octovpn/internal/chanconn/loopconn"
 	"github.com/seanmcadam/octovpn/internal/counter"
+	"github.com/seanmcadam/octovpn/internal/layer/chanconn/loopconn"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
@@ -68,7 +68,7 @@ func rawDataGenerator(ctx *ctx.Ctx) (ch chan []byte) {
 			data := generateRandomData()
 			ch <- data
 			//return
-			time.Sleep(100*time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 		}
 	}()
 	return ch

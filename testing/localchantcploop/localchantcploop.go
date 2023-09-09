@@ -4,8 +4,8 @@ import (
 	"crypto/rand"
 	"time"
 
-	"github.com/seanmcadam/octovpn/internal/channel/loopchan"
 	"github.com/seanmcadam/octovpn/internal/counter"
+	"github.com/seanmcadam/octovpn/internal/layer/channel/loopchan"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
