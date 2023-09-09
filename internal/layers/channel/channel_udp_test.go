@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/seanmcadam/octovpn/internal/layer/chanconn"
-	"github.com/seanmcadam/octovpn/internal/layer/chanconn/udpcli"
-	"github.com/seanmcadam/octovpn/internal/layer/chanconn/udpsrv"
+	"github.com/seanmcadam/octovpn/internal/layer/conn/udpcli"
+	"github.com/seanmcadam/octovpn/internal/layer/conn/udpsrv"
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
