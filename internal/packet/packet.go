@@ -8,6 +8,8 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
+const DefaultChannelDepth = 16
+
 // Sig Type CounterType Overhead
 // Type
 //
@@ -20,12 +22,12 @@ type PacketStruct struct {
 	counter counter.Counter
 	ping    pinger.Ping
 	pong    pinger.Pong
-	router  *RouterStruct
-	ipv6    *IPv6Struct
-	ipv4    *IPv4Struct
-	eth     *EthStruct
-	auth    *AuthStruct
-	id      *IDStruct
+	router  *RouterPacket
+	ipv6    *IPv6Packet
+	ipv4    *IPv4Packet
+	eth     *EthPacket
+	auth    *AuthPacket
+	id      *IDPacket
 	packet  *PacketStruct
 	raw     []byte
 }
@@ -103,7 +105,7 @@ func NewPacket(sig PacketSigType, v ...interface{}) (ps *PacketStruct, err error
 			}
 			ps.pSize += u.Size()
 			ps.packet = u
-		case *AuthStruct:
+		case *AuthPacket:
 			if !ps.pSig.Auth() {
 				log.Errorf("Got Auth type for %s", ps.pSig)
 			}
@@ -112,7 +114,7 @@ func NewPacket(sig PacketSigType, v ...interface{}) (ps *PacketStruct, err error
 			}
 			ps.pSize += u.Size()
 			ps.auth = u
-		case *IDStruct:
+		case *IDPacket:
 			if !ps.pSig.ID() {
 				log.Errorf("Got ID type for %s", ps.pSig)
 			}
@@ -121,7 +123,7 @@ func NewPacket(sig PacketSigType, v ...interface{}) (ps *PacketStruct, err error
 			}
 			ps.pSize += u.Size()
 			ps.id = u
-		case *RouterStruct:
+		case *RouterPacket:
 			if !ps.pSig.Router() {
 				log.Errorf("Got Router type for %s", ps.pSig)
 			}
@@ -130,7 +132,7 @@ func NewPacket(sig PacketSigType, v ...interface{}) (ps *PacketStruct, err error
 			}
 			ps.pSize += u.Size()
 			ps.router = u
-		case *IPv6Struct:
+		case *IPv6Packet:
 			if !ps.pSig.IPV6() {
 				log.Errorf("Got IPv6 type for %s", ps.pSig)
 			}
@@ -139,7 +141,7 @@ func NewPacket(sig PacketSigType, v ...interface{}) (ps *PacketStruct, err error
 			}
 			ps.pSize += u.Size()
 			ps.ipv6 = u
-		case *IPv4Struct:
+		case *IPv4Packet:
 			if !ps.pSig.IPV4() {
 				log.Errorf("Got IPv4 type for %s", ps.pSig)
 			}
@@ -148,7 +150,7 @@ func NewPacket(sig PacketSigType, v ...interface{}) (ps *PacketStruct, err error
 			}
 			ps.pSize += u.Size()
 			ps.ipv4 = u
-		case *EthStruct:
+		case *EthPacket:
 			if !ps.pSig.Eth() {
 				log.Errorf("Got Eth type for %s", ps.pSig)
 			}
@@ -491,27 +493,27 @@ func (p *PacketStruct) Pong() pinger.Pong {
 	return p.pong
 }
 
-func (p *PacketStruct) Router() *RouterStruct {
+func (p *PacketStruct) Router() *RouterPacket {
 	return p.router
 }
 
-func (p *PacketStruct) IPv4() *IPv4Struct {
+func (p *PacketStruct) IPv4() *IPv4Packet {
 	return p.ipv4
 }
 
-func (p *PacketStruct) IPv6() *IPv6Struct {
+func (p *PacketStruct) IPv6() *IPv6Packet {
 	return p.ipv6
 }
 
-func (p *PacketStruct) Eth() *EthStruct {
+func (p *PacketStruct) Eth() *EthPacket {
 	return p.eth
 }
 
-func (p *PacketStruct) Auth() *AuthStruct {
+func (p *PacketStruct) Auth() *AuthPacket {
 	return p.auth
 }
 
-func (p *PacketStruct) ID() *IDStruct {
+func (p *PacketStruct) ID() *IDPacket {
 	return p.id
 }
 

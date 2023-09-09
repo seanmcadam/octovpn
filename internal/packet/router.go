@@ -1,22 +1,22 @@
 package packet
 
-type RouterStruct struct{
+type RouterPacket struct{
 	pSize PacketSizeType
 }
 
-func NewRouter()(ap *RouterStruct){
-	ap = &RouterStruct{}
+func NewRouter()(ap *RouterPacket){
+	ap = &RouterPacket{}
 	return ap
 }
 
-func MakeRouter(raw []byte)(p *RouterStruct, err error){
+func MakeRouter(raw []byte)(p *RouterPacket, err error){
 	return p, err
 }
 
-func (a *RouterStruct) Size() PacketSizeType {
+func (a *RouterPacket) Size() PacketSizeType {
 	return a.pSize
 }
 
-func (p *RouterStruct)ToByte()(raw []byte){
+func (p *RouterPacket)ToByte()(raw []byte){
 	return raw
 }

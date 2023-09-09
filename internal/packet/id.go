@@ -1,24 +1,24 @@
 package packet
 
-type IDStruct struct {
+type IDPacket struct {
 	pSize PacketSizeType
 
 	id []string
 }
 
-func NewID()(ap *IDStruct){
-	ap = &IDStruct{}
+func NewID()(ap *IDPacket){
+	ap = &IDPacket{}
 	return ap
 }
 
-func MakeID(raw []byte)(p *IDStruct, err error){
+func MakeID(raw []byte)(p *IDPacket, err error){
 	return p, err
 }
 
-func (a *IDStruct) Size() PacketSizeType {
+func (a *IDPacket) Size() PacketSizeType {
 	return a.pSize
 }
 
-func (i *IDStruct)ToByte()(raw []byte){
+func (i *IDPacket)ToByte()(raw []byte){
 	return raw
 }

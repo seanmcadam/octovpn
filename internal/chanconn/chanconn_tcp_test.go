@@ -27,6 +27,8 @@ func TestNewTCP_SetupSrv(t *testing.T) {
 
 	_, _ = NewConn32(cx, config, tcpsrv.New)
 
+	cx.Cancel()
+
 }
 
 func TestNewTCP_SetupCli(t *testing.T) {
@@ -53,12 +55,23 @@ func TestNewTCP_CliSrv(t *testing.T) {
 
 	srv, cli, err := loopconn.NewTcpConnLoop(cx)
 
+	srvUpCh := srv.GetUpCh()
+	cliUpCh := cli.GetUpCh()
+	srvLinkCh := srv.GetLinkCh()
+	cliLinkCh := cli.GetLinkCh()
+
+	<-srvLinkCh
+	<-cliLinkCh
+	<-srvUpCh
+	<-cliUpCh
+
 	p, err := packet.Testpacket()
 	if err != nil {
 		t.Errorf("Testpacket() Err:%s", err)
 	}
 
 	cli.Send(p)
+
 	select {
 	case r := <-srv.RecvChan():
 		if r == nil {
@@ -70,12 +83,14 @@ func TestNewTCP_CliSrv(t *testing.T) {
 			t.Error("Validatepacket() Recieved nil")
 			return
 		}
-	case <-time.After(2 * time.Second):
-		t.Error("Recieve timeout")
+
+	case <-time.After(4 * time.Second):
+		t.Error("Srv Recieve timeout")
 		return
 	}
 
 	srv.Send(p)
+
 	select {
 	case r := <-cli.RecvChan():
 		if r == nil {
@@ -83,8 +98,9 @@ func TestNewTCP_CliSrv(t *testing.T) {
 			return
 		}
 		err = packet.Validatepackets(p, r)
-	case <-time.After(2 * time.Second):
-		t.Error("Recieve timeout")
+	case <-time.After(4 * time.Second):
+		t.Error("Cli Recieve timeout")
 	}
+
 
 }

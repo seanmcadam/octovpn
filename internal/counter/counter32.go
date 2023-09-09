@@ -75,6 +75,10 @@ func (c *Counter32Struct) Width() CounterWidth {
 	return CounterWidth32
 }
 
+func (c *Counter32Struct) Next() (Counter) {
+	return <-c.CountCh
+}
+
 func (c *Counter32Struct) GetCountCh() (ch <-chan Counter) {
 	return c.CountCh
 }

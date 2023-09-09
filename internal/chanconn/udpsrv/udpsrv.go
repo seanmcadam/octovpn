@@ -44,6 +44,7 @@ func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpserver interfaces.Con
 	if err != nil {
 		return nil, err
 	}
+	u.link.Down()
 
 	go u.goRun()
 	return u, err
@@ -70,6 +71,7 @@ func (u *UdpServerStruct) goRun() {
 
 		//
 		// conn, err = net.DialUDP(u.config.Proto, nil, u.udpaddr)
+		log.Debug("ListenUDP()")
 		conn, err = net.ListenUDP(u.config.Proto, u.udpaddr)
 
 		if err != nil {
@@ -90,40 +92,58 @@ func (u *UdpServerStruct) goRun() {
 		log.Info("New UDP Connection")
 
 		u.udpconn = udp.NewUDPSrv(u.cx.NewWithCancel(), conn)
-		u.link.ToggleState(link.LinkStateUp)
+
 		if u.udpconn == nil {
 			log.Error("udpconn == nil")
 			continue
 		}
 
-		for {
-			linkstate := u.udpconn.LinkToggleCh()
-			select {
-			case state := <-linkstate:
-				u.link.ToggleState(state)
-				if state == link.LinkStateDown {
-					log.Debug("UDPSrv Link Down")
-					u.udpconn = nil
-					break
+		log.Debug("UDP Srv Conn UP")
+		u.link.AddLink(u.udpconn.Link().LinkStateCh)
+		u.link.Up()
 
-				}
-			case <-u.cx.DoneChan():
-				log.Debug("UDPSrv Closing Down")
-				return
+		for {
+			select {
+			case <-u.link.LinkUpCh():
+			case <-u.link.LinkCloseCh():
+				log.Debug("UDPSrv Link Down")
+				u.udpconn = nil
+				break
+			case <-u.link.LinkDownCh():
+				log.Debug("UDPSrv Link Down")
+				u.udpconn = nil
+				break
 			case <-u.udpconn.DoneChan():
 				log.Debug("UDPSrv Channel Closed")
 				u.udpconn = nil
 				break
+			case <-u.cx.DoneChan():
+				log.Debug("UDPSrv Closing Down")
+				return
 			}
 		}
 	}
 }
 
-
-func (u *UdpServerStruct) StateToggleCh() <- chan link.LinkStateType {
-	return u.link.StateToggleCh()
+func (u *UdpServerStruct) GetLinkNoticeStateCh() link.LinkNoticeStateCh {
+	return u.link.LinkNoticeStateCh()
 }
+
+func (u *UdpServerStruct) GetLinkStateCh() link.LinkNoticeStateCh {
+	return u.link.LinkStateCh()
+}
+func (u *UdpServerStruct) GetUpCh() link.LinkNoticeStateCh {
+	return u.link.LinkUpCh()
+}
+
+func (u *UdpServerStruct) GetLinkCh() link.LinkNoticeStateCh {
+	return u.link.LinkLinkCh()
+}
+
+func (u *UdpServerStruct) GetDownCh() link.LinkNoticeStateCh {
+	return u.link.LinkDownCh()
+}
+
 func (u *UdpServerStruct) GetState() link.LinkStateType {
 	return u.link.GetState()
 }
-

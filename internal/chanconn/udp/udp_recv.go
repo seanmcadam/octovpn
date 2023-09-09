@@ -5,28 +5,29 @@ import (
 	"net"
 	"reflect"
 
-	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 // Recv()
 func (u *UdpStruct) RecvChan() <-chan *packet.PacketStruct {
-	if u == nil {
+	if u == nil || u.recvch == nil {
+		log.Debug("UPD RecvChan() Nil")
 		return nil
 	}
-	if u.recvch == nil {
-		log.Error("Nil recvch pointer")
-		return nil
-	}
+
 	return u.recvch
 }
 
 // Run while connection is running
 // Exit when closed
 func (u *UdpStruct) goRecv() {
+	if u == nil {
+		return
+	}
+
 	defer u.emptyrecv()
-	defer u.link.ToggleState(link.LinkStateDown)
+	defer u.link.Down()
 
 	for {
 		buf := make([]byte, 2048)
@@ -69,11 +70,14 @@ func (u *UdpStruct) goRecv() {
 		if u.closed() {
 			return
 		}
-
 	}
 }
 
 func (u *UdpStruct) emptyrecv() {
+	if u == nil {
+		return
+	}
+
 	for {
 		select {
 		case <-u.recvch:

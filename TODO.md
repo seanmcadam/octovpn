@@ -1,5 +1,6 @@
+Standardize Error messages
 
-MTU calculator
+MTU calculator (1/2 done)
 
 Active link status channels
     UP
@@ -13,5 +14,3 @@ Latency
 Packet Loss
 
 Configuration modules
-
-Standardize Error messages

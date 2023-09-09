@@ -52,6 +52,7 @@ func NewTcpConnLoop(ctx *ctx.Ctx) (loop1 interfaces.ConnInterface, loop2 interfa
 	if err != nil {
 		return nil, nil, err
 	}
+
 	loop2, err = tcpcli.New(ctx, config)
 	if err != nil {
 		return nil, nil, err

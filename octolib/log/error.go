@@ -1,8 +1,20 @@
 package log
 
 import (
+	"fmt"
 	systemlog "log"
 )
+
+// func Err(v ...any)
+func Errf(format string, v ...any) error {
+	format = "[%s]:" + format
+	var x []interface{}
+	x = append(x, "Error:")
+	x = append(x, FileLine(2)+":")
+	x = append(x, v)
+	y := append(x, v...)
+	return fmt.Errorf(format, y...)
+}
 
 // func Debug(v ...any)
 // Debug calls Output to print to the standard logger. Arguments are handled in the manner of fmt.Print.
@@ -39,7 +51,6 @@ func Errorln(v ...any) {
 	defer logLock.Unlock()
 	systemlog.Println(v...)
 }
-
 
 // func Debug(v ...any)
 // Debug calls Output to print to the standard logger. Arguments are handled in the manner of fmt.Print.

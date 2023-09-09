@@ -11,7 +11,7 @@ import (
 
 type UdpStruct struct {
 	cx     *ctx.Ctx
-	link   link.LinkStateStruct
+	link   *link.LinkStateStruct
 	srv    bool
 	conn   *net.UDPConn
 	addr   *net.UDPAddr
@@ -25,7 +25,7 @@ func NewUDPSrv(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
 
 	udp = &UdpStruct{
 		cx:     ctx,
-		link:   *link.NewLinkState(ctx),
+		link:   link.NewLinkState(ctx),
 		srv:    true,
 		conn:   conn,
 		addr:   nil,
@@ -43,6 +43,7 @@ func NewUDPCli(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
 
 	udp = &UdpStruct{
 		cx:     ctx,
+		link:   link.NewLinkState(ctx),
 		srv:    false,
 		conn:   conn,
 		addr:   nil,
@@ -50,6 +51,7 @@ func NewUDPCli(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
 		recvch: make(chan *packet.PacketStruct),
 	}
 
+	udp.link.Down()
 	udp.run()
 	return udp
 }
@@ -63,15 +65,12 @@ func (u *UdpStruct) endpoint() (v string) {
 	return v
 }
 
-func (u *UdpStruct) LinkToggleCh() <-chan link.LinkStateType {
-	if u == nil{
-		return nil
-	}
-	return u.link.StateToggleCh()
+func (u *UdpStruct) Link() *link.LinkStateStruct {
+	return u.link
 }
 
 func (u *UdpStruct) run() {
-	u.link.ToggleState(link.LinkStateUp)
 	go u.goRecv()
 	go u.goSend()
+	u.link.Link()
 }

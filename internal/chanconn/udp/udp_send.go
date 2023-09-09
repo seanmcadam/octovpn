@@ -9,6 +9,9 @@ import (
 
 // Send()
 func (u *UdpStruct) Send(p *packet.PacketStruct) (err error) {
+	if u == nil {
+		return
+	}
 
 	go func(p *packet.PacketStruct) {
 		u.sendch <- p
@@ -18,6 +21,9 @@ func (u *UdpStruct) Send(p *packet.PacketStruct) (err error) {
 }
 
 func (u *UdpStruct) goSend() {
+	if u == nil {
+		return
+	}
 
 	defer u.emptysend()
 
@@ -38,13 +44,19 @@ func (u *UdpStruct) goSend() {
 }
 
 func (u *UdpStruct) sendpacket(p *packet.PacketStruct) {
+	if u == nil {
+		return
+	}
+
 	var l int
 	var err error
 	raw := p.ToByte()
 	if u.srv {
 		l, err = u.conn.WriteToUDP(raw, u.addr)
+		log.Debugf("UDP WriteToUDP():%v", raw)
 	} else {
 		l, err = u.conn.Write(raw)
+		log.Debugf("UDP Write():%v", raw)
 	}
 
 	if err != nil {
@@ -61,6 +73,10 @@ func (u *UdpStruct) sendpacket(p *packet.PacketStruct) {
 }
 
 func (u *UdpStruct) emptysend() {
+	if u == nil {
+		return
+	}
+
 	for {
 		select {
 		case <-u.sendch:

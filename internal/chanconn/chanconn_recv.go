@@ -15,30 +15,47 @@ func (cs *ChanconnStruct) RecvChan() <-chan *packet.PacketStruct {
 		log.Error("Nil recvch pointer")
 		return nil
 	}
+
+	if cs.link.GetState() != link.LinkStateUP {
+		return nil
+	}
+
 	return cs.recvch
 }
 
 func (cs *ChanconnStruct) goRecv() {
-	//cs.link.ToggleState(cs.conn.GetState())
 	for {
 		select {
-		case state := <-cs.conn.StateToggleCh():
-			if state == link.LinkStateDown {
-				cs.link.ToggleState(state)
-				return
-			}
-			if state == link.LinkStateClose {
-				return
-			}
-
+		case <-cs.link.LinkDownCh():
+			return
 		case <-cs.cx.DoneChan():
 			return
+
+		case <-cs.link.LinkUpCh():
+			continue
+		case <-cs.link.LinkLinkCh():
+			continue
+
+		case ap := <-cs.auth.GetSendCh():
+			var p *packet.PacketStruct
+			var err error
+			if cs.width == 32 {
+				p, err = packet.NewPacket(packet.SIG_CONN_32_AUTH, ap, cs.counter.Next())
+			} else {
+				p, err = packet.NewPacket(packet.SIG_CONN_64_AUTH, ap, cs.counter.Next())
+			}
+			if err != nil {
+				return
+			}
+			cs.send(p)
 
 		case p := <-cs.conn.RecvChan():
 			if p == nil {
 				log.Debug("Got nil packet")
 				return
 			}
+
+			log.Debugf("Conn Recv:%v", p)
 
 			switch p.Sig() {
 			case packet.SIG_CONN_32_PACKET:
@@ -50,7 +67,7 @@ func (cs *ChanconnStruct) goRecv() {
 
 			case packet.SIG_CONN_32_AUTH:
 			case packet.SIG_CONN_64_AUTH:
-				log.Fatal("Unhandled Sig")
+				cs.auth.GetRecvCh() <- p.Auth()
 
 			case packet.SIG_CONN_32_PING:
 			case packet.SIG_CONN_64_PING:

@@ -11,7 +11,7 @@ import (
 
 func (cs *ChanconnStruct) Send(cp *packet.PacketStruct) error {
 
-	if cs.link.GetState() == link.LinkStateUp {
+	if cs.link.GetState() == link.LinkStateUP {
 		packet, err := packet.NewPacket(packet.SIG_CONN_32_PACKET, cp, <-cs.counter.GetCountCh())
 		if err != nil {
 			return err
@@ -23,7 +23,7 @@ func (cs *ChanconnStruct) Send(cp *packet.PacketStruct) error {
 }
 
 func (cs *ChanconnStruct) send(p *packet.PacketStruct) error {
-	if cs.conn.GetState() == link.LinkStateDown {
+	if cs.conn.GetState() == link.LinkStateDOWN {
 		return fmt.Errorf("link shows down")
 	}
 	return cs.conn.Send(p)

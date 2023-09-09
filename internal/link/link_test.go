@@ -7,6 +7,8 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
 
+// @TODO - validate the Notice actions
+
 func TestLinkState_compile(t *testing.T) {
 	cx := ctx.NewContext()
 	_ = NewLinkState(cx)
@@ -17,19 +19,19 @@ func TestLinkState_StateToggles(t *testing.T) {
 	cx := ctx.NewContext()
 	ls := NewLinkState(cx)
 
-	if ls.GetState() != LinkStateNone {
+	if ls.GetState() != LinkStateNONE {
 		t.Error("State not NONE")
 	}
 
-	ls.ToggleState(LinkStateUp)
+	ls.Up()
 
-	if ls.GetState() != LinkStateUp {
+	if ls.GetState() != LinkStateUP {
 		t.Error("State not Up")
 	}
 
-	ls.ToggleState(LinkStateDown)
+	ls.Down()
 
-	if ls.GetState() != LinkStateDown {
+	if ls.GetState() != LinkStateDOWN {
 		t.Error("State not Down")
 	}
 
@@ -42,35 +44,35 @@ func TestLinkState_StateTogglesChannel(t *testing.T) {
 
 	ls := NewLinkState(cx)
 
-	ch := ls.StateToggleCh()
-	ls.ToggleState(LinkStateUp)
+	ch := ls.LinkStateCh()
+	ls.Up()
 	select {
-	case state := <-ch:
-		if state != LinkStateUp {
+	case ns := <-ch:
+		if ns.State() != LinkStateUP {
 			t.Error("State did not toggle to Up")
 		}
-	case <-time.After(time.Microsecond):
+	case <-time.After(time.Millisecond):
 		t.Error("Timeout...")
 	}
 
-	ch = ls.StateToggleCh()
-	ls.ToggleState(LinkStateUp)
+	ch = ls.LinkStateCh()
+	ls.Up()
 	select {
-	case state := <-ch:
-		if state != LinkStateUp {
+	case ns := <-ch:
+		if ns.State() != LinkStateUP {
 			t.Error("State toggled")
 		}
-	case <-time.After(time.Microsecond):
+	case <-time.After(time.Millisecond):
 	}
 
-	ch = ls.StateToggleCh()
-	ls.ToggleState(LinkStateDown)
+	ch = ls.LinkStateCh()
+	ls.Down()
 	select {
-	case state := <-ch:
-		if state != LinkStateDown {
+	case ns := <-ch:
+		if ns.State() != LinkStateDOWN {
 			t.Error("State did not toggle to Down")
 		}
-	case <-time.After(time.Microsecond):
+	case <-time.After(time.Second):
 		t.Error("Timeout...")
 	}
 

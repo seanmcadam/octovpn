@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/auth"
 	"github.com/seanmcadam/octovpn/internal/counter"
 	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
@@ -21,6 +22,7 @@ type NewConnFunc func(*ctx.Ctx, *settings.NetworkStruct) (interfaces.ConnInterfa
 type ChanconnStruct struct {
 	cx      *ctx.Ctx
 	link    *link.LinkStateStruct
+	auth    *auth.AuthStruct
 	conn    interfaces.ConnInterface
 	width   packet.PacketWidth
 	recvch  chan *packet.PacketStruct
@@ -35,15 +37,24 @@ func NewConn32(ctx *ctx.Ctx, config *settings.NetworkStruct, confFunc NewConnFun
 		return nil, err
 	}
 
+	auth, err := auth.NewAuthStruct(ctx, config.Auth)
+	if err != nil {
+		return nil, err
+	}
+
 	cs := &ChanconnStruct{
 		cx:      ctx,
-		link:    link.NewLinkState(ctx),
+		link:    link.NewLinkState(ctx, link.LinkModeUpAND),
+		auth:    auth,
 		width:   packet.PacketWidth32,
 		conn:    conn,
-		recvch:  make(chan *packet.PacketStruct, 16),
+		recvch:  make(chan *packet.PacketStruct, packet.DefaultChannelDepth),
 		pinger:  pinger.NewPinger32(ctx, PingFreq, PingTimeout),
 		counter: counter.NewCounter32(ctx),
 	}
+
+	cs.link.AddLink(cs.conn.GetLinkNoticeStateCh)
+	cs.link.AddLink(cs.auth.GetLinkCh)
 
 	go cs.goRecv()
 
@@ -57,15 +68,24 @@ func NewConn64(ctx *ctx.Ctx, config *settings.NetworkStruct, confFunc NewConnFun
 		return nil, err
 	}
 
+	auth, err := auth.NewAuthStruct(ctx, config.Auth)
+	if err != nil {
+		return nil, err
+	}
+
 	cs := &ChanconnStruct{
 		cx:      ctx,
 		link:    link.NewLinkState(ctx),
+		auth:    auth,
 		width:   packet.PacketWidth64,
 		conn:    conn,
-		recvch:  make(chan *packet.PacketStruct, 16),
+		recvch:  make(chan *packet.PacketStruct, packet.DefaultChannelDepth),
 		pinger:  pinger.NewPinger64(ctx, PingFreq, PingTimeout),
 		counter: counter.NewCounter64(ctx),
 	}
+
+	cs.link.AddLink(cs.conn.GetLinkNoticeStateCh)
+	cs.link.AddLink(cs.auth.GetLinkCh)
 
 	go cs.goRecv()
 

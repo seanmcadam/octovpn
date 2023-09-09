@@ -9,6 +9,11 @@ import (
 
 // Send()
 func (t *TcpStruct) Send(p *packet.PacketStruct) (err error) {
+	if t == nil || t.sendch == nil {
+		return TcpErrNilStructPointer(log.Errf(""))
+	}
+
+	log.Debugf("TCP Send:%v", p)
 
 	go func(p *packet.PacketStruct) {
 		t.sendch <- p
@@ -18,6 +23,9 @@ func (t *TcpStruct) Send(p *packet.PacketStruct) (err error) {
 }
 
 func (t *TcpStruct) goSend() {
+	if t == nil {
+		return
+	}
 
 	defer t.emptysend()
 
@@ -37,6 +45,12 @@ func (t *TcpStruct) goSend() {
 }
 
 func (t *TcpStruct) sendpacket(p *packet.PacketStruct) {
+	if t == nil {
+		return
+	}
+
+	log.Debugf("TCP sendpacket:%v", p)
+
 	raw := p.ToByte()
 	l, err := t.conn.Write(raw)
 	if err != nil {
@@ -53,6 +67,10 @@ func (t *TcpStruct) sendpacket(p *packet.PacketStruct) {
 }
 
 func (t *TcpStruct) emptysend() {
+	if t == nil {
+		return
+	}
+
 	for {
 		select {
 		case <-t.sendch:

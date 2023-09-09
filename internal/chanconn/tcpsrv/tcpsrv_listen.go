@@ -20,14 +20,13 @@ func (t *TcpServerStruct) goListen() {
 		newconn := tcp.NewTCP(t.cx.NewWithCancel(), conn)
 		t.tcpconnch <- newconn
 
-		t.link.ToggleState(link.LinkStateUp)
 
 		for {
-			tcplink := newconn.LinkToggleCh()
+			tcplink := newconn.Link().LinkStateCh()
 			select {
 			case state := <-tcplink:
 				log.Debug("TCPSrv listener got State %v", state)
-				if state == link.LinkStateDown {
+				if state.State() == link.LinkStateDOWN {
 					return
 				}
 			case <-t.cx.DoneChan():

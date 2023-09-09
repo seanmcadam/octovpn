@@ -1,14 +1,20 @@
 package udpsrv
 
 import (
+	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
-func (t *UdpServerStruct) RecvChan() <-chan *packet.PacketStruct {
-	if t.udpconn == nil {
-		log.ErrorStack("udpconn is nil")
+func (u *UdpServerStruct) RecvChan() <-chan *packet.PacketStruct {
+	if u == nil || u.udpconn == nil {
 		return nil
 	}
-	return t.udpconn.RecvChan()
+
+	if u.link.GetState() != link.LinkStateUP {
+		log.Debugf("UDP Cli Recv state:%s", u.link.GetState())
+		return nil
+	}
+
+	return u.udpconn.RecvChan()
 }

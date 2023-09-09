@@ -16,7 +16,7 @@ import (
 
 type TcpClientStruct struct {
 	cx      *ctx.Ctx
-	link    link.LinkStateStruct
+	link    *link.LinkStateStruct
 	config  *settings.NetworkStruct
 	address string
 	tcpaddr *net.TCPAddr
@@ -28,7 +28,7 @@ func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpclient interfaces.Con
 
 	t := &TcpClientStruct{
 		cx:      ctx,
-		link:    *link.NewLinkState(ctx),
+		link:    link.NewLinkState(ctx),
 		config:  config,
 		address: fmt.Sprintf("%s:%d", config.GetHost(), config.GetPort()),
 		tcpaddr: nil,
@@ -42,6 +42,8 @@ func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpclient interfaces.Con
 	if err != nil {
 		return nil, err
 	}
+
+	t.link.Down()
 
 	go t.goRun()
 	return t, err
@@ -98,38 +100,54 @@ TCPFOR:
 		if t.tcpconn == nil {
 			log.Fatal("tcpconn == nil")
 		}
-		t.link.ToggleState(link.LinkStateUp)
 
-		//closech := t.tcpconn.Closech
+		t.link.Link()
+		t.link.Up()
+		t.link.AddLink(t.tcpconn.Link().LinkNoticeStateCh)
 
 	TCPCLOSE:
 		for {
-			tcplink := t.tcpconn.LinkToggleCh()
+			tcplink := t.link.LinkStateCh()
 			select {
 			case state := <-tcplink:
-				log.Debug("TCPCli Link Toggled Down")
-				if state == link.LinkStateDown {
-					t.link.ToggleState(link.LinkStateDown)
+				if state.State() == link.LinkStateDOWN {
+					t.link.Down()
 					break TCPCLOSE
 				}
-			case <-t.cx.DoneChan():
-				log.Debug("TCPCli Closing Down")
-				return
-
 			case <-t.tcpconn.DoneChan():
 				log.Debug("TCPCli Channel Closed")
 				t.tcpconn = nil
 				break TCPCLOSE
+
+			case <-t.cx.DoneChan():
+				log.Debug("TCPCli Closing Down")
+				return
 			}
 		}
 	}
 }
 
 
-
-func (t *TcpClientStruct) StateToggleCh() <- chan link.LinkStateType {
-	return t.link.StateToggleCh()
+func (t *TcpClientStruct) GetLinkNoticeStateCh() link.LinkNoticeStateCh {
+	return t.link.LinkNoticeStateCh()
 }
+
+func (t *TcpClientStruct) GetLinkStateCh() link.LinkNoticeStateCh {
+	return t.link.LinkStateCh()
+}
+
+func (t *TcpClientStruct) GetUpCh() link.LinkNoticeStateCh {
+	return t.link.LinkUpCh()
+}
+
+func (t *TcpClientStruct) GetLinkCh() link.LinkNoticeStateCh {
+	return t.link.LinkLinkCh()
+}
+
+func (t *TcpClientStruct) GetDownCh() link.LinkNoticeStateCh {
+	return t.link.LinkDownCh()
+}
+
 func (t *TcpClientStruct) GetState() link.LinkStateType {
 	return t.link.GetState()
 }

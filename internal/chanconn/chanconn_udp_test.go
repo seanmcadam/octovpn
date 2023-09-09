@@ -53,6 +53,9 @@ func TestNewUdp_CliSrv(t *testing.T) {
 
 	srv, cli, err := loopconn.NewUdpConnLoop(cx)
 
+	srvUpCh := srv.GetUpCh()
+	cliUpCh := cli.GetUpCh()
+
 	p, err := packet.Testpacket()
 	if err != nil {
 		t.Error(err)
@@ -60,6 +63,7 @@ func TestNewUdp_CliSrv(t *testing.T) {
 
 	cli.Send(p)
 	select {
+	case <-srv.GetUpCh():
 	case r := <-srv.RecvChan():
 		if r == nil {
 			t.Error("Recieved nil")
@@ -87,4 +91,6 @@ func TestNewUdp_CliSrv(t *testing.T) {
 		t.Error("Recieve timeout")
 	}
 
+	<-srvUpCh
+	<-cliUpCh
 }

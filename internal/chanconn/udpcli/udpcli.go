@@ -42,6 +42,7 @@ func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpclient interfaces.Con
 	if err != nil {
 		return nil, err
 	}
+	u.link.Down()
 
 	go u.goRun()
 	return u, err
@@ -92,17 +93,20 @@ func (u *UdpClientStruct) goRun() {
 			continue
 		}
 
-		u.link.ToggleState(link.LinkStateUp)
-		udplink := u.udpconn.LinkToggleCh()
+		log.Debug("UDP Cli Conn UP")
+		u.link.AddLink(u.udpconn.Link().LinkStateCh)
+		u.link.Up()
 		for {
 			select {
-			case state := <-udplink:
-				u.link.ToggleState(state)
-				if state == link.LinkStateDown {
-					log.Debug("UDPLink Down")
-					u.udpconn = nil
-					break
-				}
+			case <-u.udpconn.Link().LinkUpCh():
+			case <-u.udpconn.Link().LinkDownCh():
+				log.Debug("UDPLink Down")
+				u.udpconn = nil
+				break
+			case <-u.udpconn.Link().LinkCloseCh():
+				log.Debug("UDPLink CLosed")
+				u.udpconn = nil
+				break
 			case <-u.cx.DoneChan():
 				log.Debug("UDPCli Closing Down")
 				return
@@ -115,10 +119,26 @@ func (u *UdpClientStruct) goRun() {
 	}
 }
 
-func (u *UdpClientStruct) StateToggleCh() <- chan link.LinkStateType {
-	return u.link.StateToggleCh()
+func (u *UdpClientStruct) GetLinkNoticeStateCh() link.LinkNoticeStateCh {
+	return u.link.LinkNoticeStateCh()
 }
+
+func (u *UdpClientStruct) GetLinkStateCh() link.LinkNoticeStateCh {
+	return u.link.LinkStateCh()
+}
+
+func (u *UdpClientStruct) GetUpCh() link.LinkNoticeStateCh {
+	return u.link.LinkUpCh()
+}
+
+func (u *UdpClientStruct) GetLinkCh() link.LinkNoticeStateCh {
+	return u.link.LinkLinkCh()
+}
+
+func (u *UdpClientStruct) GetDownCh() link.LinkNoticeStateCh {
+	return u.link.LinkDownCh()
+}
+
 func (u *UdpClientStruct) GetState() link.LinkStateType {
 	return u.link.GetState()
 }
-

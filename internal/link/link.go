@@ -1,86 +1,90 @@
 package link
 
 import (
-	"sync"
-
 	"github.com/seanmcadam/octovpn/internal/counter"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
-type LinkStateType uint8
-
-const DefaultListeners int = 2
-
-const LinkStateNone LinkStateType = 0x00
-const LinkStateUp LinkStateType = 0x01
-const LinkStateDown LinkStateType = 0x02
-const LinkStateClose LinkStateType = 0x0F
-const LinkStateError LinkStateType = 0xF0
-
-type LinkStateStruct struct {
-	mx        sync.Mutex
-	cx        *ctx.Ctx
-	instance  uint32
-	state     LinkStateType
-	listeners []chan LinkStateType
-}
-
-var instanceCounter counter.CounterStruct
-
-func init() {
-	instanceCounter = counter.NewCounter32(ctx.NewContext())
-}
-
-func NewLinkState(ctx *ctx.Ctx) (ls *LinkStateStruct) {
+func NewLinkState(ctx *ctx.Ctx, m ...LinkModeType) (ls *LinkStateStruct) {
 	count := <-instanceCounter.GetCountCh()
-	ls = &LinkStateStruct{
-		cx:        ctx,
-		instance:  count.Uint().(uint32),
-		state:     LinkStateNone,
-		listeners: []chan LinkStateType{},
+	mode := LinkModePassALL // Default PAss All
+
+	if len(m) > 0 {
+		mode = m[0]
 	}
+
+	ls = &LinkStateStruct{
+		cx:              ctx,
+		mode:            mode,
+		instance:        count.Uint().(uint32),
+		state:           LinkStateNONE,
+		linkNoticeState: newLinkChan("NoticeState"),
+		linkState:       newLinkChan("State"),
+		linkNotice:      newLinkChan("Notice"),
+		linkUp:          newLinkChan("Up"),
+		linkLink:        newLinkChan("Link"),
+		linkDown:        newLinkChan("Down"),
+		linkLoss:        newLinkChan("Loss"),
+		linkLatency:     newLinkChan("Latency"),
+		linkSaturation:  newLinkChan("Saturation"),
+		linkClose:       newLinkChan("Close"),
+		recvcounter:     counter.NewCounter32(ctx),
+		recvnew:         make(chan LinkNoticeStateType, 10),
+		recvfn:          make(map[counter.Counter]LinkNoticeStateFunc),
+		recvchan:        make(map[counter.Counter]LinkNoticeStateCh),
+		recvstate:       make(map[counter.Counter]LinkStateType),
+		addlinkch:       make(chan LinkNoticeStateFunc, 5),
+		dellinkch:       make(chan counter.Counter, 5),
+	}
+
+	ls.recvchan[counter.MakeCounter32(0)] = recvnew
+
 	log.Debugf("Link[%d] Starting", ls.instance)
 	go ls.goRun()
+	go ls.goRecv()
 	return ls
 }
 
-func (ls *LinkStateStruct) ToggleState(s LinkStateType) {
-	if s == LinkStateClose {
-		log.FatalStack("ToggleState() got a Close... not allowed")
-	}
-	if s == LinkStateNone {
-		log.Debug("ToggleState() got a None... skipping")
+func (ls *LinkStateStruct) AddLink(fn LinkNoticeStateFunc) {
+	ls.addlinkch <- fn
+	ls.recvnew <- noticeState(LinkNoticeNONE, LinkStateNONE)
+}
+
+func (ls *LinkStateStruct) SendNotice(n LinkNoticeType) {
+	if n == LinkNoticeNONE {
 		return
 	}
-
-	ls.toggleState(s)
+	ls.processMessage(noticeState(n, LinkStateNONE))
 }
 
-func (ls *LinkStateStruct) toggleState(s LinkStateType) {
-	if s != ls.state && s != LinkStateNone {
-		log.Debugf("Link[%d] Toggled State:%s", ls.instance, s)
-		ls.mx.Lock()
-		defer ls.mx.Unlock()
-		ls.state = s
-		for _, l := range ls.listeners {
-			l <- ls.state
-			close(l)
-		}
-		ls.listeners = ls.listeners[:0]
-	} else {
-		if s == LinkStateNone {
-			log.FatalStack("ToggleState to None")
-		}
+func (ls *LinkStateStruct) Up() {
+	ls.setState(LinkStateUP)
+}
+
+func (ls *LinkStateStruct) Link() {
+	ls.setState(LinkStateLINK)
+}
+
+func (ls *LinkStateStruct) Down() {
+	ls.setState(LinkStateDOWN)
+}
+
+func (ls *LinkStateStruct) Chal() {
+	ls.setState(LinkStateCHAL)
+}
+
+func (ls *LinkStateStruct) Auth() {
+	ls.setState(LinkStateAUTH)
+}
+
+func (ls *LinkStateStruct) setState(s LinkStateType) {
+	if s == ls.state {
+		return
 	}
-}
-
-func (ls *LinkStateStruct) StateToggleCh() (newch chan LinkStateType) {
-	ls.mx.Lock()
-	defer ls.mx.Unlock()
-	newch = make(chan LinkStateType, 1)
-	ls.listeners = append(ls.listeners, newch)
-	return newch
+	log.Debugf("Link State Change:%s -> %s", ls.state, s)
+	ls.state = s
+	ls.processMessage(noticeState(LinkNoticeNONE, s))
 }
 
 func (ls *LinkStateStruct) GetState() LinkStateType {
@@ -88,29 +92,54 @@ func (ls *LinkStateStruct) GetState() LinkStateType {
 }
 
 func (ls *LinkStateStruct) goRun() {
+	defer log.Debugf("Link[%d] Shutdown", ls.instance)
 	for {
 		select {
 		case <-ls.cx.DoneChan():
-			log.Debugf("Link[%d] Shutdown", ls.instance)
-			ls.toggleState(LinkStateClose)
+			ls.setState(LinkStateDOWN)
+			ls.processMessage(noticeState(LinkNoticeCLOSED, LinkStateNONE))
+			return
 		}
 	}
 }
 
-func (state LinkStateType) String() string {
-	switch state {
-	case LinkStateNone:
-		return "NONE"
-	case LinkStateUp:
-		return "UP"
-	case LinkStateDown:
-		return "DOWN"
-	case LinkStateClose:
-		return "CLOSE"
-	case LinkStateError:
-		return "ERROR"
-	default:
-		log.FatalfStack("unsupported LinkStateType:%02X", uint8(state))
+func (ls *LinkStateStruct) goRecv() {
+FORLOOP:
+	for {
+		select {
+		case fn := <-ls.addlinkch:
+			if fn == nil {
+				log.Debug("nil pointer")
+			}
+			c := ls.recvcounter.Next()
+			ls.recvfn[c] = fn
+			ls.recvchan[c] = fn()
+			ls.recvstate[c] = LinkStateNONE
+		case c := <-ls.dellinkch:
+			delete(ls.recvfn, c)
+			delete(ls.recvchan, c)
+			delete(ls.recvstate, c)
+		default:
+		}
+
+		for i, ch := range ls.recvchan {
+			var ns LinkNoticeStateType
+			select {
+			case ns = <-ch:
+				if i.Uint().(uint32) == 0 {
+					continue FORLOOP
+				}
+				ls.processMessage(ns)
+			default:
+				// Channel closed, it is dead to me now.
+				ls.dellinkch <- i
+			}
+
+			continue FORLOOP
+		}
 	}
-	return ""
+}
+
+func noticeState(n LinkNoticeType, s LinkStateType) (ns LinkNoticeStateType) {
+	return LinkNoticeStateType((uint16(n) << 8) | uint16(s))
 }

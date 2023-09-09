@@ -1,22 +1,22 @@
 package packet
 
-type IPv4Struct struct{
+type IPv4Packet struct{
 	pSize PacketSizeType
 }
 
-func NewIPv4()(ap *IPv4Struct){
-	ap = &IPv4Struct{}
+func NewIPv4()(ap *IPv4Packet){
+	ap = &IPv4Packet{}
 	return ap
 }
 
-func MakeIPv4(raw []byte)(p *IPv4Struct, err error){
+func MakeIPv4(raw []byte)(p *IPv4Packet, err error){
 	return p, err
 }
 
-func (a *IPv4Struct) Size() PacketSizeType {
+func (a *IPv4Packet) Size() PacketSizeType {
 	return a.pSize
 }
 
-func (p *IPv4Struct)ToByte()(raw []byte){
+func (p *IPv4Packet)ToByte()(raw []byte){
 	return raw
 }

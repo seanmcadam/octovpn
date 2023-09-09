@@ -31,7 +31,7 @@ func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpserver interfaces.Con
 
 	t := &TcpServerStruct{
 		cx:          ctx,
-		link:        link.NewLinkState(ctx),
+		link:        link.NewLinkState(ctx, link.LinkModeUpAND), // If more then 1 is connected, they all have to be up
 		config:      config,
 		address:     fmt.Sprintf("%s:%d", config.GetHost(), config.GetPort()),
 		tcplistener: nil,
@@ -51,6 +51,9 @@ func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpserver interfaces.Con
 	if err != nil {
 		return nil, fmt.Errorf("ListenTCP Failed:%s", err)
 	}
+
+	// This is the server, so the connection is down to start with.
+	t.link.Down()
 
 	go t.goListen()
 	go t.goRun()
@@ -86,20 +89,22 @@ func (t *TcpServerStruct) goRun() {
 
 		select {
 		case conn := <-t.tcpconnch:
-			log.Info("New incoming TCP Connection")
+			log.Debugf("New incoming TCP Connection")
 
-			// Authenticate
-
-			// Terminate other connection
+			// Terminate last connection
 
 			if t.tcpconn != nil {
 				log.Debug("Shutdown Previous connection")
-				// Existing Go Routines will close out and shutdown.
 				t.tcpconn.Cancel()
 				t.tcpconn = nil
 			}
 
 			t.tcpconn = conn
+			t.link.Link()
+			t.link.Up()
+			t.link.AddLink(t.tcpconn.Link().LinkNoticeStateCh)
+
+			log.Debugf("TCP Srv state:%s", conn.Link().GetState())
 
 		case <-tcpconnclosech:
 			continue
@@ -121,12 +126,26 @@ func (t *TcpServerStruct) emptyconn() {
 	}
 }
 
-
-
-func (t *TcpServerStruct) StateToggleCh() <- chan link.LinkStateType {
-	return t.link.StateToggleCh()
+func (t *TcpServerStruct) GetLinkNoticeStateCh() link.LinkNoticeStateCh {
+	return t.link.LinkNoticeStateCh()
 }
+
+func (t *TcpServerStruct) GetLinkStateCh() link.LinkNoticeStateCh {
+	return t.link.LinkStateCh()
+}
+
+func (t *TcpServerStruct) GetUpCh() link.LinkNoticeStateCh {
+	return t.link.LinkUpCh()
+}
+
+func (t *TcpServerStruct) GetDownCh() link.LinkNoticeStateCh {
+	return t.link.LinkDownCh()
+}
+
+func (t *TcpServerStruct) GetLinkCh() link.LinkNoticeStateCh {
+	return t.link.LinkLinkCh()
+}
+
 func (t *TcpServerStruct) GetState() link.LinkStateType {
 	return t.link.GetState()
 }
-

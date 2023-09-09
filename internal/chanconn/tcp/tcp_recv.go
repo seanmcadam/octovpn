@@ -4,30 +4,29 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 func (t *TcpStruct) RecvChan() <-chan *packet.PacketStruct {
-
-	if t == nil {
-		log.FatalStack("nil TcpStruct")
-		return nil
-	}
-	if t.recvch == nil {
-		log.Error("Nil recvch pointer")
+	if t == nil || t.recvch == nil {
+		log.Debugf("TCP Recv Nil")
 		return nil
 	}
 
+	log.Debugf("TCP Recv state:%s", t.link.GetState())
 	return t.recvch
 }
 
 // Run while connection is running
 // Exit when closed
 func (t *TcpStruct) goRecv() {
+	if t == nil {
+		return
+	}
+
 	defer t.emptyrecv()
-	defer t.link.ToggleState(link.LinkStateDown)
+	defer t.link.Down()
 
 	for {
 		var buffer bytes.Buffer
@@ -45,6 +44,7 @@ func (t *TcpStruct) goRecv() {
 				return
 			}
 
+			log.Debugf("TCP Raw Recv len:%d", n)
 			buffer.Write(tmp[:n])
 
 			if t.closed() {
@@ -60,12 +60,12 @@ func (t *TcpStruct) goRecv() {
 				continue
 			}
 
-			if !sig.ConnLayer(){
+			if !sig.ConnLayer() {
 				log.Errorf("Bad Layer Received")
 				continue
 			}
 
-			if buffer.Len() < int(length){
+			if buffer.Len() < int(length) {
 				continue
 			}
 
@@ -79,6 +79,7 @@ func (t *TcpStruct) goRecv() {
 				log.FatalStack("Got Nil Packet")
 			}
 
+			log.Debugf("TCP Recv:%v", p)
 			t.recvch <- p
 
 			if t.closed() {
@@ -89,6 +90,10 @@ func (t *TcpStruct) goRecv() {
 }
 
 func (t *TcpStruct) emptyrecv() {
+	if t == nil {
+		return
+	}
+
 	for {
 		select {
 		case <-t.recvch:

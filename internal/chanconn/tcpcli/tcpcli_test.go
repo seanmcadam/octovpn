@@ -30,6 +30,5 @@ func TestNewTcpClient_host(t *testing.T) {
 	time.Sleep(time.Second)
 
 	cx.Done()
-	//tcpclient.Close()
 
 }

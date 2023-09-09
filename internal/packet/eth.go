@@ -1,21 +1,21 @@
 package packet
 
-type EthStruct struct{
+type EthPacket struct{
 	pSize PacketSizeType
 }
-func NewEth()(ap *EthStruct){
-	ap = &EthStruct{}
+func NewEth()(ap *EthPacket){
+	ap = &EthPacket{}
 	return ap
 }
 
-func MakeEth(raw []byte)(p *EthStruct, err error){
+func MakeEth(raw []byte)(p *EthPacket, err error){
 	return p, err
 }
 
-func (a *EthStruct) Size() PacketSizeType {
+func (a *EthPacket) Size() PacketSizeType {
 	return a.pSize
 }
 
-func (e *EthStruct)ToByte()(raw []byte){
+func (e *EthPacket)ToByte()(raw []byte){
 	return raw
 }

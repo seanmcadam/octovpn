@@ -11,6 +11,10 @@ type ConnInterface interface {
 	Send(*packet.PacketStruct) error
 	RecvChan() <-chan *packet.PacketStruct
 	Reset() error
-	StateToggleCh() <-chan link.LinkStateType
+	GetLinkNoticeStateCh() link.LinkNoticeStateCh
+	GetLinkStateCh() link.LinkNoticeStateCh
+	GetUpCh() link.LinkNoticeStateCh
+	GetDownCh() link.LinkNoticeStateCh
+	GetLinkCh() link.LinkNoticeStateCh
 	GetState() link.LinkStateType
 }
