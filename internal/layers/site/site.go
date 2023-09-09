@@ -5,6 +5,7 @@ import (
 
 	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/counter"
+	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/internal/pinger"
 	"github.com/seanmcadam/octovpn/internal/tracker"
@@ -12,9 +13,12 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
+type Channels struct{}
+
 type SiteStruct struct {
 	cx       *ctx.Ctx
 	width    packet.PacketWidth
+	link     *link.LinkStateStruct
 	channels []interfaces.ChannelInterface
 	pinger   pinger.PingerStruct
 	counter  counter.CounterStruct
@@ -53,7 +57,8 @@ func NewSite32(ctx *ctx.Ctx, si []interfaces.SiteInterface) (s *SiteStruct, err 
 	ss := &SiteStruct{
 		cx:       ctx,
 		width:    packet.PacketWidth32,
-		channels: si,
+		link:     link.NewLinkState(ctx, link.LinkModeUpOR),
+		channels: make([]interfaces.ChannelInterface, )
 		pinger:   pinger.NewPinger32(ctx, 1, 2),
 		counter:  counter.NewCounter32(ctx),
 		tracker:  tracker.NewTracker(ctx, time.Second),
@@ -63,7 +68,6 @@ func NewSite32(ctx *ctx.Ctx, si []interfaces.SiteInterface) (s *SiteStruct, err 
 	go ss.goRecv()
 	return ss, err
 }
-
 
 func NewSite64(ctx *ctx.Ctx, si []interfaces.SiteInterface) (s *SiteStruct, err error) {
 

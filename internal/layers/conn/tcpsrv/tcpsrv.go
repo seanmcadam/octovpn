@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/seanmcadam/octovpn/interfaces"
-	"github.com/seanmcadam/octovpn/internal/chanconn/tcp"
+	"github.com/seanmcadam/octovpn/internal/layers/network/tcp"
 	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/internal/settings"

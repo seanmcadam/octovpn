@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/seanmcadam/octovpn/interfaces"
-	"github.com/seanmcadam/octovpn/internal/chanconn/tcp"
+	"github.com/seanmcadam/octovpn/internal/layers/network/tcp"
 	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/internal/settings"
@@ -127,7 +127,6 @@ TCPFOR:
 	}
 }
 
-
 func (t *TcpClientStruct) GetLinkNoticeStateCh() link.LinkNoticeStateCh {
 	return t.link.LinkNoticeStateCh()
 }
@@ -151,4 +150,3 @@ func (t *TcpClientStruct) GetDownCh() link.LinkNoticeStateCh {
 func (t *TcpClientStruct) GetState() link.LinkStateType {
 	return t.link.GetState()
 }
-

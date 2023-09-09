@@ -4,82 +4,93 @@ import (
 	"testing"
 	"time"
 
-	"github.com/seanmcadam/octovpn/internal/chanconn/loopconn"
-	"github.com/seanmcadam/octovpn/internal/chanconn/udpcli"
-	"github.com/seanmcadam/octovpn/internal/chanconn/udpsrv"
+	"github.com/seanmcadam/octovpn/internal/layer/chanconn/loopconn"
+	"github.com/seanmcadam/octovpn/internal/layer/conn/tcpcli"
+	"github.com/seanmcadam/octovpn/internal/layer/conn/tcpsrv"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
 
-func TestNewUDP_SetupSrv(t *testing.T) {
+func TestNewTCP_SetupSrv(t *testing.T) {
 
 	cx := ctx.NewContext()
 	defer cx.Cancel()
 
 	config := &settings.NetworkStruct{
 		Name:  "testing",
-		Proto: "udp",
+		Proto: "tcp",
 		Host:  "127.0.0.1",
 		Port:  "50000",
 		Auth:  "",
 	}
 
-	NewConn32(cx, config, udpsrv.New)
+	_, _ = NewConn32(cx, config, tcpsrv.New)
+
+	cx.Cancel()
 
 }
 
-func TestNewUDP_SetupCli(t *testing.T) {
+func TestNewTCP_SetupCli(t *testing.T) {
 
 	cx := ctx.NewContext()
 	defer cx.Cancel()
 
 	config := &settings.NetworkStruct{
 		Name:  "testing",
-		Proto: "udp",
+		Proto: "tcp",
 		Host:  "127.0.0.1",
 		Port:  "50000",
 		Auth:  "",
 	}
 
-	NewConn32(cx, config, udpcli.New)
+	NewConn32(cx, config, tcpcli.New)
 
 }
 
-func TestNewUdp_CliSrv(t *testing.T) {
+func TestNewTCP_CliSrv(t *testing.T) {
 
 	cx := ctx.NewContext()
 	defer cx.Cancel()
 
-	srv, cli, err := loopconn.NewUdpConnLoop(cx)
+	srv, cli, err := loopconn.NewTcpConnLoop(cx)
 
 	srvUpCh := srv.GetUpCh()
 	cliUpCh := cli.GetUpCh()
+	srvLinkCh := srv.GetLinkCh()
+	cliLinkCh := cli.GetLinkCh()
+
+	<-srvLinkCh
+	<-cliLinkCh
+	<-srvUpCh
+	<-cliUpCh
 
 	p, err := packet.Testpacket()
 	if err != nil {
-		t.Error(err)
+		t.Errorf("Testpacket() Err:%s", err)
 	}
 
 	cli.Send(p)
+
 	select {
-	case <-srv.GetUpCh():
 	case r := <-srv.RecvChan():
 		if r == nil {
-			t.Error("Recieved nil")
+			t.Error("srv.RecvChan() nil")
 			return
 		}
 		err = packet.Validatepackets(p, r)
 		if r == nil {
-			t.Error("Recieved nil")
+			t.Error("Validatepacket() Recieved nil")
 			return
 		}
-	case <-time.After(2 * time.Second):
-		t.Error("Recieve timeout")
+
+	case <-time.After(4 * time.Second):
+		t.Error("Srv Recieve timeout")
 		return
 	}
 
 	srv.Send(p)
+
 	select {
 	case r := <-cli.RecvChan():
 		if r == nil {
@@ -87,10 +98,8 @@ func TestNewUdp_CliSrv(t *testing.T) {
 			return
 		}
 		err = packet.Validatepackets(p, r)
-	case <-time.After(2 * time.Second):
-		t.Error("Recieve timeout")
+	case <-time.After(4 * time.Second):
+		t.Error("Cli Recieve timeout")
 	}
 
-	<-srvUpCh
-	<-cliUpCh
 }

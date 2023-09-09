@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/seanmcadam/octovpn/interfaces"
-	"github.com/seanmcadam/octovpn/internal/chanconn/udp"
+	"github.com/seanmcadam/octovpn/internal/layers/network/udp"
 	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/internal/settings"

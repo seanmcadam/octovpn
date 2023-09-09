@@ -2,7 +2,7 @@ package interfaces
 
 import "github.com/seanmcadam/octovpn/internal/packet"
 
-type SiteInterface interface {
+type ChannelSiteInterface interface {
 	Send(*packet.PacketStruct) error
 	RecvChan() <-chan *packet.PacketStruct
 	Reset() error

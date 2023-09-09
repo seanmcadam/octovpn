@@ -1,7 +1,7 @@
 package tcpsrv
 
 import (
-	"github.com/seanmcadam/octovpn/internal/chanconn/tcp"
+	"github.com/seanmcadam/octovpn/internal/layers/network/tcp"
 	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
@@ -19,7 +19,6 @@ func (t *TcpServerStruct) goListen() {
 		log.Debug("TCP New connection")
 		newconn := tcp.NewTCP(t.cx.NewWithCancel(), conn)
 		t.tcpconnch <- newconn
-
 
 		for {
 			tcplink := newconn.Link().LinkStateCh()
