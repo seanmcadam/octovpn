@@ -1,0 +1,8 @@
+{
+    "nodename": "TestNodeName",
+    "sites": [
+        {
+            "sitename": "mytestditename"
+        }
+    ]
+}

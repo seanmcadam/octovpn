@@ -6,6 +6,15 @@ import (
 )
 
 // func Err(v ...any)
+func Err(format string) error {
+	format = "[%s]:" + format
+	var x []interface{}
+	x = append(x, "Error:")
+	x = append(x, FileLine(2)+":")
+	return fmt.Errorf(format, x...)
+}
+
+// func Err(v ...any)
 func Errf(format string, v ...any) error {
 	format = "[%s]:" + format
 	var x []interface{}
