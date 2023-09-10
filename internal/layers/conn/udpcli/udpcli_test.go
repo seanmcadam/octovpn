@@ -17,7 +17,7 @@ func TestNewUdpClient_new(t *testing.T) {
 		Name:  "testing",
 		Proto: "udp",
 		Host:  "127.0.0.1",
-		Port:  "50000",
+		Port:  "50006",
 		Auth:  "",
 	}
 
@@ -41,7 +41,7 @@ func TestNewUdpClient_test_nil_returns(t *testing.T) {
 		Name:  "testing",
 		Proto: "udp",
 		Host:  "127.0.0.1",
-		Port:  "50000",
+		Port:  "50008",
 		Auth:  "",
 	}
 

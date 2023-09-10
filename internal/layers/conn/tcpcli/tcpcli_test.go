@@ -18,7 +18,7 @@ func TestNewTcpClient_host(t *testing.T) {
 		Name:  "testing",
 		Proto: "tcp",
 		Host:  "127.0.0.1",
-		Port:  "50000",
+		Port:  "50005",
 		Auth:  "",
 	}
 
@@ -44,7 +44,7 @@ func TestNewTcpClient_test_nil_returns(t *testing.T) {
 		Name:  "testing",
 		Proto: "tcp",
 		Host:  "127.0.0.1",
-		Port:  "50000",
+		Port:  "50002",
 		Auth:  "",
 	}
 

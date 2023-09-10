@@ -5,6 +5,7 @@ import (
 
 	"github.com/seanmcadam/octovpn/internal/counter"
 	"github.com/seanmcadam/octovpn/internal/pinger"
+	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
@@ -260,12 +261,13 @@ func ReadPacketBuffer(buf []byte) (sig PacketSigType, length PacketSizeType, err
 
 	// Not enough data to check if there is a full packet
 	if len(buf) < 6 {
-		log.Fatalf("buf to short")
+		log.ErrorStack("buf to short")
+		return SIG_ERROR, 0, errors.ErrPacketBadParameter(log.Errf("Buffer is too short:%d", len(buf)))
 	}
 
 	sig = PacketSigType(BtoU32(buf[:4]))
 	if !sig.V1() {
-		return 0, 0, fmt.Errorf("BadSignature")
+		return SIG_ERROR, 0, errors.ErrPacketBadParameter(log.Errf("Bad Sig Version:%04X", sig))
 	}
 	buf = buf[4:]
 	//
@@ -286,9 +288,19 @@ func ReadPacketBuffer(buf []byte) (sig PacketSigType, length PacketSizeType, err
 // MakePacket()
 // Expects that raw is the correct size to create the packet
 func MakePacket(raw []byte) (p *PacketStruct, err error) {
+	if raw == nil {
+		return nil, errors.ErrNetNilPointerMethod(log.Errf(""))
+	}
+
 
 	var rawsize uint16 = uint16(len(raw))
 	var calcsize PacketSizeType = 0
+
+	if rawsize < 6 {
+		log.ErrorStack("size is too small, thats what she said...")
+		return nil, errors.ErrPacketBadParameter(log.Errf("buffer is too small"))
+
+	}
 
 	p = &PacketStruct{}
 
@@ -415,6 +427,10 @@ func MakePacket(raw []byte) (p *PacketStruct, err error) {
 // ToByte()
 // -
 func (p *PacketStruct) ToByte() (raw []byte) {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return raw
+	}
 
 	//
 	// pSig

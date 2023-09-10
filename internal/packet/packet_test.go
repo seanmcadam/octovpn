@@ -13,8 +13,6 @@ func TestNewPacket_compile(t *testing.T) {
 	var c32 counter.Counter32 = 1
 	var c64 counter.Counter64 = 1
 
-
-
 	p, err = NewPacket(SIG_CONN_32_RAW, []byte(""), counter.Counter(&c32))
 	if err != nil {
 		t.Fatal(fmt.Sprintf("NewPacket Err:%s", err))
@@ -31,25 +29,29 @@ func TestNewPacket_compile(t *testing.T) {
 	}
 }
 
-//func TestNewPacket_layer(t *testing.T) {
-//	var p *PacketStruct
-//	var err error
-//
-//	p, err = NewPacket(Packet_ROUTE_RAW, []byte(""))
-//	if p == nil || err != nil {
-//		t.Fatal("NewPacket Route failed")
-//	}
-//	p, err = NewPacket(Packet_SITE_RAW, []byte(""))
-//	if p == nil || err != nil {
-//		t.Fatal("NewPacket SITE failed")
-//	}
-//	p, err = NewPacket(Packet_CHAN_RAW, []byte(""))
-//	if p == nil || err != nil {
-//		t.Fatal("NewPacket CHAN failed")
-//	}
-//	p, err = NewPacket(Packet_CONN_RAW, []byte(""))
-//	if p == nil || err != nil {
-//		t.Fatal("NewPacket CONN failed")
-//	}
-//}
-//
+func TestNewPacket_nil_methods(t *testing.T) {
+
+	var p *PacketStruct
+
+	NewPacket(0x0000)
+	ReadPacketBuffer([]byte{})
+	MakePacket([]byte{})
+
+	p.ToByte()
+	p.Sig()
+	p.Size()
+	p.Width()
+	p.Counter()
+	p.Ping()
+	p.Pong()
+	p.Router()
+	p.IPv4()
+	p.IPv6()
+	p.Eth()
+	p.Auth()
+	p.ID()
+	p.Packet()
+	p.Raw()
+	p.DebugPacket("")
+
+}

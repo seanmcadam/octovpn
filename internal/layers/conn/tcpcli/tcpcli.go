@@ -27,6 +27,7 @@ type TcpClientStruct struct {
 func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpclient interfaces.ConnInterface, err error) {
 	return new(ctx, config)
 }
+
 func new(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpclient *TcpClientStruct, err error) {
 
 	t := &TcpClientStruct{
