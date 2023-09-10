@@ -8,6 +8,9 @@ import (
 // Reset()
 // Close current connection, causing a reset
 func (t *TcpClientStruct) Reset() error {
+	if t == nil {
+		return errors.ErrNetNilPointerMethod(log.Errf(""))
+	}
 
 	log.Debugf("TCPCli Reset()")
 
@@ -15,6 +18,6 @@ func (t *TcpClientStruct) Reset() error {
 		t.tcpconn.Cancel()
 		return nil
 	} else {
-		return errors.ErrNetChannelDown
+		return errors.ErrNetChannelDown(log.Errf(""))
 	}
 }

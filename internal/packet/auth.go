@@ -3,6 +3,7 @@ package packet
 import (
 	"fmt"
 
+	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
@@ -34,6 +35,11 @@ type AuthPacket struct {
 }
 
 func NewAuth(action AuthPacketActionType, text ...string) (ap *AuthPacket, err error) {
+
+	// TODO
+	// Check MAX size too
+	// Errors...
+
 	var pSize = AuthPacketMinSize
 	var t []byte
 
@@ -61,6 +67,11 @@ func NewAuth(action AuthPacketActionType, text ...string) (ap *AuthPacket, err e
 // MakeAuth([]byte)(*AuthPacket, error)
 // Takes a byte representation of the Auth Packet and converts it to AuthPacket
 func MakeAuth(raw []byte) (p *AuthPacket, err error) {
+	if raw == nil {
+		log.ErrorStack("Nil Parameter")
+		return nil, errors.ErrPacketBadParameter(log.Errf("Nil raw data"))
+	}
+
 	if len(raw) < int(AuthPacketMinSize) {
 		return nil, AuthErrShortPacketSize(fmt.Errorf("Len:%d", len(raw)))
 	}
@@ -97,18 +108,38 @@ func MakeAuth(raw []byte) (p *AuthPacket, err error) {
 }
 
 func (ap *AuthPacket) Size() PacketSizeType {
+	if ap == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return PacketSizeTypeERROR
+	}
+
 	return ap.pSize
 }
 
 func (ap *AuthPacket) Action() AuthPacketActionType {
+	if ap == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return AuthError
+	}
+
 	return ap.action
 }
 
 func (ap *AuthPacket) Text() []byte {
+	if ap == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return []byte("Nil Method Pointer, will this actually be seen?")
+	}
+
 	return ap.text
 }
 
 func (ap *AuthPacket) ToByte() (raw []byte) {
+	if ap == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil
+	}
+
 	if ap.pSize > 256 {
 		log.FatalStack("pSize > 256")
 	}

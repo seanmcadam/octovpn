@@ -7,6 +7,10 @@ import (
 )
 
 func (t *TcpServerStruct) goListen() {
+	if t == nil {
+		return
+	}
+
 	defer t.cx.Done()
 
 	for {
@@ -18,6 +22,10 @@ func (t *TcpServerStruct) goListen() {
 
 		log.Debug("TCP New connection")
 		newconn := tcp.NewTCP(t.cx.NewWithCancel(), conn)
+		if newconn == nil {
+			log.Debugf("NewTCP is Nil")
+			return
+		}
 		t.tcpconnch <- newconn
 
 		for {

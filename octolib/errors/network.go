@@ -1,11 +1,5 @@
 package errors
 
-import "fmt"
-
-var ErrNetPacketTooBig error
-var ErrNetChannelDown error
-
-func init() {
-	ErrNetPacketTooBig = fmt.Errorf("packet too big")
-	ErrNetChannelDown = fmt.Errorf("channel down")
-}
+type ErrNetNilPointerMethod error
+type ErrNetPacketTooBig error
+type ErrNetChannelDown error

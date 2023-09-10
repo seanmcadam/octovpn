@@ -4,10 +4,19 @@ import (
 	"fmt"
 
 	"github.com/seanmcadam/octovpn/internal/pinger"
+	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 func (p *PacketStruct) Copy() (copy *PacketStruct, err error) {
+
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil, errors.ErrPacketBadParameter(log.Errf("Nil Methos Pointer"))
+	}
+
+	log.Debug("Do we really need to copy all of this data?")
+
 	var fields []interface{}
 
 	if p.counter != nil {
@@ -47,6 +56,11 @@ func (p *PacketStruct) Copy() (copy *PacketStruct, err error) {
 }
 
 func (p *PacketStruct) CopyAck() (copy *PacketStruct, err error) {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil, errors.ErrPacketBadParameter(log.Errf("Nil Methos Pointer"))
+	}
+
 	var sig PacketSigType
 
 	if p.pSig.Width32() {
@@ -66,6 +80,10 @@ func (p *PacketStruct) CopyAck() (copy *PacketStruct, err error) {
 }
 
 func (p *PacketStruct) CopyPong() (ppong *PacketStruct, err error) {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil, errors.ErrPacketBadParameter(log.Errf("Nil Methos Pointer"))
+	}
 
 	if !p.pSig.Ping() {
 		err = fmt.Errorf("CopyPong() Not a ping packet")

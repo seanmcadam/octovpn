@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/seanmcadam/octovpn/internal/counter"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
@@ -35,7 +36,7 @@ func TestNewUdpLoop_SendRecv(t *testing.T) {
 
 	cx := ctx.NewContext()
 	data := []byte("data")
-	cp, err := packet.NewPacket(packet.SIG_CONN_32_RAW, data)
+	cp, err := packet.NewPacket(packet.SIG_CONN_32_RAW, data, counter.MakeCounter32(32))
 
 	srv, cli, err := NewUdpChanLoop(cx)
 

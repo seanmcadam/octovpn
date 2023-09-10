@@ -4,13 +4,14 @@ import (
 	"io"
 
 	"github.com/seanmcadam/octovpn/internal/packet"
+	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 // Send()
 func (u *UdpStruct) Send(p *packet.PacketStruct) (err error) {
-	if u == nil {
-		return
+	if u == nil || u.sendch == nil {
+		return errors.ErrNetNilPointerMethod(log.Errf(""))
 	}
 
 	go func(p *packet.PacketStruct) {

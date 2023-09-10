@@ -8,6 +8,10 @@ import (
 // Reset()
 // Close current connection, causing a reset
 func (u *UdpClientStruct) Reset() error {
+	if u == nil {
+		return errors.ErrNetNilPointerMethod(log.Errf(""))
+	}
+
 
 	log.Debugf("UDPCli Reset()")
 
@@ -15,6 +19,6 @@ func (u *UdpClientStruct) Reset() error {
 		u.udpconn.Cancel()
 		return nil
 	} else {
-		return errors.ErrNetChannelDown
+		return errors.ErrNetChannelDown(log.Errf(""))
 	}
 }

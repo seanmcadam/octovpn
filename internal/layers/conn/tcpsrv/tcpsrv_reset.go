@@ -7,12 +7,16 @@ import (
 
 // Reset()
 func (t *TcpServerStruct) Reset() error {
+	if t == nil {
+		return errors.ErrNetNilPointerMethod(log.Errf(""))
+	}
+
 	log.Debugf("TCPSrv Reset()")
 
 	if t.tcpconn != nil {
 		t.tcpconn.Cancel()
 		return nil
 	} else {
-		return errors.ErrNetChannelDown
+		return errors.ErrNetChannelDown(log.Errf(""))
 	}
 }

@@ -10,6 +10,24 @@ func TestNewAuth_compile(t *testing.T) {
 	_, _ = NewAuth(AuthAccept)
 }
 
+func TestNewAuth_nil_methods(t *testing.T) {
+
+	var a *AuthPacket
+
+	MakeAuth([]byte{})
+	a.Size()
+	a.Action()
+	a.Text()
+	a.ToByte()
+
+	AuthChallenge.String()
+	AuthResponse.String()
+	AuthAccept.String()
+	AuthReject.String()
+	AuthError.String()
+
+}
+
 func TestNewAuth_min_raw(t *testing.T) {
 	var b []byte
 	b = append(b, uint8(0xF0))

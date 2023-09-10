@@ -16,6 +16,42 @@ func TestNewTCP_basic(t *testing.T) {
 	defer cx.Cancel()
 }
 
+func TestNewTCP_test_nil_returns(t *testing.T) {
+	cx := ctx.NewContext()
+	defer cx.Cancel()
+
+	var ts *TcpStruct
+	NewTCP(nil, nil)
+	ts.goSend()
+	ts.sendpacket(nil)
+	ts.emptysend()
+	err := ts.Send(nil)
+	if err == nil {
+		t.Error("Send() returned nil")
+	}
+	ts.Cancel()
+	_ = ts.DoneChan()
+	_ = ts.closed()
+	ts.RecvChan()
+	ts.goRecv()
+	ts.emptyrecv()
+	ts.Link()
+	ts.run()
+
+	srv, cli, err := connection(cx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	cli.emptyrecv()
+	srv.emptysend()
+
+	srv.Link()
+	srv.DoneChan()
+	srv.Cancel()
+
+}
+
 func TestNewTCP_send(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()

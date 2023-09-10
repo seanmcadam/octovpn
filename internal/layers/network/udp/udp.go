@@ -20,6 +20,10 @@ type UdpStruct struct {
 }
 
 func NewUDPSrv(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
+	if ctx == nil || conn == nil{
+		log.ErrorStack("NewUDPSrv()")
+		return
+	}
 
 	log.Debug("Local Addr %s", conn.LocalAddr())
 
@@ -38,6 +42,10 @@ func NewUDPSrv(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
 }
 
 func NewUDPCli(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
+	if ctx == nil || conn == nil{
+		log.ErrorStack("NewUDPCli()")
+		return
+	}
 
 	log.Debug("Local Addr %s", conn.LocalAddr())
 
@@ -57,6 +65,10 @@ func NewUDPCli(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
 }
 
 func (u *UdpStruct) endpoint() (v string) {
+	if u == nil {
+		return
+	}
+
 	if u.srv {
 		v = "SRV"
 	} else {
@@ -66,10 +78,18 @@ func (u *UdpStruct) endpoint() (v string) {
 }
 
 func (u *UdpStruct) Link() *link.LinkStateStruct {
+	if u == nil {
+		return nil
+	}
+
 	return u.link
 }
 
 func (u *UdpStruct) run() {
+	if u == nil {
+		return
+	}
+
 	go u.goRecv()
 	go u.goSend()
 	u.link.Link()

@@ -4,13 +4,14 @@ import (
 	"io"
 
 	"github.com/seanmcadam/octovpn/internal/packet"
+	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 // Send()
 func (t *TcpStruct) Send(p *packet.PacketStruct) (err error) {
 	if t == nil || t.sendch == nil {
-		return TcpErrNilStructPointer(log.Errf(""))
+		return errors.ErrNetNilPointerMethod(log.Errf(""))
 	}
 
 	log.Debugf("TCP Send:%v", p)

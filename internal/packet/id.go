@@ -1,24 +1,43 @@
 package packet
 
+import (
+	"github.com/seanmcadam/octovpn/octolib/errors"
+	"github.com/seanmcadam/octovpn/octolib/log"
+)
+
 type IDPacket struct {
 	pSize PacketSizeType
-
 	id []string
 }
 
-func NewID()(ap *IDPacket){
+func NewID() (ap *IDPacket, err error) {
 	ap = &IDPacket{}
-	return ap
+	return ap, err
 }
 
-func MakeID(raw []byte)(p *IDPacket, err error){
+func MakeID(raw []byte) (p *IDPacket, err error) {
+	if raw == nil {
+		log.ErrorStack("Nil Parameter")
+		return nil, errors.ErrPacketBadParameter(log.Errf("Nil raw data"))
+	}
+
 	return p, err
 }
 
-func (a *IDPacket) Size() PacketSizeType {
-	return a.pSize
+func (p *IDPacket) Size() PacketSizeType {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return 0
+	}
+
+	return p.pSize
 }
 
-func (i *IDPacket)ToByte()(raw []byte){
+func (p *IDPacket) ToByte() (raw []byte) {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return raw
+	}
+
 	return raw
 }

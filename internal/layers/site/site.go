@@ -58,7 +58,7 @@ func NewSite32(ctx *ctx.Ctx, si []interfaces.SiteInterface) (s *SiteStruct, err 
 		cx:       ctx,
 		width:    packet.PacketWidth32,
 		link:     link.NewLinkState(ctx, link.LinkModeUpOR),
-		channels: make([]interfaces.ChannelInterface, )
+		channels: []interfaces.ChannelInterface,
 		pinger:   pinger.NewPinger32(ctx, 1, 2),
 		counter:  counter.NewCounter32(ctx),
 		tracker:  tracker.NewTracker(ctx, time.Second),
@@ -73,10 +73,10 @@ func NewSite64(ctx *ctx.Ctx, si []interfaces.SiteInterface) (s *SiteStruct, err 
 
 	ss := &SiteStruct{
 		cx:       ctx,
-		width:    packet.PacketWidth32,
-		channels: si,
-		pinger:   pinger.NewPinger32(ctx, 1, 2),
-		counter:  counter.NewCounter32(ctx),
+		width:    packet.PacketWidth64,
+		channels: []interfaces.ChannelInterface,
+		pinger:   pinger.NewPinger64(ctx, 1, 2),
+		counter:  counter.NewCounter64(ctx),
 		tracker:  tracker.NewTracker(ctx, time.Second),
 		recvch:   make(chan *packet.PacketStruct, 16),
 	}

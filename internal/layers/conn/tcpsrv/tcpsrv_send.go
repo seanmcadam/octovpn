@@ -8,16 +8,20 @@ import (
 
 // Send()
 func (t *TcpServerStruct) Send(co *packet.PacketStruct) (err error) {
+	if t == nil {
+		return errors.ErrNetNilPointerMethod(log.Errf(""))
+	}
+
 	log.Debugf("TCPSrc Send:%v", co)
 
 	if uint16(co.Size()) > t.config.GetMtu() {
-		return errors.ErrNetPacketTooBig
+		return errors.ErrNetPacketTooBig(log.Errf(""))
 	}
 
 	if t.tcpconn != nil {
 		return t.tcpconn.Send(co)
 	}
 
-	return errors.ErrNetChannelDown
+	return errors.ErrNetChannelDown(log.Errf(""))
 
 }

@@ -23,7 +23,7 @@ func (ls *LinkStateStruct) processMessage(ns LinkNoticeStateType) {
 	noticechange := (ns.Notice() != LinkNoticeNONE)
 
 	if noticechange {
-		log.Debugf("Link[%d] Notice:%s",ls.instance, ns)
+		log.Debugf("Link[%d] Notice:%s", ls.instance, ns)
 		ls.processNotice(noticeState(ns.Notice(), LinkStateNONE))
 	}
 	if statechange {
@@ -160,41 +160,81 @@ func (ls *LinkStateStruct) processStateChange(ns LinkNoticeStateType) {
 }
 
 func (ls *LinkStateStruct) LinkStateCh() (newch LinkNoticeStateCh) {
+	if ls == nil {
+		return nil
+	}
+
 	return ls.linkState.LinkCh()
 }
 
 func (ls *LinkStateStruct) LinkNoticeCh() (newch LinkNoticeStateCh) {
+	if ls == nil {
+		return nil
+	}
+
 	return ls.linkNotice.LinkCh()
 }
 
 func (ls *LinkStateStruct) LinkNoticeStateCh() (newch LinkNoticeStateCh) {
+	if ls == nil {
+		return nil
+	}
+
 	return ls.linkNoticeState.LinkCh()
 }
 
 func (ls *LinkStateStruct) LinkLinkCh() (newch LinkNoticeStateCh) {
+	if ls == nil {
+		return nil
+	}
+
 	return ls.linkLink.LinkCh()
 }
 
 func (ls *LinkStateStruct) LinkUpCh() (newch LinkNoticeStateCh) {
+	if ls == nil {
+		return nil
+	}
+
 	return ls.linkUp.LinkCh()
 }
 
 func (ls *LinkStateStruct) LinkDownCh() (newch LinkNoticeStateCh) {
+	if ls == nil {
+		return nil
+	}
+
 	return ls.linkDown.LinkCh()
 }
 
 func (ls *LinkStateStruct) LinkCloseCh() (newch LinkNoticeStateCh) {
+	if ls == nil {
+		return nil
+	}
+
 	return ls.linkClose.LinkCh()
 }
 
 func (ls *LinkStateStruct) LinkLossCh() (newch LinkNoticeStateCh) {
+	if ls == nil {
+		return nil
+	}
+
 	return ls.linkLoss.LinkCh()
 }
 
 func (ls *LinkStateStruct) LinkLatencyCh() (newch LinkNoticeStateCh) {
+	if ls == nil {
+		return nil
+	}
+
 	return ls.linkLatency.LinkCh()
 }
 
 func (ls *LinkStateStruct) LinkSaturationCh() (newch LinkNoticeStateCh) {
+	if ls == nil {
+		return nil
+	}
+
 	return ls.linkSaturation.LinkCh()
 }

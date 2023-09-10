@@ -23,6 +23,7 @@ const (
 	PacketPing64Size    PacketSizeType = 8
 	PacketPong32Size    PacketSizeType = 4
 	PacketPong64Size    PacketSizeType = 8
+	PacketSizeTypeERROR PacketSizeType = 0xFF
 )
 
 //type PacketFields uint32
@@ -47,7 +48,7 @@ const (
 // Sig
 // Size
 // Counters
-// Ping/Pongs 
+// Ping/Pongs
 // Payloads (all of them)
 // Raw
 
@@ -92,6 +93,8 @@ const (
 	DATA_ETH    PacketSigType = 0x00000030
 	DATA_ROUTER PacketSigType = 0x00000040
 	DATA_ERROR  PacketSigType = 0x000000FF
+
+	SIG_ERROR PacketSigType = 0xFFFFFFFF
 
 	SIG_ROUTE = VERSION_1 | LAYER_ROUTER | FIELD_SIG | FIELD_SIZE
 	SIG_SITE  = VERSION_1 | LAYER_SITE | FIELD_SIG | FIELD_SIZE
@@ -176,9 +179,7 @@ func (p PacketSigType) V1() bool {
 	return x != 0
 }
 
-//
 // Layer
-//
 func (p PacketSigType) GetLayer() PacketSigType {
 	return (p & MASK_LAYER)
 }
@@ -195,9 +196,7 @@ func (p PacketSigType) ConnLayer() bool {
 	return (p & LAYER_CONN) != 0
 }
 
-//
 // Fileds
-//
 func (p PacketSigType) Ack() bool {
 	return (p & FIELD_ACK) != 0
 }
@@ -217,9 +216,7 @@ func (p PacketSigType) Data() bool {
 	return (p & FIELD_DATA) != 0
 }
 
-//
 // Data
-//
 func (p PacketSigType) Packet() bool {
 	return (p & DATA_PACKET) != 0
 }
@@ -251,7 +248,7 @@ func (f PacketSigType) String() string {
 
 	if (f & MASK_VERSION) == MASK_VERSION {
 		name = append(name, []byte("MASK_VERSION ")...)
-	} 
+	}
 
 	if (f & MASK_SIZE) == MASK_SIZE {
 		name = append(name, []byte("MASK_SIZE ")...)

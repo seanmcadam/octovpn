@@ -22,6 +22,45 @@ func TestNewUdp_basic(t *testing.T) {
 	}
 }
 
+func TestNewUDP_test_nil_returns(t *testing.T) {
+	cx := ctx.NewContext()
+
+	var us *UdpStruct
+	NewUDPCli(nil, nil)
+	NewUDPSrv(nil, nil)
+	us.goSend()
+	us.sendpacket(nil)
+	us.emptysend()
+	us.endpoint()
+	err := us.Send(nil)
+	if err == nil{
+		t.Error("Send() returned nil")
+	}
+	us.Cancel()
+	_ = us.DoneChan()
+	_ = us.closed()
+	us.RecvChan()
+	us.goRecv()
+	us.emptyrecv()
+	us.Link()
+	us.run()
+
+	srv, cli, err := connection(cx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	cli.endpoint()
+	srv.endpoint()
+	cli.emptyrecv()
+	srv.emptysend()
+	srv.Link()
+	srv.DoneChan()
+	srv.Cancel()
+
+	defer cx.Cancel()
+}
+
 func TestNewUdp_send_over_cli(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()

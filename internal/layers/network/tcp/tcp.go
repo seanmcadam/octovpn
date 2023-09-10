@@ -6,9 +6,8 @@ import (
 	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
+	"github.com/seanmcadam/octovpn/octolib/log"
 )
-
-type TcpErrNilStructPointer error
 
 type TcpStruct struct {
 	cx     *ctx.Ctx
@@ -19,6 +18,10 @@ type TcpStruct struct {
 }
 
 func NewTCP(ctx *ctx.Ctx, conn *net.TCPConn) (tcp *TcpStruct) {
+	if ctx == nil || conn == nil {
+		log.ErrorStack("NewTCP()")
+		return nil
+	}
 
 	tcp = &TcpStruct{
 		cx:     ctx,
@@ -41,8 +44,10 @@ func (t *TcpStruct) Link() *link.LinkStateStruct {
 	return t.link
 }
 
-
 func (t *TcpStruct) run() {
+	if t == nil {
+		return
+	}
 	t.link.Up()
 	go t.goRecv()
 	go t.goSend()

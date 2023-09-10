@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/seanmcadam/octovpn/internal/chanconn"
-	"github.com/seanmcadam/octovpn/internal/channel"
-	"github.com/seanmcadam/octovpn/internal/conn/tcpcli"
-	"github.com/seanmcadam/octovpn/internal/conn/tcpsrv"
-	"github.com/seanmcadam/octovpn/internal/conn/udpcli"
-	"github.com/seanmcadam/octovpn/internal/conn/udpsrv"
+	"github.com/seanmcadam/octovpn/internal/layers/chanconn"
+	"github.com/seanmcadam/octovpn/internal/layers/channel"
+	"github.com/seanmcadam/octovpn/internal/layers/conn/tcpcli"
+	"github.com/seanmcadam/octovpn/internal/layers/conn/tcpsrv"
+	"github.com/seanmcadam/octovpn/internal/layers/conn/udpcli"
+	"github.com/seanmcadam/octovpn/internal/layers/conn/udpsrv"
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/netlib"
@@ -27,12 +27,12 @@ func NewUdpChanLoop(ctx *ctx.Ctx) (srv *channel.ChannelStruct, cli *channel.Chan
 		Auth:  "",
 	}
 
-	connsrv, err := chanconn.NewConn(ctx, udpconfig, udpsrv.New)
+	connsrv, err := chanconn.NewConn32(ctx, udpconfig, udpsrv.New)
 	if err != nil {
 		log.Fatalf("NewConn() Err:%s", err)
 	}
 
-	conncli, err := chanconn.NewConn(ctx, udpconfig, udpcli.New)
+	conncli, err := chanconn.NewConn32(ctx, udpconfig, udpcli.New)
 	if err != nil {
 		log.Fatalf("NewConn() Err:%s", err)
 	}
@@ -60,12 +60,12 @@ func NewTcpChanLoop(ctx *ctx.Ctx) (srv *channel.ChannelStruct, cli *channel.Chan
 		Auth:  "",
 	}
 
-	connsrv, err := chanconn.NewConn(ctx, tcpconfig, tcpsrv.New)
+	connsrv, err := chanconn.NewConn32(ctx, tcpconfig, tcpsrv.New)
 	if err != nil {
 		log.Fatalf("NewConn() Err:%s", err)
 	}
 
-	conncli, err := chanconn.NewConn(ctx, tcpconfig, tcpcli.New)
+	conncli, err := chanconn.NewConn32(ctx, tcpconfig, tcpcli.New)
 	if err != nil {
 		log.Fatalf("NewConn() Err:%s", err)
 	}

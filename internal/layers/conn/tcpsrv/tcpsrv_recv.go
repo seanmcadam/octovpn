@@ -7,10 +7,13 @@ import (
 )
 
 func (t *TcpServerStruct) RecvChan() <-chan *packet.PacketStruct {
+	if t == nil {
+		log.ErrorStack("TCP Srv Recv Nil")
+		return nil
 
-	if t == nil || t.tcpconn == nil {
-		log.Debugf("TCP Srv Recv Nil")
-		log.Debugf("TCP Srv Recv state:%s", t.link.GetState())
+	}
+	if t.tcpconn == nil {
+		log.Debug("TCP Srv nil tcpconn")
 		return nil
 	}
 

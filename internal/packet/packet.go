@@ -470,62 +470,136 @@ func (p *PacketStruct) ToByte() (raw []byte) {
 }
 
 func (p *PacketStruct) Sig() PacketSigType {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return SIG_ERROR
+	}
+
 	return p.pSig
 }
 
 func (p *PacketStruct) Size() PacketSizeType {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return PacketSizeTypeERROR
+	}
+
 	return p.pSize
 }
 
 func (p *PacketStruct) Width() PacketWidth {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return 0
+	}
+
 	return p.pWidth
 }
 
 func (p *PacketStruct) Counter() counter.Counter {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return counter.MakeCounter32(0)
+	}
+
 	return p.counter
 }
 
 func (p *PacketStruct) Ping() pinger.Ping {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return counter.MakeCounter32(0)
+	}
+
 	return p.ping
 }
 
 func (p *PacketStruct) Pong() pinger.Pong {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return counter.MakeCounter32(0)
+	}
+
 	return p.pong
 }
 
 func (p *PacketStruct) Router() *RouterPacket {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil
+	}
+
 	return p.router
 }
 
 func (p *PacketStruct) IPv4() *IPv4Packet {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil
+	}
+
 	return p.ipv4
 }
 
 func (p *PacketStruct) IPv6() *IPv6Packet {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil
+	}
+
 	return p.ipv6
 }
 
 func (p *PacketStruct) Eth() *EthPacket {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil
+	}
+
 	return p.eth
 }
 
 func (p *PacketStruct) Auth() *AuthPacket {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil
+	}
+
 	return p.auth
 }
 
 func (p *PacketStruct) ID() *IDPacket {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil
+	}
+
 	return p.id
 }
 
 func (p *PacketStruct) Packet() *PacketStruct {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil
+	}
+
 	return p.packet
 }
 
 func (p *PacketStruct) Raw() []byte {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil
+	}
+
 	return p.raw
 }
 
 func (p *PacketStruct) DebugPacket(prefix string) {
+	if p == nil {
+		log.ErrorStack("Nil Method Pointer... on a debug packet.")
+		return
+	}
 
 	debug := fmt.Sprintf("\n\t----------- PACKET ------------------\n")
 	debug += fmt.Sprintf("\t%s\n", prefix)

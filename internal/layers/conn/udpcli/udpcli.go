@@ -25,6 +25,10 @@ type UdpClientStruct struct {
 }
 
 func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpclient interfaces.ConnInterface, err error) {
+	return new(ctx, config)
+}
+
+func new(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpclient *UdpClientStruct, err error) {
 
 	u := &UdpClientStruct{
 		cx:      ctx,
@@ -55,6 +59,9 @@ func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpclient interfaces.Con
 //	Start Send and Recv Goroutines
 //	Monitor reset request
 func (u *UdpClientStruct) goRun() {
+	if u == nil {
+		return
+	}
 
 	defer func(u *UdpClientStruct) {
 		if u.udpconn != nil {
@@ -120,25 +127,49 @@ func (u *UdpClientStruct) goRun() {
 }
 
 func (u *UdpClientStruct) GetLinkNoticeStateCh() link.LinkNoticeStateCh {
+	if u == nil {
+		return nil
+	}
+
 	return u.link.LinkNoticeStateCh()
 }
 
 func (u *UdpClientStruct) GetLinkStateCh() link.LinkNoticeStateCh {
+	if u == nil {
+		return nil
+	}
+
 	return u.link.LinkStateCh()
 }
 
 func (u *UdpClientStruct) GetUpCh() link.LinkNoticeStateCh {
+	if u == nil {
+		return nil
+	}
+
 	return u.link.LinkUpCh()
 }
 
 func (u *UdpClientStruct) GetLinkCh() link.LinkNoticeStateCh {
+	if u == nil {
+		return nil
+	}
+
 	return u.link.LinkLinkCh()
 }
 
 func (u *UdpClientStruct) GetDownCh() link.LinkNoticeStateCh {
+	if u == nil {
+		return nil
+	}
+
 	return u.link.LinkDownCh()
 }
 
 func (u *UdpClientStruct) GetState() link.LinkStateType {
+	if u == nil {
+		return link.LinkStateERROR
+	}
+
 	return u.link.GetState()
 }

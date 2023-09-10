@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/seanmcadam/octovpn/internal/counter"
-	"github.com/seanmcadam/octovpn/internal/layer/chanconn/loopconn"
+	"github.com/seanmcadam/octovpn/internal/layers/chanconn/loopconn"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
@@ -19,7 +19,7 @@ func main() {
 
 	srv, cli, err := loopconn.NewTcpConnLoop(cx)
 	if err != nil {
-		log.FatalStack("NewTcpConnLoop Err:%s", err)
+		log.FatalfStack("NewTcpConnLoop Err:%s", err)
 	}
 
 	time.Sleep(time.Second)
@@ -38,14 +38,14 @@ func main() {
 		case srvdata := <-srvdatach:
 			p, err := packet.NewPacket(packet.SIG_CONN_32_RAW, srvdata, <-c32.GetCountCh())
 			if err != nil {
-				log.FatalStack("NewPacket Err:%s", err)
+				log.FatalfStack("NewPacket Err:%s", err)
 			}
 			p.DebugPacket("CONN TCP Send RAW SRV: ")
 			srv.Send(p)
 		case clidata := <-clidatach:
 			p, err := packet.NewPacket(packet.SIG_CONN_32_RAW, clidata, <-c32.GetCountCh())
 			if err != nil {
-				log.FatalStack("NewPacket Err:%s", err)
+				log.FatalfStack("NewPacket Err:%s", err)
 			}
 			p.DebugPacket("CONN TCP Send RAW CLI: ")
 			cli.Send(p)
@@ -79,7 +79,7 @@ func generateRandomData() []byte {
 	data := make([]byte, size)
 	_, err := rand.Read(data)
 	if err != nil {
-		log.FatalfStack("Error generating random data:", err)
+		log.FatalfStack("Error generating random data:%s", err)
 	}
 	return data
 }

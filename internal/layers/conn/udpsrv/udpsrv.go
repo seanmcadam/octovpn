@@ -26,6 +26,10 @@ type UdpServerStruct struct {
 }
 
 func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpserver interfaces.ConnInterface, err error) {
+	return new(ctx, config)
+}
+
+func new(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpserver *UdpServerStruct, err error) {
 
 	u := &UdpServerStruct{
 		cx:      ctx,
@@ -57,6 +61,9 @@ func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpserver interfaces.Con
 //	Start Send and Recv Goroutines
 //	Monitor reset request
 func (u *UdpServerStruct) goRun() {
+	if u == nil {
+		return
+	}
 
 	defer func(u *UdpServerStruct) {
 		if u.udpconn != nil {
@@ -126,24 +133,48 @@ func (u *UdpServerStruct) goRun() {
 }
 
 func (u *UdpServerStruct) GetLinkNoticeStateCh() link.LinkNoticeStateCh {
+	if u == nil {
+		return nil
+	}
+
 	return u.link.LinkNoticeStateCh()
 }
 
 func (u *UdpServerStruct) GetLinkStateCh() link.LinkNoticeStateCh {
+	if u == nil {
+		return nil
+	}
+
 	return u.link.LinkStateCh()
 }
 func (u *UdpServerStruct) GetUpCh() link.LinkNoticeStateCh {
+	if u == nil {
+		return nil
+	}
+
 	return u.link.LinkUpCh()
 }
 
 func (u *UdpServerStruct) GetLinkCh() link.LinkNoticeStateCh {
+	if u == nil {
+		return nil
+	}
+
 	return u.link.LinkLinkCh()
 }
 
 func (u *UdpServerStruct) GetDownCh() link.LinkNoticeStateCh {
+	if u == nil {
+		return nil
+	}
+
 	return u.link.LinkDownCh()
 }
 
 func (u *UdpServerStruct) GetState() link.LinkStateType {
+	if u == nil {
+		return link.LinkStateERROR
+	}
+
 	return u.link.GetState()
 }

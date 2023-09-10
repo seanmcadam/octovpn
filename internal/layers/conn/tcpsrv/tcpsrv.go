@@ -25,9 +25,11 @@ type TcpServerStruct struct {
 	recvch      chan *packet.PacketStruct
 }
 
-// NewTcpServer()
-// Returns a TcpServerStruct and error value
 func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpserver interfaces.ConnInterface, err error) {
+	return new(ctx, config)
+}
+
+func new(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpserver *TcpServerStruct, err error) {
 
 	t := &TcpServerStruct{
 		cx:          ctx,
@@ -70,6 +72,11 @@ func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpserver interfaces.Con
 //
 
 func (t *TcpServerStruct) goRun() {
+	if t == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return
+	}
+
 
 	defer func(t *TcpServerStruct) {
 		if t.tcplistener != nil {
@@ -117,6 +124,10 @@ func (t *TcpServerStruct) goRun() {
 }
 
 func (t *TcpServerStruct) emptyconn() {
+	if t == nil {
+		return 
+	}
+
 	for {
 		select {
 		case <-t.tcpconnch:
@@ -127,25 +138,55 @@ func (t *TcpServerStruct) emptyconn() {
 }
 
 func (t *TcpServerStruct) GetLinkNoticeStateCh() link.LinkNoticeStateCh {
+	if t == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil
+	}
+
 	return t.link.LinkNoticeStateCh()
 }
 
 func (t *TcpServerStruct) GetLinkStateCh() link.LinkNoticeStateCh {
+	if t == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil
+	}
+
 	return t.link.LinkStateCh()
 }
 
 func (t *TcpServerStruct) GetUpCh() link.LinkNoticeStateCh {
+	if t == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil
+	}
+
 	return t.link.LinkUpCh()
 }
 
 func (t *TcpServerStruct) GetDownCh() link.LinkNoticeStateCh {
+	if t == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil
+	}
+
 	return t.link.LinkDownCh()
 }
 
 func (t *TcpServerStruct) GetLinkCh() link.LinkNoticeStateCh {
+	if t == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return nil
+	}
+
 	return t.link.LinkLinkCh()
 }
 
 func (t *TcpServerStruct) GetState() link.LinkStateType {
+	if t == nil {
+		log.ErrorStack("Nil Method Pointer")
+		return link.LinkStateERROR
+	}
+
 	return t.link.GetState()
 }
