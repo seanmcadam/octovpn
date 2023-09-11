@@ -1,7 +1,6 @@
 package loopchan
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/seanmcadam/octovpn/internal/layers/chanconn"
@@ -19,11 +18,11 @@ import (
 // Returns a pair of connected UDP sockets as a
 func NewUdpChanLoop(ctx *ctx.Ctx) (srv *channel.ChannelStruct, cli *channel.ChannelStruct, err error) {
 
-	udpconfig := &settings.NetworkStruct{
+	udpconfig := &settings.ConnectionStruct{
 		Name:  "LoopbackUDP",
 		Proto: "udp",
 		Host:  "127.0.0.1",
-		Port:  fmt.Sprintf("%d", uint16(netlib.GetRandomNetworkPort())),
+		Port:  settings.ConfigPortType(uint16(netlib.GetRandomNetworkPort())),
 		Auth:  "",
 	}
 
@@ -52,11 +51,11 @@ func NewUdpChanLoop(ctx *ctx.Ctx) (srv *channel.ChannelStruct, cli *channel.Chan
 
 func NewTcpChanLoop(ctx *ctx.Ctx) (srv *channel.ChannelStruct, cli *channel.ChannelStruct, err error) {
 
-	tcpconfig := &settings.NetworkStruct{
+	tcpconfig := &settings.ConnectionStruct{
 		Name:  "LoopbackTCP",
 		Proto: "tcp",
 		Host:  "127.0.0.1",
-		Port:  fmt.Sprintf("%d", uint16(netlib.GetRandomNetworkPort())),
+		Port:  settings.ConfigPortType(uint16(netlib.GetRandomNetworkPort())),
 		Auth:  "",
 	}
 

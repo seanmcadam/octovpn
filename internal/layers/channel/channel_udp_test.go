@@ -15,11 +15,11 @@ func TestNewChannel_Udp(t *testing.T) {
 
 	cx := ctx.NewContext()
 
-	config := &settings.NetworkStruct{
+	config := &settings.ConnectionStruct{
 		Name:  "testing",
 		Proto: "udp",
 		Host:  "127.0.0.1",
-		Port:  "50000",
+		Port:  50000,
 		Auth:  "",
 	}
 

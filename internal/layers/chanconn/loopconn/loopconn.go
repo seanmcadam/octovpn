@@ -1,8 +1,6 @@
 package loopconn
 
 import (
-	"fmt"
-
 	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/layers/conn/tcpcli"
 	"github.com/seanmcadam/octovpn/internal/layers/conn/tcpsrv"
@@ -17,11 +15,11 @@ import (
 // Returns a pair of connected UDP sockets as a
 func NewUdpConnLoop(ctx *ctx.Ctx) (srv interfaces.ConnInterface, cli interfaces.ConnInterface, err error) {
 
-	udpconfig := &settings.NetworkStruct{
+	udpconfig := &settings.ConnectionStruct{
 		Name:  "LoopbackUDP",
 		Proto: "udp",
 		Host:  "127.0.0.1",
-		Port:  fmt.Sprintf("%d", uint16(netlib.GetRandomNetworkPort())),
+		Port:  settings.ConfigPortType(uint16(netlib.GetRandomNetworkPort())),
 		Auth:  "",
 	}
 
@@ -40,11 +38,11 @@ func NewUdpConnLoop(ctx *ctx.Ctx) (srv interfaces.ConnInterface, cli interfaces.
 
 func NewTcpConnLoop(ctx *ctx.Ctx) (loop1 interfaces.ConnInterface, loop2 interfaces.ConnInterface, err error) {
 
-	config := &settings.NetworkStruct{
+	config := &settings.ConnectionStruct{
 		Name:  "LoopbackTCP",
 		Proto: "tcp",
 		Host:  "127.0.0.1",
-		Port:  fmt.Sprintf("%d", uint16(netlib.GetRandomNetworkPort())),
+		Port:  settings.ConfigPortType(uint16(netlib.GetRandomNetworkPort())),
 		Auth:  "",
 	}
 

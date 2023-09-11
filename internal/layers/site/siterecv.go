@@ -1,6 +1,7 @@
 package site
 
 import (
+	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
@@ -9,7 +10,7 @@ func (cs *SiteStruct) RecvChan() <-chan *packet.PacketStruct {
 	return cs.recvch
 }
 
-func (cs *SiteStruct) goRecv() {
+func (cs *SiteStruct) goRecv(channel interfaces.ChannelSiteInterface) {
 
 	//defer
 
@@ -17,13 +18,13 @@ func (cs *SiteStruct) goRecv() {
 		select {
 		case <-cs.cx.DoneChan():
 			return
-		case p := <-cs.channel.RecvChan():
-			cs.recv(p)
+		case p := <-channel.RecvChan():
+			cs.recv(p, channel)
 		}
 	}
 }
 
-func (cs *SiteStruct) recv(p *packet.PacketStruct) {
+func (cs *SiteStruct) recv(p *packet.PacketStruct, channel interfaces.ChannelSiteInterface) {
 
 	p.DebugPacket("CHAN RECV")
 
@@ -42,7 +43,7 @@ func (cs *SiteStruct) recv(p *packet.PacketStruct) {
 			log.FatalfStack("Copy() Err:%s", err)
 		}
 
-		cs.channel.Send(copyack)
+		channel.Send(copyack)
 		cs.tracker.Recv(copy)
 		cs.recvch <- p
 

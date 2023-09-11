@@ -13,7 +13,7 @@ func (u *UdpClientStruct) Send(co *packet.PacketStruct) (err error) {
 	}
 
 
-	if uint16(co.Size()) > u.config.GetMtu() {
+	if uint16(co.Size()) > uint16(u.config.Mtu) {
 		return errors.ErrNetPacketTooBig(log.Errf(""))
 	}
 

@@ -14,7 +14,7 @@ func (t *TcpServerStruct) Send(co *packet.PacketStruct) (err error) {
 
 	log.Debugf("TCPSrc Send:%v", co)
 
-	if uint16(co.Size()) > t.config.GetMtu() {
+	if uint16(co.Size()) > uint16(t.config.Mtu) {
 		return errors.ErrNetPacketTooBig(log.Errf(""))
 	}
 

@@ -16,7 +16,7 @@ import (
 type TcpServerStruct struct {
 	cx          *ctx.Ctx
 	link        *link.LinkStateStruct
-	config      *settings.NetworkStruct
+	config      *settings.ConnectionStruct
 	address     string
 	tcplistener *net.TCPListener
 	tcpaddr     *net.TCPAddr
@@ -25,17 +25,17 @@ type TcpServerStruct struct {
 	recvch      chan *packet.PacketStruct
 }
 
-func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpserver interfaces.ConnInterface, err error) {
+func New(ctx *ctx.Ctx, config *settings.ConnectionStruct) (tcpserver interfaces.ConnInterface, err error) {
 	return new(ctx, config)
 }
 
-func new(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpserver *TcpServerStruct, err error) {
+func new(ctx *ctx.Ctx, config *settings.ConnectionStruct) (tcpserver *TcpServerStruct, err error) {
 
 	t := &TcpServerStruct{
 		cx:          ctx,
 		link:        link.NewLinkState(ctx, link.LinkModeUpAND), // If more then 1 is connected, they all have to be up
 		config:      config,
-		address:     fmt.Sprintf("%s:%d", config.GetHost(), config.GetPort()),
+		address:     fmt.Sprintf("%s:%d", config.Host, config.Port),
 		tcplistener: nil,
 		tcpaddr:     nil,
 		tcpconn:     nil,
@@ -44,12 +44,12 @@ func new(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpserver *TcpServerStru
 	}
 
 	// Recheck this each time, the IP could change or rotate
-	t.tcpaddr, err = net.ResolveTCPAddr(t.config.Proto, t.address)
+	t.tcpaddr, err = net.ResolveTCPAddr(string(t.config.Proto), t.address)
 	if err != nil {
 		return nil, fmt.Errorf("ResolveTCPAddr Failed:%s", err)
 	}
 
-	t.tcplistener, err = net.ListenTCP(t.config.Proto, t.tcpaddr)
+	t.tcplistener, err = net.ListenTCP(string(t.config.Proto), t.tcpaddr)
 	if err != nil {
 		return nil, fmt.Errorf("ListenTCP Failed:%s", err)
 	}
@@ -76,7 +76,6 @@ func (t *TcpServerStruct) goRun() {
 		log.ErrorStack("Nil Method Pointer")
 		return
 	}
-
 
 	defer func(t *TcpServerStruct) {
 		if t.tcplistener != nil {
@@ -125,7 +124,7 @@ func (t *TcpServerStruct) goRun() {
 
 func (t *TcpServerStruct) emptyconn() {
 	if t == nil {
-		return 
+		return
 	}
 
 	for {
@@ -135,6 +134,10 @@ func (t *TcpServerStruct) emptyconn() {
 			return
 		}
 	}
+}
+
+func (t *TcpServerStruct) Link() *link.LinkStateStruct {
+	return t.link
 }
 
 func (t *TcpServerStruct) GetLinkNoticeStateCh() link.LinkNoticeStateCh {

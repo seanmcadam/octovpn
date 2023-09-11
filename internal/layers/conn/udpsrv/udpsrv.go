@@ -17,7 +17,7 @@ import (
 type UdpServerStruct struct {
 	cx      *ctx.Ctx
 	link    *link.LinkStateStruct
-	config  *settings.NetworkStruct
+	config  *settings.ConnectionStruct
 	address string
 	udpaddr *net.UDPAddr
 	udpconn *udp.UdpStruct
@@ -25,17 +25,17 @@ type UdpServerStruct struct {
 	recvch  chan *packet.PacketStruct
 }
 
-func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpserver interfaces.ConnInterface, err error) {
+func New(ctx *ctx.Ctx, config *settings.ConnectionStruct) (udpserver interfaces.ConnInterface, err error) {
 	return new(ctx, config)
 }
 
-func new(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpserver *UdpServerStruct, err error) {
+func new(ctx *ctx.Ctx, config *settings.ConnectionStruct) (udpserver *UdpServerStruct, err error) {
 
 	u := &UdpServerStruct{
 		cx:      ctx,
 		link:    link.NewLinkState(ctx),
 		config:  config,
-		address: fmt.Sprintf("%s:%d", config.GetHost(), config.GetPort()),
+		address: fmt.Sprintf("%s:%d", config.Host, config.Port),
 		udpaddr: nil,
 		udpconn: nil,
 		auth:    false,
@@ -44,7 +44,7 @@ func new(ctx *ctx.Ctx, config *settings.NetworkStruct) (udpserver *UdpServerStru
 
 	// Do an initial check and fail if it fails
 	// Recheck this each time, the IP could change or rotate
-	u.udpaddr, err = net.ResolveUDPAddr(u.config.Proto, u.address)
+	u.udpaddr, err = net.ResolveUDPAddr(string(u.config.Proto), u.address)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (u *UdpServerStruct) goRun() {
 		//
 		// conn, err = net.DialUDP(u.config.Proto, nil, u.udpaddr)
 		log.Debug("ListenUDP()")
-		conn, err = net.ListenUDP(u.config.Proto, u.udpaddr)
+		conn, err = net.ListenUDP(string(u.config.Proto), u.udpaddr)
 
 		if err != nil {
 			log.Warnf("UDP Listener failed %s: %s, wait", u.address, err)
@@ -130,6 +130,10 @@ func (u *UdpServerStruct) goRun() {
 			}
 		}
 	}
+}
+
+func (t *UdpServerStruct) Link() *link.LinkStateStruct {
+	return t.link
 }
 
 func (u *UdpServerStruct) GetLinkNoticeStateCh() link.LinkNoticeStateCh {

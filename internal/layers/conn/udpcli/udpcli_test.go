@@ -8,16 +8,17 @@ import (
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
+	"github.com/seanmcadam/octovpn/octolib/netlib"
 )
 
 func TestNewUdpClient_new(t *testing.T) {
 
 	cx := ctx.NewContext()
-	config := &settings.NetworkStruct{
+	config := &settings.ConnectionStruct{
 		Name:  "testing",
 		Proto: "udp",
 		Host:  "127.0.0.1",
-		Port:  "50006",
+		Port:  settings.ConfigPortType(uint16(netlib.GetRandomNetworkPort())),
 		Auth:  "",
 	}
 
@@ -37,11 +38,11 @@ func TestNewUdpClient_test_nil_returns(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()
 
-	config := &settings.NetworkStruct{
+	config := &settings.ConnectionStruct{
 		Name:  "testing",
 		Proto: "udp",
 		Host:  "127.0.0.1",
-		Port:  "50008",
+		Port:  settings.ConfigPortType(uint16(netlib.GetRandomNetworkPort())),
 		Auth:  "",
 	}
 

@@ -17,7 +17,7 @@ import (
 const PingFreq = 1 * time.Second
 const PingTimeout = 2 * time.Second
 
-type NewConnFunc func(*ctx.Ctx, *settings.NetworkStruct) (interfaces.ConnInterface, error)
+type NewConnFunc func(*ctx.Ctx, *settings.ConnectionStruct) (interfaces.ConnInterface, error)
 
 type ChanconnStruct struct {
 	cx      *ctx.Ctx
@@ -30,8 +30,7 @@ type ChanconnStruct struct {
 	counter counter.CounterStruct
 }
 
-func NewConn32(ctx *ctx.Ctx, config *settings.NetworkStruct, confFunc NewConnFunc) (ci interfaces.ChannelInterface, err error) {
-
+func NewConn32(ctx *ctx.Ctx, config *settings.ConnectionStruct, confFunc NewConnFunc) (ci interfaces.ChannelInterface, err error) {
 	conn, err := confFunc(ctx, config)
 	if err != nil {
 		return nil, err
@@ -61,7 +60,7 @@ func NewConn32(ctx *ctx.Ctx, config *settings.NetworkStruct, confFunc NewConnFun
 	return cs, err
 }
 
-func NewConn64(ctx *ctx.Ctx, config *settings.NetworkStruct, confFunc NewConnFunc) (ci interfaces.ChannelInterface, err error) {
+func NewConn64(ctx *ctx.Ctx, config *settings.ConnectionStruct, confFunc NewConnFunc) (ci interfaces.ChannelInterface, err error) {
 
 	conn, err := confFunc(ctx, config)
 	if err != nil {
@@ -105,4 +104,8 @@ func (c *ChanconnStruct) MaxLocalMtu() (size packet.PacketSizeType) {
 		}
 	}
 	return size
+}
+
+func (c *ChanconnStruct) Link() (link *link.LinkStateStruct) {
+	return c.link
 }

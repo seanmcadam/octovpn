@@ -37,6 +37,12 @@ func validateSite(site *ConfigSiteStruct) (err error) {
 		return log.Err("Not Site Name")
 	}
 
+	if site.Width != 0 {
+		if site.Width != 32 && site.Width != 64 {
+			return log.Errf("NOT VALID: Site Width is 63 or 32, Not:%d", int(site.Width))
+		}
+	}
+
 	if len(site.Servers) == 0 && len(site.Clients) == 0 {
 		return log.Err("Need One Server or Client specified")
 	}
@@ -70,6 +76,12 @@ func validateConnection(connection *ConnectionStruct) (err error) {
 
 	if len(connection.Name) == 0 {
 		return log.Err("Server Name Required")
+	}
+
+	if connection.Width != 0 {
+		if connection.Width != 32 && connection.Width != 64 {
+			return log.Errf("NOT VALID: Connection Width is 63 or 32, Not:%d", int(connection.Width))
+		}
 	}
 
 	if len(connection.Host) == 0 {

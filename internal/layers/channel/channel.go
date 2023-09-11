@@ -62,8 +62,12 @@ func (cs *ChannelStruct) Width() packet.PacketWidth {
 	return cs.width
 }
 
-func (cs *ChannelStruct) Reset() {
-	cs.channel.Reset()
+func (cs *ChannelStruct) Link() *link.LinkStateStruct {
+	return cs.link
+}
+
+func (cs *ChannelStruct) Reset() error {
+	return cs.channel.Reset()
 }
 
 func (cs *ChannelStruct) Close() {

@@ -22,7 +22,7 @@ func (u *UdpServerStruct) Send(co *packet.PacketStruct) (err error) {
 		return log.Errf("no config in UdpServerStruct")
 	}
 
-	if uint16(co.Size()) > u.config.GetMtu() {
+	if uint16(co.Size()) > uint16(u.config.Mtu) {
 		return errors.ErrNetPacketTooBig(log.Errf(""))
 	}
 

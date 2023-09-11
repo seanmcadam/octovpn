@@ -4,9 +4,11 @@
         {
             "sitename": "Site1",
             "mtu": 1400,
-            "server": [
+            "width": 32,
+            "servers": [
                 {
                     "name": "Site1Server1",
+                    "width": 32,
                     "proto": "tcp",
                     "host": "localhost",
                     "port": 10000,
@@ -17,6 +19,7 @@
             "clients": [
                 {
                     "name": "Site1Client1",
+                    "width": 32,
                     "proto": "tcp",
                     "host": "localhost",
                     "port": 20000,
@@ -28,9 +31,11 @@
         {
             "sitename": "Site2",
             "mtu": 1400,
-            "server": [
+            "width": 32,
+            "servers": [
                 {
                     "name": "Site2Server1",
+                    "width": 32,
                     "proto": "tcp",
                     "host": "localhost",
                     "port": 20000,
@@ -41,6 +46,7 @@
             "clients": [
                 {
                     "name": "Site2Client1",
+                    "width": 32,
                     "proto": "tcp",
                     "host": "localhost",
                     "port": 10000,

@@ -10,6 +10,7 @@ import (
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
+	"github.com/seanmcadam/octovpn/octolib/netlib"
 )
 
 func TestNewTCP_SetupSrv(t *testing.T) {
@@ -17,11 +18,11 @@ func TestNewTCP_SetupSrv(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()
 
-	config := &settings.NetworkStruct{
+	config := &settings.ConnectionStruct{
 		Name:  "testing",
 		Proto: "tcp",
 		Host:  "127.0.0.1",
-		Port:  "50000",
+		Port:  settings.ConfigPortType(uint16(netlib.GetRandomNetworkPort())),
 		Auth:  "",
 	}
 
@@ -36,11 +37,11 @@ func TestNewTCP_SetupCli(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()
 
-	config := &settings.NetworkStruct{
+	config := &settings.ConnectionStruct{
 		Name:  "testing",
 		Proto: "tcp",
 		Host:  "127.0.0.1",
-		Port:  "50000",
+		Port:  settings.ConfigPortType(uint16(netlib.GetRandomNetworkPort())),
 		Auth:  "",
 	}
 

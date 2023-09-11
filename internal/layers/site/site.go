@@ -19,7 +19,7 @@ type SiteStruct struct {
 	cx       *ctx.Ctx
 	width    packet.PacketWidth
 	link     *link.LinkStateStruct
-	channels []interfaces.ChannelInterface
+	channels []interfaces.ChannelSiteInterface
 	pinger   pinger.PingerStruct
 	counter  counter.CounterStruct
 	tracker  *tracker.TrackerStruct
@@ -50,37 +50,46 @@ func (c *SiteStruct) MaxLocalMtu() (size packet.PacketSizeType) {
 
 		return size
 	}
+	return size
 }
 
-func NewSite32(ctx *ctx.Ctx, si []interfaces.SiteInterface) (s *SiteStruct, err error) {
+func NewSite32(ctx *ctx.Ctx, si []interfaces.ChannelSiteInterface) (s *SiteStruct, err error) {
 
 	ss := &SiteStruct{
 		cx:       ctx,
 		width:    packet.PacketWidth32,
 		link:     link.NewLinkState(ctx, link.LinkModeUpOR),
-		channels: []interfaces.ChannelInterface,
+		channels: si,
 		pinger:   pinger.NewPinger32(ctx, 1, 2),
 		counter:  counter.NewCounter32(ctx),
 		tracker:  tracker.NewTracker(ctx, time.Second),
 		recvch:   make(chan *packet.PacketStruct, 16),
 	}
 
-	go ss.goRecv()
+	for _, channel := range si {
+		go ss.goRecv(channel)
+	}
 	return ss, err
 }
 
-func NewSite64(ctx *ctx.Ctx, si []interfaces.SiteInterface) (s *SiteStruct, err error) {
+func NewSite64(ctx *ctx.Ctx, si []interfaces.ChannelSiteInterface) (s *SiteStruct, err error) {
 
 	ss := &SiteStruct{
 		cx:       ctx,
 		width:    packet.PacketWidth64,
-		channels: []interfaces.ChannelInterface,
+		channels: si,
 		pinger:   pinger.NewPinger64(ctx, 1, 2),
 		counter:  counter.NewCounter64(ctx),
 		tracker:  tracker.NewTracker(ctx, time.Second),
 		recvch:   make(chan *packet.PacketStruct, 16),
 	}
 
-	go ss.goRecv()
+	for _, channel := range si {
+		go ss.goRecv(channel)
+	}
 	return ss, err
+}
+
+func (s *SiteStruct) Link() (link *link.LinkStateStruct) {
+	return s.link
 }

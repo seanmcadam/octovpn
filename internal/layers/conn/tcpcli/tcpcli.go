@@ -17,24 +17,24 @@ import (
 type TcpClientStruct struct {
 	cx      *ctx.Ctx
 	link    *link.LinkStateStruct
-	config  *settings.NetworkStruct
+	config  *settings.ConnectionStruct
 	address string
 	tcpaddr *net.TCPAddr
 	tcpconn *tcp.TcpStruct
 	recvch  chan *packet.PacketStruct
 }
 
-func New(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpclient interfaces.ConnInterface, err error) {
+func New(ctx *ctx.Ctx, config *settings.ConnectionStruct) (tcpclient interfaces.ConnInterface, err error) {
 	return new(ctx, config)
 }
 
-func new(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpclient *TcpClientStruct, err error) {
+func new(ctx *ctx.Ctx, config *settings.ConnectionStruct) (tcpclient *TcpClientStruct, err error) {
 
 	t := &TcpClientStruct{
 		cx:      ctx,
 		link:    link.NewLinkState(ctx),
 		config:  config,
-		address: fmt.Sprintf("%s:%d", config.GetHost(), config.GetPort()),
+		address: fmt.Sprintf("%s:%d", config.Host, config.Port),
 		tcpaddr: nil,
 		tcpconn: nil,
 		recvch:  make(chan *packet.PacketStruct),
@@ -42,7 +42,7 @@ func new(ctx *ctx.Ctx, config *settings.NetworkStruct) (tcpclient *TcpClientStru
 
 	// Do an initial check and fail if it fails
 	// Recheck this each time, the IP could change or rotate
-	t.tcpaddr, err = net.ResolveTCPAddr(t.config.Proto, t.address)
+	t.tcpaddr, err = net.ResolveTCPAddr(string(t.config.Proto), t.address)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ TCPFOR:
 		var conn *net.TCPConn
 
 		// Dial it and keep trying forever
-		conn, err = net.DialTCP(t.config.Proto, nil, t.tcpaddr)
+		conn, err = net.DialTCP(string(t.config.Proto), nil, t.tcpaddr)
 
 		if err != nil {
 			log.Warnf("connection failed %s: %s, wait", t.address, err)
@@ -133,6 +133,10 @@ TCPFOR:
 			}
 		}
 	}
+}
+
+func (t *TcpClientStruct) Link() *link.LinkStateStruct {
+	return t.link
 }
 
 func (t *TcpClientStruct) GetLinkNoticeStateCh() link.LinkNoticeStateCh {
