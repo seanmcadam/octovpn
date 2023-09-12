@@ -24,6 +24,7 @@ func TestLinkState_nil_method(t *testing.T) {
 	ls.processMessage(0)
 	ls.setState(0)
 	ls.NoLink()
+	ls.Listen()
 	ls.Link()
 	ls.Chal()
 	ls.Auth()
@@ -36,6 +37,8 @@ func TestLinkState_nil_method(t *testing.T) {
 	ls.LinkAuthCh()
 	ls.LinkLinkCh()
 	ls.LinkConnectCh()
+	ls.LinkNoLinkCh()
+	ls.LinkListenCh()
 	ls.LinkUpDownCh()
 	ls.LinkUpCh()
 	ls.LinkDownCh()
@@ -126,32 +129,24 @@ func TestLinkState_UP_send(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()
 
-	ls1 := NewLinkState(cx)
+	ls1 := newLinkState(cx, "Slave")
 	ls1.NoLink()
 
-	ls := NewLinkState(cx)
-	stateCh := ls.LinkStateCh()
-	upCh := ls.LinkUpCh()
-	connectCh := ls.LinkConnectCh()
-	ls.NoLink()
-	ls.AddLinkStateCh(ls1)
-	time.Sleep(1*time.Millisecond)
+	ls := newLinkState(cx, "Master")
+	connectedCh := ls.LinkConnectCh()
+	connectedCh1 := ls1.LinkConnectCh()
+	ls.AddLinkConnectCh(ls1)
 
-	ls.AddLinkStateCh(ls1)
-	time.Sleep(1*time.Millisecond)
-	//upCh := ls.LinkConnectCh()
-	//upCh := ls.LinkUpCh()
-	//upCh := ls.LinkUpCh()
+	ls.NoLink()
 
 	ls1.Connected()
-	time.Sleep(1*time.Millisecond)
+	time.Sleep(1 * time.Millisecond)
 
 	select {
-	case <-stateCh:
-	case <-upCh:
-	case <-connectCh:
+	case <-connectedCh:
+	case <-connectedCh1:
 	default:
-		t.Error("State did not change to Up")
+		t.Error("StateCh did not change to Up")
 	}
 
 	cx.Cancel()

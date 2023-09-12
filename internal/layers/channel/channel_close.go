@@ -14,7 +14,7 @@ func (c *ChannelStruct) Cancel() {
 		return
 	}
 	log.GDebug("Cancel() %s", c.name)
-	c.link.Down()
+	c.link.NoLink()
 	c.link.Close()
 	c.cx.Cancel()
 }

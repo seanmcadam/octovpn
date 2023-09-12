@@ -1,7 +1,6 @@
 package udpcli
 
 import (
-	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
@@ -12,7 +11,7 @@ func (u *UdpClientStruct) RecvChan() <-chan *packet.PacketStruct {
 		return nil
 	}
 
-	if u.link.GetState() != link.LinkStateUP {
+	if u.link.IsDown() {
 		log.Debugf("UDP Cli Recv state:%s", u.link.GetState())
 		return nil
 	}

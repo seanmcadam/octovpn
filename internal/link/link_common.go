@@ -1,8 +1,6 @@
 package link
 
 import (
-	"sync"
-
 	"github.com/seanmcadam/octovpn/internal/counter"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
@@ -31,7 +29,8 @@ const LinkModeDownOR LinkModeType = 0x08       // One link is down
 const LinkModeFilterNotices LinkModeType = 0x08
 
 const LinkStateNONE LinkStateType = 0x00
-const LinkStateNOLINK LinkStateType = 0x01
+const LinkStateLISTEN LinkStateType = 0x01
+const LinkStateNOLINK LinkStateType = 0x02
 const LinkStateLINK LinkStateType = 0x10
 const LinkStateCHAL LinkStateType = 0x20
 const LinkStateAUTH LinkStateType = 0x30
@@ -50,7 +49,7 @@ const LinkNoticeERROR LinkNoticeType = 0xFF
 var recvnew chan LinkNoticeStateType
 
 type AddLinkStruct struct {
-	State LinkStateType
+	State    LinkStateType
 	LinkFunc LinkNoticeStateFunc
 }
 
@@ -61,9 +60,8 @@ type LinkChan struct {
 
 type LinkStateStruct struct {
 	cx              *ctx.Ctx
-	mx              sync.Mutex
+	linkname        string
 	mode            LinkModeType
-	instance        uint32
 	state           LinkStateType
 	linkNoticeState *LinkChan
 	linkState       *LinkChan
@@ -73,6 +71,7 @@ type LinkStateStruct struct {
 	linkDown        *LinkChan
 	linkConnected   *LinkChan
 	linkNoLink      *LinkChan
+	linkListen      *LinkChan
 	linkLink        *LinkChan
 	linkAuth        *LinkChan
 	linkChal        *LinkChan
@@ -106,6 +105,8 @@ func (state LinkStateType) String() string {
 	switch state {
 	case LinkStateNONE:
 		return "NONE"
+	case LinkStateLISTEN:
+		return "LISTEN"
 	case LinkStateNOLINK:
 		return "NOLINK"
 	case LinkStateLINK:

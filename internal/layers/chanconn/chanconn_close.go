@@ -14,7 +14,6 @@ func (c *ChanconnStruct) Cancel() {
 		return
 	}
 	log.GDebug("Cancel() %s", c.name)
-	c.link.Down()
 	c.link.Close()
 	c.cx.Cancel()
 }

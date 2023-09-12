@@ -15,7 +15,7 @@ func (t *TcpServerStruct) goListen() {
 	for {
 		conn, err := t.tcplistener.AcceptTCP()
 		if err != nil {
-			log.FatalfStack("AcceptTCP Error:%s", err)
+			log.FFFatalfStack("AcceptTCP Error:%s", err)
 			return
 		}
 

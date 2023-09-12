@@ -42,7 +42,6 @@ func (u *UdpStruct) goSend() {
 			return
 		}
 	}
-
 }
 
 func (u *UdpStruct) sendpacket(p *packet.PacketStruct) {
@@ -54,6 +53,40 @@ func (u *UdpStruct) sendpacket(p *packet.PacketStruct) {
 	var err error
 	p.DebugPacket("UDP Send")
 	raw := p.ToByte()
+	if u.srv {
+		if u.link.IsUp() {
+			l, err = u.conn.WriteToUDP(raw, u.addr)
+			log.Debugf("UDP WriteToUDP():%v", raw)
+		} else {
+			log.Warnf("UDP Srv WriteToUDP() on Down Connection:%v", raw)
+		}
+	} else {
+		l, err = u.conn.Write(raw)
+		log.Debugf("UDP Write():%v", raw)
+	}
+
+	if err != nil {
+		if err != io.EOF {
+			log.Errorf("UDP %s Write() Error:%s", u.endpoint(), err)
+		}
+		u.Cancel()
+	}
+
+	if l != len(raw) {
+		log.Errorf("UDP Write() Length Error:%d != %d", l, len(raw))
+		u.Cancel()
+	}
+}
+
+
+func (u *UdpStruct) sendtestpacket(raw []byte) {
+	if u == nil {
+		return
+	}
+
+	var l int
+	var err error
+	log.Debugf("UDP Test Send:%v", raw)
 	if u.srv {
 		l, err = u.conn.WriteToUDP(raw, u.addr)
 		log.Debugf("UDP WriteToUDP():%v", raw)

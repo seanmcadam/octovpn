@@ -2,6 +2,7 @@ package udp
 
 import (
 	"net"
+	"time"
 
 	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
@@ -9,20 +10,24 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
+// Should get a Ping every 1 second or so
+const UDPRecvTimeout = 5 * time.Second
+const UDPCloseTimeout = 15 * time.Second
+
 type UdpStruct struct {
-	cx     *ctx.Ctx
-	link   *link.LinkStateStruct
-	srv    bool
-	conn   *net.UDPConn
-	addr   *net.UDPAddr
-	sendch chan *packet.PacketStruct
-	recvch chan *packet.PacketStruct
+	cx               *ctx.Ctx
+	link             *link.LinkStateStruct
+	srv              bool
+	conn             *net.UDPConn
+	addr             *net.UDPAddr
+	sendch           chan *packet.PacketStruct
+	recvch           chan *packet.PacketStruct
+	recvresettimeout chan interface{}
 }
 
 func NewUDPSrv(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
-	if ctx == nil || conn == nil{
-		log.ErrorStack("NewUDPSrv()")
-		return
+	if ctx == nil || conn == nil {
+		return nil
 	}
 
 	log.Debug("Local Addr %s", conn.LocalAddr())
@@ -35,17 +40,17 @@ func NewUDPSrv(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
 		addr:   nil,
 		sendch: make(chan *packet.PacketStruct),
 		recvch: make(chan *packet.PacketStruct),
+		recvresettimeout: make(chan interface{}),
 	}
 
-	udp.link.Down()
+	udp.link.NoLink()
 	udp.run()
 	return udp
 }
 
 func NewUDPCli(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
-	if ctx == nil || conn == nil{
-		log.ErrorStack("NewUDPCli()")
-		return
+	if ctx == nil || conn == nil {
+		return nil
 	}
 
 	log.Debug("Local Addr %s", conn.LocalAddr())
@@ -58,10 +63,11 @@ func NewUDPCli(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
 		addr:   nil,
 		sendch: make(chan *packet.PacketStruct),
 		recvch: make(chan *packet.PacketStruct),
+		recvresettimeout: make(chan interface{}),
 	}
 
-	udp.link.Down()
 	udp.run()
+	udp.link.Connected()
 	return udp
 }
 
@@ -91,7 +97,7 @@ func (u *UdpStruct) run() {
 		return
 	}
 
-	go u.goRecv()
 	go u.goSend()
-	u.link.Link()
+	go u.goRecv()
+	go u.goRecvTimeout()
 }

@@ -13,7 +13,7 @@ func (l *LinkStateStruct) Cancel() {
 	if l == nil {
 		return
 	}
-	log.GDebug("Cancel() %d", l.instance)
+	log.GDebug("Cancel() %s", l.linkname)
 	l.cx.Cancel()
 }
 

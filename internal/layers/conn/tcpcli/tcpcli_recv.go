@@ -1,7 +1,6 @@
 package tcpcli
 
 import (
-	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
@@ -13,7 +12,7 @@ func (t *TcpClientStruct) RecvChan() <-chan *packet.PacketStruct {
 		return nil
 	}
 
-	if t.link.GetState() != link.LinkStateUP {
+	if t.link.IsDown() {
 		log.Debugf("TCP Cli Recv state:%s", t.link.GetState())
 		return nil
 	}

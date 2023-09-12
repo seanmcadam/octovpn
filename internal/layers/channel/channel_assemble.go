@@ -23,6 +23,8 @@ func ChannelAssembleClient(ctx *ctx.Ctx, config *settings.ConnectionStruct) (cs 
 
 func channelAssemble(ctx *ctx.Ctx, config *settings.ConnectionStruct, server bool) (cs *ChannelStruct, err error) {
 
+	log.Debugf("confg:%v", config)
+
 	var connFunc chanconn.NewConnFunc
 
 	switch config.Proto {

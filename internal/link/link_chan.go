@@ -13,8 +13,12 @@ func newLinkChan(name string) (lc *LinkChan) {
 	return lc
 }
 
-// func (ls *LinkChan) LinkCh() (newch chan LinkNoticeStateType) {
 func (ls *LinkChan) LinkCh() (newch LinkNoticeStateCh) {
+	if ls == nil {
+		log.ErrorStack("send() nil method pointer")
+		return
+	}
+
 	ch := make(chan LinkNoticeStateType, 1) // Always allow 1 message to be send, no waiting...
 	select {
 	case ls.listenChan <- ch:
@@ -22,29 +26,32 @@ func (ls *LinkChan) LinkCh() (newch LinkNoticeStateCh) {
 	default:
 		log.Errorf("Channel Full:%v", ls.listenChan)
 	}
+
+	log.Debug("Link:%s chan len:%d", ls.name, len(ls.listenChan))
+
 	return nil
 }
 
-func (ls *LinkChan) send(ns LinkNoticeStateType) {
-	if ls == nil {
-		log.Error("send() nil method pointer")
+func (lc *LinkChan) send(ns LinkNoticeStateType) {
+	if lc == nil {
+		log.ErrorStack("send() nil method pointer")
 		return
 	}
 
-	if ls.listenChan == nil {
-		log.Warnf("send() listenChan[%s] is nil", ls.name)
+	if lc.listenChan == nil {
+		log.Warnf("send() listenChan[%s] is nil", lc.name)
 		return
 	}
 
-	if len(ls.listenChan) > 0 {
-		log.GDebugf("send() listenChan[%s] count:%d, Msg:%s", ls.name, len(ls.listenChan), ns)
-		length := len(ls.listenChan)
+	if len(lc.listenChan) > 0 {
+		log.GDebugf("LinkChan send() listenChan[%s] count:%d, Msg:%s", lc.name, len(lc.listenChan), ns)
+		length := len(lc.listenChan)
 		for i := 0; i < length; i++ {
-			l := <-ls.listenChan
+			l := <-lc.listenChan
 			select {
 			case l <- ns:
 			default:
-				log.Warn("LinkChan[%s] unable to send", ls.name)
+				log.Warn("LinkChan[%s] unable to send", lc.name)
 			}
 			close(l)
 		}

@@ -92,9 +92,15 @@ const (
 	DATA_IPV6   PacketSigType = 0x00000020
 	DATA_ETH    PacketSigType = 0x00000030
 	DATA_ROUTER PacketSigType = 0x00000040
+	DATA_CLOSE  PacketSigType = 0x000000FE
 	DATA_ERROR  PacketSigType = 0x000000FF
 
 	SIG_ERROR PacketSigType = 0xFFFFFFFF
+
+	SIG_CONN_CLOSE  = VERSION_1 | LAYER_CONN | FIELD_SIG | FIELD_SIZE | FIELD_DATA | DATA_CLOSE
+	SIG_CHAN_CLOSE  = VERSION_1 | LAYER_CHAN | FIELD_SIG | FIELD_SIZE | FIELD_DATA | DATA_CLOSE
+	SIG_SITE_CLOSE  = VERSION_1 | LAYER_SITE | FIELD_SIG | FIELD_SIZE | FIELD_DATA | DATA_CLOSE 
+	SIG_ROUTE_CLOSE = VERSION_1 | LAYER_ROUTER | FIELD_SIG | FIELD_SIZE | FIELD_DATA | DATA_CLOSE
 
 	SIG_ROUTE = VERSION_1 | LAYER_ROUTER | FIELD_SIG | FIELD_SIZE
 	SIG_SITE  = VERSION_1 | LAYER_SITE | FIELD_SIG | FIELD_SIZE
@@ -240,6 +246,20 @@ func (p PacketSigType) Eth() bool {
 }
 func (p PacketSigType) Router() bool {
 	return (p & DATA_ROUTER) != 0
+}
+
+func (p PacketSigType) Close() bool {
+	switch p {
+	case SIG_CONN_CLOSE:
+		fallthrough
+	case SIG_CHAN_CLOSE:
+		fallthrough
+	case SIG_SITE_CLOSE:
+		fallthrough
+	case SIG_ROUTE_CLOSE:
+		return true
+	}
+	return false
 }
 
 func (f PacketSigType) String() string {

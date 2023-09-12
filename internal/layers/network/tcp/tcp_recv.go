@@ -10,11 +10,11 @@ import (
 
 func (t *TcpStruct) RecvChan() <-chan *packet.PacketStruct {
 	if t == nil || t.recvch == nil {
-		log.Debugf("TCP Recv Nil")
+		log.Error("Nil Method")
 		return nil
 	}
 
-	log.Debugf("TCP Recv state:%s", t.link.GetState())
+	log.Debugf("State:%s", t.link.GetState())
 	return t.recvch
 }
 
@@ -34,42 +34,57 @@ func (t *TcpStruct) goRecv() {
 		tmp := make([]byte, 2048)
 
 		for {
+			//
+			// Load the receive buffer
+			//
 			n, err := t.conn.Read(tmp)
 			if err != nil {
 				if err == io.EOF {
-					log.Errorf("TCP Read() connection closed")
+					log.Errorf("Read() connection closed")
 				} else {
-					log.Errorf("TCP Read() Error:%s", err)
+					log.Errorf("Read() Error:%s", err)
 				}
 				return
 			}
 
-			log.Debugf("TCP Raw Recv len:%d", n)
+			log.Debugf("Raw Recv len:%d", n)
 			buffer.Write(tmp[:n])
 
 			if t.closed() {
 				return
 			}
 
+			//
+			// Does the buffer have enough data to assemble a packet?
+			//
 			sig, length, err := packet.ReadPacketBuffer(buffer.Bytes()[:6])
 			//
 			// Error checking types here
 			//
 			if err != nil {
-				log.Errorf("TCP MakePacket() Err:%s", err)
+				log.Errorf("MakePacket() Err:%s", err)
 				return
 			}
 
+			//
+			// Only receive CONN layer packets here
+			//
 			if !sig.ConnLayer() {
-				log.Errorf("Bad Layer Received")
+				log.Errorf("Bad SIG Layer Received:%04X")
 				return
 			}
 
+			//
+			// Is there enough data?
+			//
 			if buffer.Len() < int(length) {
 				log.Infof("Not Enough Buffer Data %d < %d", buffer.Len(), int(length))
 				continue
 			}
 
+			//
+			// Extract a packet
+			//
 			p, err := packet.MakePacket(buffer.Next(int(length)))
 			if err != nil {
 				log.Errorf("MakePacket Err:%s", err)
@@ -77,10 +92,10 @@ func (t *TcpStruct) goRecv() {
 			}
 
 			if p == nil {
-				log.FatalStack("Got Nil Packet")
+				log.FatalStack("MakePacket() returned Nil Packet")
 			}
 
-			p.DebugPacket("TCP Recv")
+			p.DebugPacket("TCP Recv() Packet")
 			t.recvch <- p
 
 			if t.closed() {
@@ -90,6 +105,9 @@ func (t *TcpStruct) goRecv() {
 	}
 }
 
+//
+// Clean up the recvch before closing
+//
 func (t *TcpStruct) emptyrecv() {
 	if t == nil {
 		return

@@ -3,7 +3,6 @@ package chanconn
 import (
 	"fmt"
 
-	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
@@ -15,7 +14,7 @@ func (cs *ChanconnStruct) Send(cp *packet.PacketStruct) error {
 		return errors.ErrNetNilPointerMethod(log.Errf(""))
 	}
 
-	if cs.link.GetState() == link.LinkStateUP {
+	if cs.link.IsUp() {
 		packet, err := packet.NewPacket(packet.SIG_CONN_32_PACKET, cp, <-cs.counter.GetCountCh())
 		if err != nil {
 			return err
@@ -32,7 +31,7 @@ func (cs *ChanconnStruct) send(p *packet.PacketStruct) error {
 		return errors.ErrNetNilPointerMethod(log.Errf(""))
 	}
 
-	if cs.conn.Link().GetState() == link.LinkStateDOWN {
+	if cs.conn.Link().IsDown() {
 		return fmt.Errorf("link shows down")
 	}
 

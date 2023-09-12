@@ -14,7 +14,7 @@ func init() {
 func Debug(v ...any) {
 	var x []interface{}
 	x = append(x, "DBG:")
-	x = append(x, FileLine(2)+":")
+	x = append(x, FileLineFunc(2)+":")
 	x = append(x, v)
 	logLock.Lock()
 	defer logLock.Unlock()
@@ -26,7 +26,7 @@ func GDebug(v ...any) {
 	gid := fmt.Sprintf("[%04d]", getGID())
 	x = append(x, "DBG:")
 	x = append(x, gid)
-	x = append(x, FileLine(2)+":")
+	x = append(x, FileLineFunc(2)+":")
 	x = append(x, v)
 	logLock.Lock()
 	defer logLock.Unlock()
@@ -38,7 +38,7 @@ func GDebug(v ...any) {
 func Debugf(format string, v ...any) {
 	var x []any
 	format = "DBG:%s:" + format
-	x = append(x, FileLine(2))
+	x = append(x, FileLineFunc(2))
 	x = append(x, v...)
 	logLock.Lock()
 	defer logLock.Unlock()
@@ -50,7 +50,7 @@ func GDebugf(format string, v ...any) {
 	gid := fmt.Sprintf("[%04d]", getGID())
 	format = "DBG:%s%s:" + format
 	x = append(x, gid)
-	x = append(x, FileLine(2))
+	x = append(x, FileLineFunc(2))
 	x = append(x, v...)
 	logLock.Lock()
 	defer logLock.Unlock()
@@ -62,7 +62,7 @@ func GDebugf(format string, v ...any) {
 func Debugln(v ...any) {
 	var x []interface{}
 	x = append(x, "DBG:")
-	x = append(x, FileLine(2)+":")
+	x = append(x, FileLineFunc(2)+":")
 	x = append(x, v)
 	logLock.Lock()
 	defer logLock.Unlock()
@@ -74,7 +74,7 @@ func GDebugln(v ...any) {
 	gid := fmt.Sprintf("[%04d]", getGID())
 	x = append(x, "DBG:")
 	x = append(x, gid)
-	x = append(x, FileLine(2)+":")
+	x = append(x, FileLineFunc(2)+":")
 	x = append(x, v)
 	logLock.Lock()
 	defer logLock.Unlock()

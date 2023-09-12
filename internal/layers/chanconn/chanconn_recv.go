@@ -1,7 +1,6 @@
 package chanconn
 
 import (
-	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
@@ -16,7 +15,7 @@ func (cs *ChanconnStruct) RecvChan() <-chan *packet.PacketStruct {
 		return nil
 	}
 
-	if cs.link.GetState() != link.LinkStateUP {
+	if cs.link.IsDown() {
 		return nil
 	}
 

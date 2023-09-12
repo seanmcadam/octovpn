@@ -48,7 +48,7 @@ func new(ctx *ctx.Ctx, config *settings.ConnectionStruct) (udpserver *UdpServerS
 	if err != nil {
 		return nil, err
 	}
-	u.link.Down()
+	u.link.NoLink()
 
 	go u.goRun()
 	return u, err
@@ -94,8 +94,8 @@ func (u *UdpServerStruct) goRun() {
 		}
 
 		log.Debug("UDP Srv Conn UP")
-		u.link.AddLink(u.udpconn.Link().LinkStateCh)
-		u.link.Up()
+		u.link.AddLinkStateCh(u.udpconn.Link())
+		u.link.Connected()
 
 		for {
 			select {
@@ -114,4 +114,3 @@ func (u *UdpServerStruct) goRun() {
 func (t *UdpServerStruct) Link() *link.LinkStateStruct {
 	return t.link
 }
-

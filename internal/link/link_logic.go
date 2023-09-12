@@ -19,15 +19,15 @@ import "github.com/seanmcadam/octovpn/octolib/log"
 
 // State has already assumed to have changed
 func (ls *LinkStateStruct) processMessage(ns LinkNoticeStateType) {
-	if ls == nil{
-		return 
+	if ls == nil {
+		return
 	}
 
 	statechange := (ns.State() != LinkStateNONE)
 	noticechange := (ns.Notice() != LinkNoticeNONE)
 
 	if noticechange {
-		log.Debugf("Link[%d] Notice:%s", ls.instance, ns)
+		log.Debugf("[%s] Notice:%s", ls.linkname, ns)
 		ls.processNotice(noticeState(ns.Notice(), LinkStateNONE))
 	}
 	if statechange {
@@ -37,8 +37,8 @@ func (ls *LinkStateStruct) processMessage(ns LinkNoticeStateType) {
 }
 
 func (ls *LinkStateStruct) processNotice(ns LinkNoticeStateType) {
-	if ls == nil{
-		return 
+	if ls == nil {
+		return
 	}
 
 	ls.linkNotice.send(ns)
@@ -58,8 +58,8 @@ func (ls *LinkStateStruct) processNotice(ns LinkNoticeStateType) {
 }
 
 func (ls *LinkStateStruct) processStateChange(ns LinkNoticeStateType) {
-	if ls == nil{
-		return 
+	if ls == nil {
+		return
 	}
 
 	currentState := ls.state
@@ -138,14 +138,28 @@ func (ls *LinkStateStruct) processStateChange(ns LinkNoticeStateType) {
 		switch ns.State() {
 		case LinkStateCONNECTED:
 			ls.linkConnected.send(ns)
+			ls.linkUp.send(ns)
+			ls.linkUpDown.send(ns)
 		case LinkStateAUTH:
 			ls.linkAuth.send(ns)
+			ls.linkUp.send(ns)
+			ls.linkUpDown.send(ns)
 		case LinkStateCHAL:
 			ls.linkChal.send(ns)
+			ls.linkUp.send(ns)
+			ls.linkUpDown.send(ns)
 		case LinkStateLINK:
 			ls.linkLink.send(ns)
+			ls.linkUp.send(ns)
+			ls.linkUpDown.send(ns)
+		case LinkStateLISTEN:
+			ls.linkListen.send(ns)
+			ls.linkDown.send(ns)
+			ls.linkUpDown.send(ns)
 		case LinkStateNOLINK:
 			ls.linkNoLink.send(ns)
+			ls.linkDown.send(ns)
+			ls.linkUpDown.send(ns)
 		}
 
 		if (currentState&LinkStateUpMASK) > 0 && (newState&LinkStateDownMASK) > 0 {
@@ -164,6 +178,8 @@ func (ls *LinkStateStruct) LinkStateCh() (newch LinkNoticeStateCh) {
 		return nil
 	}
 
+	log.Debug("")
+
 	return ls.linkState.LinkCh()
 }
 
@@ -171,6 +187,8 @@ func (ls *LinkStateStruct) LinkNoticeCh() (newch LinkNoticeStateCh) {
 	if ls == nil {
 		return nil
 	}
+
+	log.Debug("")
 
 	return ls.linkNotice.LinkCh()
 }
@@ -180,6 +198,8 @@ func (ls *LinkStateStruct) LinkNoticeStateCh() (newch LinkNoticeStateCh) {
 		return nil
 	}
 
+	log.Debug("")
+
 	return ls.linkNoticeState.LinkCh()
 }
 
@@ -187,6 +207,8 @@ func (ls *LinkStateStruct) LinkChalCh() (newch LinkNoticeStateCh) {
 	if ls == nil {
 		return nil
 	}
+
+	log.Debug("")
 
 	return ls.linkChal.LinkCh()
 }
@@ -196,6 +218,8 @@ func (ls *LinkStateStruct) LinkAuthCh() (newch LinkNoticeStateCh) {
 		return nil
 	}
 
+	log.Debug("")
+
 	return ls.linkAuth.LinkCh()
 }
 
@@ -203,6 +227,8 @@ func (ls *LinkStateStruct) LinkLinkCh() (newch LinkNoticeStateCh) {
 	if ls == nil {
 		return nil
 	}
+
+	log.Debug("")
 
 	return ls.linkLink.LinkCh()
 }
@@ -212,6 +238,8 @@ func (ls *LinkStateStruct) LinkConnectCh() (newch LinkNoticeStateCh) {
 		return nil
 	}
 
+	log.Debug("")
+
 	return ls.linkConnected.LinkCh()
 }
 
@@ -220,13 +248,37 @@ func (ls *LinkStateStruct) LinkUpDownCh() (newch LinkNoticeStateCh) {
 		return nil
 	}
 
-	return ls.linkUp.LinkCh()
+	log.Debug("")
+
+	return ls.linkUpDown.LinkCh()
+}
+
+func (ls *LinkStateStruct) LinkListenCh() (newch LinkNoticeStateCh) {
+	if ls == nil {
+		return nil
+	}
+
+	log.Debug("")
+
+	return ls.linkListen.LinkCh()
+}
+
+func (ls *LinkStateStruct) LinkNoLinkCh() (newch LinkNoticeStateCh) {
+	if ls == nil {
+		return nil
+	}
+
+	log.Debug("")
+
+	return ls.linkNoLink.LinkCh()
 }
 
 func (ls *LinkStateStruct) LinkUpCh() (newch LinkNoticeStateCh) {
 	if ls == nil {
 		return nil
 	}
+
+	log.Debug("")
 
 	return ls.linkUp.LinkCh()
 }
@@ -236,6 +288,8 @@ func (ls *LinkStateStruct) LinkDownCh() (newch LinkNoticeStateCh) {
 		return nil
 	}
 
+	log.Debug("")
+
 	return ls.linkDown.LinkCh()
 }
 
@@ -243,6 +297,8 @@ func (ls *LinkStateStruct) LinkCloseCh() (newch LinkNoticeStateCh) {
 	if ls == nil {
 		return nil
 	}
+
+	log.Debug("")
 
 	return ls.linkClose.LinkCh()
 }
@@ -252,6 +308,8 @@ func (ls *LinkStateStruct) LinkLossCh() (newch LinkNoticeStateCh) {
 		return nil
 	}
 
+	log.Debug("")
+
 	return ls.linkLoss.LinkCh()
 }
 
@@ -260,6 +318,8 @@ func (ls *LinkStateStruct) LinkLatencyCh() (newch LinkNoticeStateCh) {
 		return nil
 	}
 
+	log.Debug("")
+
 	return ls.linkLatency.LinkCh()
 }
 
@@ -267,6 +327,8 @@ func (ls *LinkStateStruct) LinkSaturationCh() (newch LinkNoticeStateCh) {
 	if ls == nil {
 		return nil
 	}
+
+	log.Debug("")
 
 	return ls.linkSaturation.LinkCh()
 }

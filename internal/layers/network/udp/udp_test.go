@@ -33,7 +33,7 @@ func TestNewUDP_test_nil_returns(t *testing.T) {
 	us.emptysend()
 	us.endpoint()
 	err := us.Send(nil)
-	if err == nil{
+	if err == nil {
 		t.Error("Send() returned nil")
 	}
 	us.Cancel()
@@ -41,9 +41,11 @@ func TestNewUDP_test_nil_returns(t *testing.T) {
 	_ = us.closed()
 	us.RecvChan()
 	us.goRecv()
+	us.goRecvTimeout()
 	us.emptyrecv()
 	us.Link()
 	us.run()
+	us.sendclose()
 
 	srv, cli, err := connection(cx)
 	if err != nil {
@@ -84,11 +86,10 @@ func TestNewUdp_send_over_cli(t *testing.T) {
 			t.Error("Recieved nil")
 			return
 		}
-	case <-time.After(2 * time.Second):
+	case <-time.After(UDPRecvTimeout):
 		t.Error("Recieve timeout")
 		return
 	}
-
 }
 
 func TestNewUdp_send_over_cli_srv(t *testing.T) {
@@ -135,8 +136,211 @@ func TestNewUdp_send_over_cli_srv(t *testing.T) {
 
 }
 
-//-----------------------------------------------------------------------------
+// Validate the link system
+func TestNewUDP_link_validation(t *testing.T) {
+	cx := ctx.NewContext()
+	defer cx.Cancel()
 
+	srv, cli, err := connection(cx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	srvUpCh := srv.link.LinkUpCh()
+	cliUpCh := srv.link.LinkUpCh()
+	srvDnCh := srv.link.LinkDownCh()
+	cliDnCh := srv.link.LinkDownCh()
+	srvCloseCh := srv.link.LinkCloseCh()
+	cliCloseCh := srv.link.LinkCloseCh()
+
+	select {
+	case <-cliUpCh:
+	case <-time.After(time.Millisecond):
+		if cli.link.IsDown() {
+			t.Error("Cli Up Timeout")
+		}
+	}
+
+	p, err := packet.Testpacket()
+	if err != nil {
+		t.Error(err)
+	}
+
+	cli.Send(p)
+	select {
+	case r := <-srv.RecvChan():
+		if r == nil {
+			t.Error("Recieved nil")
+			return
+		}
+		err = packet.Validatepackets(p, r)
+		if r == nil {
+			t.Error("Recieved nil")
+			return
+		}
+	case <-time.After(10*time.Second):
+		t.Error("Srv Recieve timeout")
+		return
+	}
+
+	select {
+	case <-srvUpCh:
+	case <-time.After(time.Millisecond):
+		if srv.link.IsDown() {
+			t.Error("Srv Up Timeout")
+		}
+	}
+
+	srv.Send(p)
+	select {
+	case r := <-cli.RecvChan():
+		if r == nil {
+			t.Error("Recieved nil")
+			return
+		}
+		err = packet.Validatepackets(p, r)
+	case <-time.After(time.Second):
+		t.Error("Cli Recieve timeout")
+	}
+
+	srv.Cancel()
+
+	select {
+	case <-srvDnCh:
+	case <-time.After(time.Millisecond):
+		t.Error("Srv Dn Timeout")
+	}
+
+	select {
+	case <-cliDnCh:
+	case <-time.After(time.Millisecond):
+		t.Error("Cli Dn Timeout")
+	}
+
+	select {
+	case <-srvCloseCh:
+	case <-time.After(time.Millisecond):
+		t.Error("Srv Close Timeout")
+	}
+
+	select {
+	case <-cliCloseCh:
+	case <-time.After(time.Millisecond):
+		t.Error("Cli Close Timeout")
+	}
+
+}
+
+func TestNewUDP_cli_send_bad_sig(t *testing.T) {
+	cx := ctx.NewContext()
+	defer cx.Cancel()
+
+	srv, cli, err := connection(cx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	srvCloseCh := srv.link.LinkCloseCh()
+	cliCloseCh := cli.link.LinkCloseCh()
+
+	raw := []byte{0, 0, 0, 0}
+	cli.sendtestpacket(raw)
+
+	select {
+	case <-srvCloseCh:
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Srv Close Timeout")
+	}
+
+	select {
+	case <-cliCloseCh:
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Cli Close Timeout")
+	}
+}
+
+func TestNewUDP_srv_send_bad_sig(t *testing.T) {
+	cx := ctx.NewContext()
+	defer cx.Cancel()
+
+	srv, cli, err := connection(cx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	srvCloseCh := srv.link.LinkCloseCh()
+	cliCloseCh := cli.link.LinkCloseCh()
+
+	raw := []byte{0, 0, 0, 0}
+	srv.sendtestpacket(raw)
+
+	select {
+	case <-cliCloseCh:
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Cli Close Timeout")
+	}
+
+	select {
+	case <-srvCloseCh:
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Srv Close Timeout")
+	}
+}
+
+func TestNewUDP_srv_send_short_packet(t *testing.T) {
+	cx := ctx.NewContext()
+	defer cx.Cancel()
+
+	srv, cli, err := connection(cx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	srvCloseCh := srv.link.LinkCloseCh()
+	cliCloseCh := cli.link.LinkCloseCh()
+
+	p, err := packet.Testpacket()
+	if err != nil {
+		t.Error(err)
+	}
+
+	raw := p.ToByte()
+
+	raw1 := raw[:len(raw)-3]
+	raw2 := raw[len(raw)-3:]
+
+	srv.sendtestpacket(raw1)
+	<-time.After(time.Millisecond)
+	srv.sendtestpacket(raw2)
+
+	select {
+	case r := <-cli.RecvChan():
+		if r == nil {
+			t.Error("Recieved nil")
+			return
+		}
+		err = packet.Validatepackets(p, r)
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Cli Recieve timeout")
+	}
+
+	srv.Cancel()
+
+	select {
+	case <-srvCloseCh:
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Srv Close Timeout")
+	}
+
+	select {
+	case <-cliCloseCh:
+	case <-time.After(10 * time.Second):
+		t.Error("Cli Close Timeout")
+	}
+
+}
+
+//-----------------------------------------------------------------------------
 
 // -
 //

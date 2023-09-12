@@ -78,7 +78,7 @@ func NewAuthStruct(ctx *ctx.Ctx, secret string) (as *AuthStruct, err error) {
 		recvch:      make(chan *packet.AuthPacket),
 	}
 
-	as.link.Down()
+	as.link.NoLink()
 
 	go as.goAuth()
 
@@ -153,13 +153,13 @@ MAINLOOP:
 					as.setLocalState(AuthStateAuthenticated)
 					as.sendPacket(packet.AuthAccept, "")
 					if as.remotestate == AuthStateAuthenticated {
-						as.link.Up()
+						as.link.Connected()
 						as.resetCounters()
 					} else {
 						as.link.Auth()
 					}
 				} else {
-					as.link.Down()
+					as.link.NoLink()
 					as.setLocalState(AuthStateUnauthenticated)
 					as.sendPacket(packet.AuthReject, "")
 					as.resetLocalTimer(AuthRetryDelay)
@@ -171,7 +171,7 @@ MAINLOOP:
 				//
 				as.setRemoteState(AuthStateAuthenticated)
 				if as.localstate == AuthStateAuthenticated {
-					as.link.Up()
+					as.link.Connected()
 					as.resetCounters()
 				}
 
@@ -179,7 +179,7 @@ MAINLOOP:
 				//
 				// Recieve Remote Reject - Reset to initial conditions
 				//
-				as.link.Down()
+				as.link.NoLink()
 				as.setRemoteState(AuthStateUnauthenticated)
 				as.setLocalState(AuthStateStart)
 				as.resetRemoteTimer(AuthTimeout)
@@ -189,7 +189,7 @@ MAINLOOP:
 				log.Errorf("Received AuthError:%s", ap.Text())
 				fallthrough
 			default:
-				as.link.Down()
+				as.link.NoLink()
 				return
 			}
 
@@ -236,7 +236,7 @@ MAINLOOP:
 				return
 
 			default:
-				as.link.Down()
+				as.link.NoLink()
 				log.Errorf("Remote Unhandled Auth State:%02X, bailing out", as.remotestate)
 				return
 			}
@@ -270,12 +270,12 @@ MAINLOOP:
 
 			case AuthStateUnauthenticated:
 				log.Warn("Local Auth Unauthenticated, restarting process")
-				as.link.Down()
+				as.link.NoLink()
 				as.setLocalState(AuthStateStart)
 				as.resetLocalTimer(AuthRetryDelay)
 
 			default:
-				as.link.Down()
+				as.link.NoLink()
 				log.Errorf("Local Unhandled Auth State:%02X, bailing out", as.localstate)
 				return
 			}

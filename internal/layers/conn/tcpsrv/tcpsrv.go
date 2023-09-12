@@ -55,7 +55,7 @@ func new(ctx *ctx.Ctx, config *settings.ConnectionStruct) (tcpserver *TcpServerS
 	}
 
 	// This is the server, so the connection is down to start with.
-	t.link.Down()
+	t.link.NoLink()
 
 	go t.goListen()
 	go t.goRun()
@@ -98,8 +98,8 @@ func (t *TcpServerStruct) goRun() {
 
 			t.tcpconn = conn
 			t.link.Link()
-			t.link.Up()
-			t.link.AddLink(t.tcpconn.Link().LinkStateCh)
+			t.link.Connected()
+			t.link.AddLinkStateCh(t.tcpconn.Link())
 
 			log.Debugf("TCP Srv state:%s", conn.Link().GetState())
 

@@ -40,7 +40,7 @@ func NewChannel32(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStru
 		recvch:  make(chan *packet.PacketStruct, 16),
 	}
 
-	cs.link.AddLink(cs.channel.Link().LinkStateCh)
+	cs.link.AddLinkStateCh(cs.channel.Link())
 	go cs.goRecv()
 	return cs, err
 }
@@ -58,7 +58,7 @@ func NewChannel64(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStru
 		recvch:  make(chan *packet.PacketStruct, 16),
 	}
 
-	cs.link.AddLink(cs.channel.Link().LinkStateCh)
+	cs.link.AddLinkStateCh(cs.channel.Link())
 	go cs.goRecv()
 	return cs, err
 }

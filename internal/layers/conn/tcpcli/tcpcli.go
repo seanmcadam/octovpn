@@ -47,7 +47,7 @@ func new(ctx *ctx.Ctx, config *settings.ConnectionStruct) (tcpclient *TcpClientS
 		return nil, err
 	}
 
-	t.link.Down()
+	t.link.NoLink()
 
 	go t.goRun()
 	return t, err
@@ -79,10 +79,10 @@ TCPFOR:
 		// Dial it and keep trying forever
 		conn, err = net.DialTCP(string(t.config.Proto), nil, t.tcpaddr)
 
-		if err != nil || conn == nil{
+		if err != nil || conn == nil {
 			log.Warnf("connection failed %s: %s, wait", t.address, err)
 			t.tcpconn = nil
-			t.link.Down()
+			t.link.NoLink()
 			time.Sleep(1 * time.Second)
 			continue TCPFOR
 		}
@@ -95,8 +95,8 @@ TCPFOR:
 		}
 
 		t.link.Link()
-		t.link.Up()
-		t.link.AddLink(t.tcpconn.Link().LinkStateCh)
+		t.link.Connected()
+		t.link.AddLinkStateCh(t.tcpconn.Link())
 
 	TCPCLOSE:
 		for {
@@ -117,4 +117,3 @@ TCPFOR:
 func (t *TcpClientStruct) Link() *link.LinkStateStruct {
 	return t.link
 }
-

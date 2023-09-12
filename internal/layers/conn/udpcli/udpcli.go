@@ -46,7 +46,7 @@ func new(ctx *ctx.Ctx, config *settings.ConnectionStruct) (udpclient *UdpClientS
 	if err != nil {
 		return nil, err
 	}
-	u.link.Down()
+	u.link.NoLink()
 
 	go u.goRun()
 	return u, err
@@ -93,8 +93,8 @@ func (u *UdpClientStruct) goRun() {
 		}
 
 		log.Debug("UDP Cli Conn UP")
-		u.link.AddLink(u.udpconn.Link().LinkStateCh)
-		u.link.Up()
+		u.link.AddLinkStateCh(u.udpconn.Link())
+		u.link.Connected()
 		for {
 			select {
 			case <-u.udpconn.Link().LinkCloseCh():

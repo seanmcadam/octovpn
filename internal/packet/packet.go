@@ -39,7 +39,7 @@ func NewPacket(sig PacketSigType, v ...interface{}) (ps *PacketStruct, err error
 	// log.Debugf("Sig:%s", sig.String())
 
 	if !sig.V1() {
-		return nil, fmt.Errorf("Bad Packet Version1: 0x%02X", uint16(sig&MASK_VERSION))
+		return nil, log.Errf("Bad Packet Version1: 0x%02X", uint16(sig&MASK_VERSION))
 	}
 
 	if sig.Width0() {
@@ -67,14 +67,18 @@ func NewPacket(sig PacketSigType, v ...interface{}) (ps *PacketStruct, err error
 		raw:     nil,
 	}
 
-	// If it is a router there is no width needed
-	if sig.RouterLayer() != sig.Width0() {
-		err = fmt.Errorf("Router:%v Width0:%v", sig.Router(), sig.Width0())
+	if sig.Close() {
+		return ps, nil
+	}
+
+	// If it is a router or close there is no width needed
+	if sig.Width0() != sig.RouterLayer() {
+		err = log.Err("Width0 not with Router or Close")
 		return nil, err
 	}
 
 	if sig.RouterLayer() && !sig.Data() {
-		err = fmt.Errorf("Router:%v Data:%v", sig.Router(), sig.Data())
+		err = log.Errf("Router:%v Data:%v", sig.Router(), sig.Data())
 		return nil, err
 	}
 
@@ -82,87 +86,85 @@ func NewPacket(sig PacketSigType, v ...interface{}) (ps *PacketStruct, err error
 		ps.pSize += PacketSize16Size
 	} else if sig.Size8() {
 		ps.pSize += PacketSize8Size
-	} else {
-		log.Error("NewPacket() no 8/16 size")
 	}
 
 	for _, i := range v {
 		switch u := i.(type) {
 		case []byte:
 			if !ps.pSig.Raw() {
-				log.Errorf("Got RAW type for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Got RAW type for %s", ps.pSig))
 			}
 			if !ps.pSig.Data() {
-				log.Errorf("Missing FIELD_DATA for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Missing FIELD_DATA for %s", ps.pSig))
 			}
 			ps.pSize += PacketSizeType(len(u))
 			ps.raw = u
 		case *PacketStruct:
 			if !ps.pSig.Packet() {
-				log.Errorf("Got Parent type for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Got Parent type for %s", ps.pSig))
 			}
 			if !ps.pSig.Data() {
-				log.Errorf("Missing FIELD_DATA for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Missing FIELD_DATA for %s", ps.pSig))
 			}
 			ps.pSize += u.Size()
 			ps.packet = u
 		case *AuthPacket:
 			if !ps.pSig.Auth() {
-				log.Errorf("Got Auth type for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Got Auth type for %s", ps.pSig))
 			}
 			if !ps.pSig.Data() {
-				log.Errorf("Missing FIELD_DATA for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Missing FIELD_DATA for %s", ps.pSig))
 			}
 			ps.pSize += u.Size()
 			ps.auth = u
 		case *IDPacket:
 			if !ps.pSig.ID() {
-				log.Errorf("Got ID type for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Got ID type for %s", ps.pSig))
 			}
 			if !ps.pSig.Data() {
-				log.Errorf("Missing FIELD_DATA for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Missing FIELD_DATA for %s", ps.pSig))
 			}
 			ps.pSize += u.Size()
 			ps.id = u
 		case *RouterPacket:
 			if !ps.pSig.Router() {
-				log.Errorf("Got Router type for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Got Router type for %s", ps.pSig))
 			}
 			if !ps.pSig.Data() {
-				log.Errorf("Missing FIELD_DATA for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Missing FIELD_DATA for %s", ps.pSig))
 			}
 			ps.pSize += u.Size()
 			ps.router = u
 		case *IPv6Packet:
 			if !ps.pSig.IPV6() {
-				log.Errorf("Got IPv6 type for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Got IPv6 type for %s", ps.pSig))
 			}
 			if !ps.pSig.Data() {
-				log.Errorf("Missing FIELD_DATA for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Missing FIELD_DATA for %s", ps.pSig))
 			}
 			ps.pSize += u.Size()
 			ps.ipv6 = u
 		case *IPv4Packet:
 			if !ps.pSig.IPV4() {
-				log.Errorf("Got IPv4 type for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Got IPv4 type for %s", ps.pSig))
 			}
 			if !ps.pSig.Data() {
-				log.Errorf("Missing FIELD_DATA for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Missing FIELD_DATA for %s", ps.pSig))
 			}
 			ps.pSize += u.Size()
 			ps.ipv4 = u
 		case *EthPacket:
 			if !ps.pSig.Eth() {
-				log.Errorf("Got Eth type for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Got Eth type for %s", ps.pSig))
 			}
 			if !ps.pSig.Data() {
-				log.Errorf("Missing FIELD_DATA for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Missing FIELD_DATA for %s", ps.pSig))
 			}
 			ps.pSize += u.Size()
 			ps.eth = u
 		case counter.Counter:
 			if !ps.pSig.Counter() {
-				log.Errorf("Got Counter type for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Got Counter type for %s", ps.pSig))
 			}
 			ps.counter = u
 			if ps.pSig.Width32() {
@@ -174,7 +176,7 @@ func NewPacket(sig PacketSigType, v ...interface{}) (ps *PacketStruct, err error
 			}
 		case pinger.Ping:
 			if !ps.pSig.Ping() {
-				log.Errorf("Got Ping type for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Got Ping type for %s", ps.pSig))
 			}
 			ps.ping = u
 			if ps.pSig.Width32() {
@@ -186,7 +188,7 @@ func NewPacket(sig PacketSigType, v ...interface{}) (ps *PacketStruct, err error
 			}
 		case pinger.Pong:
 			if !ps.pSig.Pong() {
-				log.Errorf("Got Pong type for %s", ps.pSig)
+				return nil, errors.ErrPacketBadParameter(log.Errf("Got Pong type for %s", ps.pSig))
 			}
 			ps.pong = u
 			if ps.pSig.Width32() {
@@ -203,51 +205,51 @@ func NewPacket(sig PacketSigType, v ...interface{}) (ps *PacketStruct, err error
 
 	if sig.Counter() {
 		if ps.counter == nil {
-			log.FatalStack("no counter")
+			return nil, errors.ErrPacketNoCounterParameter(log.Errf("No Counter"))
 		}
 	} else if sig.Ack() {
 		if ps.counter == nil {
-			log.FatalStack("no ack - counter")
+			return nil, errors.ErrPacketNoCounterParameter(log.Errf("No Counter"))
 		}
 	} else if sig.Nak() {
 		if ps.counter == nil {
-			log.FatalStack("no nak - counter")
+			return nil, errors.ErrPacketNoCounterParameter(log.Errf("No Counter"))
 		}
 	}
 
 	if sig.Ping() {
 		if ps.counter == nil {
-			log.FatalStack("no ping")
+			return nil, errors.ErrPacketNoPingParameter(log.Errf("No Ping"))
 		}
 	} else if sig.Pong() {
 		if ps.counter == nil {
-			log.FatalStack("no pong")
+			return nil, errors.ErrPacketNoPongParameter(log.Errf("No Pong"))
 		}
 	}
 
 	if sig.Packet() {
 		if ps.packet == nil {
-			log.FatalStack("no packet")
+			return nil, errors.ErrPacketNoPacketParameter(log.Errf(""))
 		}
 	} else if sig.IPV4() {
 		if ps.ipv4 == nil {
-			log.FatalStack("no ipv4")
+			return nil, errors.ErrPacketNoIPv4Parameter(log.Errf(""))
 		}
 	} else if sig.IPV6() {
 		if ps.ipv6 == nil {
-			log.FatalStack("no ipv6")
+			return nil, errors.ErrPacketNoIPv6Parameter(log.Errf(""))
 		}
 	} else if sig.Eth() {
 		if ps.eth == nil {
-			log.FatalStack("no eth")
+			return nil, errors.ErrPacketNoEthParameter(log.Errf(""))
 		}
 	} else if sig.Router() {
 		if ps.router == nil {
-			log.FatalStack("no router")
+			return nil, errors.ErrPacketNoRouterParameter(log.Errf(""))
 		}
 	} else if sig.Raw() {
 		if ps.raw == nil {
-			log.FatalStack("no raw")
+			return nil, errors.ErrPacketNoRawParameter(log.Errf(""))
 		}
 	}
 
@@ -260,7 +262,7 @@ func NewPacket(sig PacketSigType, v ...interface{}) (ps *PacketStruct, err error
 func ReadPacketBuffer(buf []byte) (sig PacketSigType, length PacketSizeType, err error) {
 
 	// Not enough data to check if there is a full packet
-	if len(buf) < 6 {
+	if len(buf) < 4 {
 		log.ErrorStack("buf to short")
 		return SIG_ERROR, 0, errors.ErrPacketBadParameter(log.Errf("Buffer is too short:%d", len(buf)))
 	}
@@ -273,9 +275,10 @@ func ReadPacketBuffer(buf []byte) (sig PacketSigType, length PacketSizeType, err
 	//
 	// pSize
 	//
-	if sig.Size8() {
+	if sig.Close() {
+		length = 4
+	} else if sig.Size8() {
 		length = PacketSizeType(BtoU8(buf))
-
 	} else if sig.Size16() {
 		length = PacketSizeType(BtoU16(buf))
 	} else {
@@ -292,11 +295,10 @@ func MakePacket(raw []byte) (p *PacketStruct, err error) {
 		return nil, errors.ErrNetNilPointerMethod(log.Errf(""))
 	}
 
-
 	var rawsize uint16 = uint16(len(raw))
 	var calcsize PacketSizeType = 0
 
-	if rawsize < 6 {
+	if rawsize < 4 {
 		log.ErrorStack("size is too small, thats what she said...")
 		return nil, errors.ErrPacketBadParameter(log.Errf("buffer is too small"))
 
@@ -308,6 +310,11 @@ func MakePacket(raw []byte) (p *PacketStruct, err error) {
 	if !p.pSig.V1() {
 		log.FatalfStack("Bad Sig Version:%s", p.pSig)
 	}
+
+	if p.pSig.Close() {
+		return p, nil
+	}
+
 	raw = raw[4:]
 	calcsize += 4
 
@@ -330,7 +337,7 @@ func MakePacket(raw []byte) (p *PacketStruct, err error) {
 	// If the buffer does not contain enough data, return now, and leave the start of the packet in tact
 	if rawsize != uint16(p.pSize) {
 		log.Debugf("TCP Recv Buffer has %d, needs:%d", rawsize, p.pSize)
-		return nil, fmt.Errorf("Raw data sizes do not match")
+		return nil, log.Errf("Raw data sizes do not match")
 	}
 
 	if p.pSig.Width32() {
@@ -428,7 +435,6 @@ func MakePacket(raw []byte) (p *PacketStruct, err error) {
 // -
 func (p *PacketStruct) ToByte() (raw []byte) {
 	if p == nil {
-		log.ErrorStack("Nil Method Pointer")
 		return raw
 	}
 
@@ -436,6 +442,10 @@ func (p *PacketStruct) ToByte() (raw []byte) {
 	// pSig
 	//
 	raw = append(raw, U32toB(uint32(p.pSig))...)
+
+	if p.pSig.Close() {
+		return raw
+	}
 
 	//
 	// pSize
@@ -613,7 +623,6 @@ func (p *PacketStruct) Raw() []byte {
 
 func (p *PacketStruct) DebugPacket(prefix string) {
 	if p == nil {
-		log.ErrorStack("Nil Method Pointer... on a debug packet.")
 		return
 	}
 

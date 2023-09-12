@@ -39,6 +39,6 @@ func main() {
 
 
 	<-sites[0].Link().LinkCloseCh()
+	<-sites[1].Link().LinkCloseCh()
 	
-	_ = config
 }

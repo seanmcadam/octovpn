@@ -1,3 +1,12 @@
 package errors
 
 type ErrPacketBadParameter error
+type ErrPacketNoCounterParameter error
+type ErrPacketNoPingParameter error
+type ErrPacketNoPongParameter error
+type ErrPacketNoPacketParameter error
+type ErrPacketNoIPv4Parameter error
+type ErrPacketNoIPv6Parameter error
+type ErrPacketNoEthParameter error
+type ErrPacketNoRouterParameter error
+type ErrPacketNoRawParameter error

@@ -8,21 +8,29 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
+//
 // Send()
+//
 func (t *TcpStruct) Send(p *packet.PacketStruct) (err error) {
 	if t == nil || t.sendch == nil {
 		return errors.ErrNetNilPointerMethod(log.Errf(""))
 	}
 
 	log.Debugf("TCP Send:%v", p)
+	select{
+	case t.sendch <- p:
+	default:
+		return errors.ErrNetSendBufferFull(log.Errf(""))
+	}
 
-	go func(p *packet.PacketStruct) {
-		t.sendch <- p
-	}(p)
-	return err
+	return nil
 
 }
 
+//
+// goSend() 
+// handle the send buffer
+//
 func (t *TcpStruct) goSend() {
 	if t == nil {
 		return
@@ -38,13 +46,12 @@ func (t *TcpStruct) goSend() {
 		case <-t.doneChan():
 			return
 		}
-
-		if t.closed() {
-			return
-		}
 	}
 }
 
+//
+// sendpacket()
+//
 func (t *TcpStruct) sendpacket(p *packet.PacketStruct) {
 	if t == nil {
 		return
@@ -66,6 +73,34 @@ func (t *TcpStruct) sendpacket(p *packet.PacketStruct) {
 	}
 }
 
+//
+// sendtestpacket()
+//
+func (t *TcpStruct) sendtestpacket(raw []byte) {
+	if t == nil {
+		return
+	}
+
+	log.Debugf("TCP RAW Send:%v", raw)
+
+	l, err := t.conn.Write(raw)
+	if err != nil {
+		if err != io.EOF {
+			log.Errorf("TCP RAW Write() Error:%s, Closing Connection", err)
+		}
+		t.Cancel()
+	}
+	if l != len(raw) {
+		log.Errorf("TCP RAW Write() Send length:%d, Closing Connection", l, len(raw))
+		t.Cancel()
+	}
+}
+
+
+
+// 
+// Clean up sendch before exit
+//
 func (t *TcpStruct) emptysend() {
 	if t == nil {
 		return

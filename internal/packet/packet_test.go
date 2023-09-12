@@ -55,3 +55,42 @@ func TestNewPacket_nil_methods(t *testing.T) {
 	p.DebugPacket("")
 
 }
+
+func TestNewPacket_close_packets(t *testing.T) {
+	var p *PacketStruct
+	var buf []byte
+	var err error
+
+	if p, err = NewPacket(SIG_CONN_CLOSE); err != nil {
+		t.Errorf("NewPacket Err:%s", err)
+	}
+
+	if buf = p.ToByte(); len(buf) != 4 {
+		t.Errorf("NewPacket ToByte return %d", len(buf))
+	}
+
+	if _, err := MakePacket(buf); err != nil {
+		t.Errorf("MakePacket Err:%s", err)
+	}
+
+}
+
+
+func TestNewPacket_short_packets(t *testing.T) {
+	var p *PacketStruct
+	var buf []byte
+	var err error
+
+	if p, err = NewPacket(SIG_CONN_64_RAW,counter.MakeCounter32(0), []byte("data")); err != nil {
+		t.Fatalf("NewPacket Err:%s", err)
+	}
+
+	if buf = p.ToByte(); len(buf) < 10 {
+		t.Errorf("NewPacket ToByte return %d", len(buf))
+	}
+
+	if _, err := MakePacket(buf[:10]); err == nil {
+		t.Errorf("MakePacket did not Err")
+	}
+
+}

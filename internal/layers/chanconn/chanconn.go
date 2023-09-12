@@ -54,8 +54,8 @@ func NewConn32(ctx *ctx.Ctx, config *settings.ConnectionStruct, confFunc NewConn
 		counter: counter.NewCounter32(ctx),
 	}
 
-	cs.link.AddLink(cs.conn.Link().LinkStateCh)
-	cs.link.AddLink(cs.auth.Link().LinkStateCh)
+	cs.link.AddLinkStateCh(cs.conn.Link())
+	cs.link.AddLinkStateCh(cs.auth.Link())
 
 	go cs.goRecv()
 
@@ -85,8 +85,8 @@ func NewConn64(ctx *ctx.Ctx, config *settings.ConnectionStruct, confFunc NewConn
 		counter: counter.NewCounter64(ctx),
 	}
 
-	cs.link.AddLink(cs.conn.Link().LinkStateCh)
-	cs.link.AddLink(cs.auth.Link().LinkStateCh)
+	cs.link.AddLinkStateCh(cs.conn.Link())
+	cs.link.AddLinkStateCh(cs.auth.Link())
 
 	go cs.goRecv()
 
