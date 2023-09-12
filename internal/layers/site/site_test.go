@@ -9,6 +9,6 @@ import (
 func TestNewSite32_compile(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()
-	NewSite32(cx, nil)
+	NewSite32(cx,nil, nil)
 
 }

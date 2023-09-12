@@ -93,17 +93,10 @@ func (as *AuthStruct) GetSendCh() (ch <-chan *packet.AuthPacket) {
 	return as.sendch
 }
 
-func (as *AuthStruct) GetLinkUpCh() link.LinkNoticeStateCh {
-	return as.link.LinkUpCh()
+func (as *AuthStruct) Link() *link.LinkStateStruct {
+	return as.link
 }
 
-func (as *AuthStruct) GetLinkDownCh() link.LinkNoticeStateCh {
-	return as.link.LinkDownCh()
-}
-
-func (as *AuthStruct) GetLinkCh() link.LinkNoticeStateCh {
-	return as.link.LinkStateCh()
-}
 
 // -
 //

@@ -9,6 +9,7 @@ import (
 	"github.com/seanmcadam/octovpn/internal/layers/conn/tcpsrv"
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
+	"github.com/seanmcadam/octovpn/octolib/netlib"
 )
 
 func TestNewChannel_Tcp(t *testing.T) {
@@ -18,7 +19,7 @@ func TestNewChannel_Tcp(t *testing.T) {
 		Name:  "testing",
 		Proto: "tcp",
 		Host:  "127.0.0.1",
-		Port:  50000,
+		Port:  settings.ConfigPortType(uint16(netlib.GetRandomNetworkPort())),
 		Auth:  "",
 	}
 

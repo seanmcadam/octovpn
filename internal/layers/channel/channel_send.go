@@ -2,16 +2,18 @@ package channel
 
 import (
 	"github.com/seanmcadam/octovpn/internal/packet"
+	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 func (cs *ChannelStruct) Send(sp *packet.PacketStruct) (err error) {
+
+	if cs == nil {
+		return errors.ErrNetNilPointerMethod(log.Errf(""))
+	}
+
 	var sig packet.PacketSigType
 	var p *packet.PacketStruct
-
-	//if !cs.channel.Active() {
-	//	return errors.ErrNetChannelDown
-	//}
 
 	if sp.Sig().RouterLayer() {
 		if cs.Width() == 32 {
@@ -29,5 +31,9 @@ func (cs *ChannelStruct) Send(sp *packet.PacketStruct) (err error) {
 	}
 
 	cs.tracker.Send(p)
+	if err = cs.channel.Send(p); err != nil {
+		log.ErrorfStack("Send() Err:%s", err)
+	}
+
 	return cs.channel.Send(p)
 }

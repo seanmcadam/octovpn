@@ -27,7 +27,7 @@ func (u *UdpStruct) goRecv() {
 	}
 
 	defer u.emptyrecv()
-	defer u.link.Down()
+	defer u.Cancel()
 
 	for {
 		buf := make([]byte, 2048)
@@ -45,7 +45,6 @@ func (u *UdpStruct) goRecv() {
 			if err != io.EOF {
 				log.Errorf("UDP %s Read() Error:%s", u.endpoint(), err)
 			}
-			u.cx.Cancel()
 			return
 		}
 
@@ -62,9 +61,10 @@ func (u *UdpStruct) goRecv() {
 		p.DebugPacket("UDP RECV")
 		if err != nil {
 			log.Errorf("UDP MakePacket() Err:%s", err)
-			continue
+			return
 		}
 
+		p.DebugPacket("UDP Recv")
 		u.recvch <- p
 
 		if u.closed() {

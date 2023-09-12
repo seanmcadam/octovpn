@@ -15,10 +15,4 @@ type ConnInterface interface {
 	RecvChan() <-chan *packet.PacketStruct
 	Reset() error
 	Link() *link.LinkStateStruct
-	GetLinkNoticeStateCh() link.LinkNoticeStateCh
-	GetLinkStateCh() link.LinkNoticeStateCh
-	GetUpCh() link.LinkNoticeStateCh
-	GetDownCh() link.LinkNoticeStateCh
-	GetLinkCh() link.LinkNoticeStateCh
-	GetState() link.LinkStateType
 }

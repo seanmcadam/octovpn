@@ -37,7 +37,7 @@ func TestNewUDP_test_nil_returns(t *testing.T) {
 		t.Error("Send() returned nil")
 	}
 	us.Cancel()
-	_ = us.DoneChan()
+	_ = us.doneChan()
 	_ = us.closed()
 	us.RecvChan()
 	us.goRecv()
@@ -55,7 +55,7 @@ func TestNewUDP_test_nil_returns(t *testing.T) {
 	cli.emptyrecv()
 	srv.emptysend()
 	srv.Link()
-	srv.DoneChan()
+	srv.doneChan()
 	srv.Cancel()
 
 	defer cx.Cancel()

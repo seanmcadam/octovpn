@@ -2,7 +2,6 @@ package tcpsrv
 
 import (
 	"github.com/seanmcadam/octovpn/internal/layers/network/tcp"
-	"github.com/seanmcadam/octovpn/internal/link"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
@@ -11,33 +10,24 @@ func (t *TcpServerStruct) goListen() {
 		return
 	}
 
-	defer t.cx.Done()
+	defer t.Cancel()
 
 	for {
 		conn, err := t.tcplistener.AcceptTCP()
 		if err != nil {
-			log.Debugf("AcceptTCP Error:%s", err)
+			log.FatalfStack("AcceptTCP Error:%s", err)
 			return
 		}
 
-		log.Debug("TCP New connection")
-		newconn := tcp.NewTCP(t.cx.NewWithCancel(), conn)
-		if newconn == nil {
-			log.Debugf("NewTCP is Nil")
-			return
-		}
-		t.tcpconnch <- newconn
+		if conn != nil {
+			log.Debug("TCPSrv New incoming connection")
+			newconn := tcp.NewTCP(t.cx.NewWithCancel(), conn)
+			if newconn == nil {
+				log.FatalStack("NewTCP is Nil")
+			}
+			t.tcpconnch <- newconn
 
-		for {
-			tcplink := newconn.Link().LinkStateCh()
-			select {
-			case state := <-tcplink:
-				log.Debug("TCPSrv listener got State %v", state)
-				if state.State() == link.LinkStateDOWN {
-					return
-				}
-			case <-t.cx.DoneChan():
-				log.Debug("TCPSrv listener close ch")
+			if t.closed() {
 				return
 			}
 		}

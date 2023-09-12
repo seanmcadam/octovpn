@@ -6,16 +6,23 @@ import (
 )
 
 func (cs *ChannelStruct) RecvChan() <-chan *packet.PacketStruct {
+	if cs == nil {
+		return nil
+	}
 	return cs.recvch
 }
 
 func (cs *ChannelStruct) goRecv() {
 
-	//defer
+	if cs == nil {
+		return 
+	}
+
+	defer cs.Cancel()
 
 	for {
 		select {
-		case <-cs.cx.DoneChan():
+		case <-cs.doneChan():
 			return
 		case p := <-cs.channel.RecvChan():
 			cs.recv(p)
@@ -24,6 +31,9 @@ func (cs *ChannelStruct) goRecv() {
 }
 
 func (cs *ChannelStruct) recv(p *packet.PacketStruct) {
+	if cs == nil || p == nil {
+		return 
+	}
 
 	p.DebugPacket("CHAN RECV")
 

@@ -10,11 +10,13 @@ import (
 	"github.com/seanmcadam/octovpn/internal/pinger"
 	"github.com/seanmcadam/octovpn/internal/tracker"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
+	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 type ChannelStruct struct {
 	cx      *ctx.Ctx
+	name    string
 	link    *link.LinkStateStruct
 	width   packet.PacketWidth
 	channel interfaces.ChannelInterface
@@ -28,6 +30,7 @@ func NewChannel32(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStru
 
 	cs = &ChannelStruct{
 		cx:      ctx,
+		name:    ci.Name(),
 		link:    link.NewLinkState(ctx),
 		width:   packet.PacketWidth32,
 		channel: ci,
@@ -37,6 +40,7 @@ func NewChannel32(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStru
 		recvch:  make(chan *packet.PacketStruct, 16),
 	}
 
+	cs.link.AddLink(cs.channel.Link().LinkStateCh)
 	go cs.goRecv()
 	return cs, err
 }
@@ -54,31 +58,36 @@ func NewChannel64(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStru
 		recvch:  make(chan *packet.PacketStruct, 16),
 	}
 
+	cs.link.AddLink(cs.channel.Link().LinkStateCh)
 	go cs.goRecv()
 	return cs, err
 }
 
 func (cs *ChannelStruct) Width() packet.PacketWidth {
+	if cs == nil {
+		return 0
+	}
 	return cs.width
 }
 
 func (cs *ChannelStruct) Link() *link.LinkStateStruct {
+	if cs == nil {
+		return nil
+	}
 	return cs.link
 }
 
 func (cs *ChannelStruct) Reset() error {
+	if cs == nil {
+		return errors.ErrNetNilPointerMethod(log.Errf(""))
+	}
 	return cs.channel.Reset()
 }
 
-func (cs *ChannelStruct) Close() {
-	cs.close()
-}
-
-func (cs *ChannelStruct) close() {
-	cs.cx.Cancel()
-}
-
 func (c *ChannelStruct) MaxLocalMtu() (size packet.PacketSizeType) {
+	if c == nil {
+		return 0
+	}
 	size = packet.PacketSigSize + packet.PacketSize16Size
 	if c.width == packet.PacketWidth32 {
 		size += packet.PacketCounter32Size

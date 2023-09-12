@@ -54,8 +54,8 @@ func TestNewUdp_CliSrv(t *testing.T) {
 
 	srv, cli, err := loopconn.NewUdpConnLoop(cx)
 
-	srvUpCh := srv.GetUpCh()
-	cliUpCh := cli.GetUpCh()
+	srvUpCh := srv.Link().LinkUpCh()
+	cliUpCh := cli.Link().LinkUpCh()
 
 	p, err := packet.Testpacket()
 	if err != nil {
@@ -64,7 +64,7 @@ func TestNewUdp_CliSrv(t *testing.T) {
 
 	cli.Send(p)
 	select {
-	case <-srv.GetUpCh():
+	case <-srv.Link().LinkUpCh():
 	case r := <-srv.RecvChan():
 		if r == nil {
 			t.Error("Recieved nil")

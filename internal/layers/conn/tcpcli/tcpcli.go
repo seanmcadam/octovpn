@@ -65,41 +65,26 @@ func (t *TcpClientStruct) goRun() {
 		return
 	}
 
-	defer func(t *TcpClientStruct) {
-		t.cx.Cancel()
-		if t.tcpconn != nil {
-			t.tcpconn.Cancel()
-			t.tcpconn = nil
-		}
-
-	}(t)
+	defer t.Cancel()
 
 TCPFOR:
 	for {
 		var err error
 		var conn *net.TCPConn
 
+		if t.tcpconn != nil {
+			log.FatalStack("should be nil")
+		}
+
 		// Dial it and keep trying forever
 		conn, err = net.DialTCP(string(t.config.Proto), nil, t.tcpaddr)
 
-		if err != nil {
+		if err != nil || conn == nil{
 			log.Warnf("connection failed %s: %s, wait", t.address, err)
 			t.tcpconn = nil
+			t.link.Down()
 			time.Sleep(1 * time.Second)
-
-			if conn != nil {
-				select {
-				case <-t.cx.DoneChan():
-					log.Debug("tcpcli goRun() closed")
-					return
-				default:
-				}
-			}
 			continue TCPFOR
-		}
-
-		if conn == nil {
-			log.Fatal("conn == nil")
 		}
 
 		log.Info("New TCP Connection")
@@ -111,23 +96,17 @@ TCPFOR:
 
 		t.link.Link()
 		t.link.Up()
-		t.link.AddLink(t.tcpconn.Link().LinkNoticeStateCh)
+		t.link.AddLink(t.tcpconn.Link().LinkStateCh)
 
 	TCPCLOSE:
 		for {
-			tcplink := t.link.LinkStateCh()
 			select {
-			case state := <-tcplink:
-				if state.State() == link.LinkStateDOWN {
-					t.link.Down()
-					break TCPCLOSE
-				}
-			case <-t.tcpconn.DoneChan():
-				log.Debug("TCPCli Channel Closed")
+			case <-t.tcpconn.Link().LinkCloseCh():
+				log.Debug("TCPCli TCP Closed, restart")
 				t.tcpconn = nil
 				break TCPCLOSE
 
-			case <-t.cx.DoneChan():
+			case <-t.doneChan():
 				log.Debug("TCPCli Closing Down")
 				return
 			}
@@ -139,56 +118,3 @@ func (t *TcpClientStruct) Link() *link.LinkStateStruct {
 	return t.link
 }
 
-func (t *TcpClientStruct) GetLinkNoticeStateCh() link.LinkNoticeStateCh {
-	if t == nil {
-		log.ErrorStack("Nil Method Pointer")
-		return nil
-	}
-
-	return t.link.LinkNoticeStateCh()
-}
-
-func (t *TcpClientStruct) GetLinkStateCh() link.LinkNoticeStateCh {
-	if t == nil {
-		log.ErrorStack("Nil Method Pointer")
-		return nil
-	}
-
-	return t.link.LinkStateCh()
-}
-
-func (t *TcpClientStruct) GetUpCh() link.LinkNoticeStateCh {
-	if t == nil {
-		log.ErrorStack("Nil Method Pointer")
-		return nil
-	}
-
-	return t.link.LinkUpCh()
-}
-
-func (t *TcpClientStruct) GetLinkCh() link.LinkNoticeStateCh {
-	if t == nil {
-		log.ErrorStack("Nil Method Pointer")
-		return nil
-	}
-
-	return t.link.LinkLinkCh()
-}
-
-func (t *TcpClientStruct) GetDownCh() link.LinkNoticeStateCh {
-	if t == nil {
-		log.ErrorStack("Nil Method Pointer")
-		return nil
-	}
-
-	return t.link.LinkDownCh()
-}
-
-func (t *TcpClientStruct) GetState() link.LinkStateType {
-	if t == nil {
-		log.ErrorStack("Nil Method Pointer")
-		return link.LinkStateERROR
-	}
-
-	return t.link.GetState()
-}

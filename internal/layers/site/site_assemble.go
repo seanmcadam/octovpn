@@ -40,13 +40,13 @@ func AssembleSite(ctx *ctx.Ctx, config *settings.ConfigSiteStruct) (s *SiteStruc
 
 	if config.Width == 32 || (config.Width == 0 && settings.Width32 == settings.WidthDefault) {
 
-		if s, err = NewSite32(ctx, channels); err != nil {
+		if s, err = NewSite32(ctx, config, channels); err != nil {
 			return nil, log.Errf("NewSite32 err:%s", err)
 		}
 
 	} else if config.Width == 64 || (config.Width == 0 && settings.Width64 == settings.WidthDefault) {
 
-		if s, err = NewSite64(ctx, channels); err != nil {
+		if s, err = NewSite64(ctx, config, channels); err != nil {
 			return nil, log.Errf("NewSite64 err:%s", err)
 		}
 

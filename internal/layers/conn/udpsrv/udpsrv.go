@@ -65,12 +65,7 @@ func (u *UdpServerStruct) goRun() {
 		return
 	}
 
-	defer func(u *UdpServerStruct) {
-		if u.udpconn != nil {
-			u.udpconn.Cancel()
-			u.udpconn = nil
-		}
-	}(u)
+	defer u.Cancel()
 
 	for {
 		var err error
@@ -85,13 +80,6 @@ func (u *UdpServerStruct) goRun() {
 			log.Warnf("UDP Listener failed %s: %s, wait", u.address, err)
 			u.udpconn = nil
 			time.Sleep(1 * time.Second)
-
-			select {
-			case <-u.cx.DoneChan():
-				log.Debug("udpsrv goRun() closed")
-				return
-			default:
-			}
 
 			continue
 		}
@@ -111,20 +99,11 @@ func (u *UdpServerStruct) goRun() {
 
 		for {
 			select {
-			case <-u.link.LinkUpCh():
 			case <-u.link.LinkCloseCh():
 				log.Debug("UDPSrv Link Down")
 				u.udpconn = nil
 				break
-			case <-u.link.LinkDownCh():
-				log.Debug("UDPSrv Link Down")
-				u.udpconn = nil
-				break
-			case <-u.udpconn.DoneChan():
-				log.Debug("UDPSrv Channel Closed")
-				u.udpconn = nil
-				break
-			case <-u.cx.DoneChan():
+			case <-u.doneChan():
 				log.Debug("UDPSrv Closing Down")
 				return
 			}
@@ -136,49 +115,3 @@ func (t *UdpServerStruct) Link() *link.LinkStateStruct {
 	return t.link
 }
 
-func (u *UdpServerStruct) GetLinkNoticeStateCh() link.LinkNoticeStateCh {
-	if u == nil {
-		return nil
-	}
-
-	return u.link.LinkNoticeStateCh()
-}
-
-func (u *UdpServerStruct) GetLinkStateCh() link.LinkNoticeStateCh {
-	if u == nil {
-		return nil
-	}
-
-	return u.link.LinkStateCh()
-}
-func (u *UdpServerStruct) GetUpCh() link.LinkNoticeStateCh {
-	if u == nil {
-		return nil
-	}
-
-	return u.link.LinkUpCh()
-}
-
-func (u *UdpServerStruct) GetLinkCh() link.LinkNoticeStateCh {
-	if u == nil {
-		return nil
-	}
-
-	return u.link.LinkLinkCh()
-}
-
-func (u *UdpServerStruct) GetDownCh() link.LinkNoticeStateCh {
-	if u == nil {
-		return nil
-	}
-
-	return u.link.LinkDownCh()
-}
-
-func (u *UdpServerStruct) GetState() link.LinkStateType {
-	if u == nil {
-		return link.LinkStateERROR
-	}
-
-	return u.link.GetState()
-}

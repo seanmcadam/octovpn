@@ -12,7 +12,6 @@ func (u *UdpServerStruct) Reset() error {
 		return errors.ErrNetNilPointerMethod(log.Errf(""))
 	}
 
-
 	log.Debugf("UDPSrv Reset()")
 
 	if u.udpconn != nil {

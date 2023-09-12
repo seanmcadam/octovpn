@@ -72,23 +72,13 @@ func new(ctx *ctx.Ctx, config *settings.ConnectionStruct) (tcpserver *TcpServerS
 //
 
 func (t *TcpServerStruct) goRun() {
+
 	if t == nil {
 		log.ErrorStack("Nil Method Pointer")
 		return
 	}
-
-	defer func(t *TcpServerStruct) {
-		if t.tcplistener != nil {
-			t.tcplistener.Close()
-			t.tcplistener = nil
-		}
-		if t.tcpconn != nil {
-			t.tcpconn.Cancel()
-			t.emptyconn()
-			t.tcpconn = nil
-		}
-		close(t.tcpconnch)
-	}(t)
+	
+	defer t.Cancel()
 
 	for {
 		var tcpconnclosech chan interface{}
@@ -98,6 +88,7 @@ func (t *TcpServerStruct) goRun() {
 			log.Debugf("New incoming TCP Connection")
 
 			// Terminate last connection
+			log.Debug("Need to do more here with closing old connections")
 
 			if t.tcpconn != nil {
 				log.Debug("Shutdown Previous connection")
@@ -108,7 +99,7 @@ func (t *TcpServerStruct) goRun() {
 			t.tcpconn = conn
 			t.link.Link()
 			t.link.Up()
-			t.link.AddLink(t.tcpconn.Link().LinkNoticeStateCh)
+			t.link.AddLink(t.tcpconn.Link().LinkStateCh)
 
 			log.Debugf("TCP Srv state:%s", conn.Link().GetState())
 
@@ -138,58 +129,4 @@ func (t *TcpServerStruct) emptyconn() {
 
 func (t *TcpServerStruct) Link() *link.LinkStateStruct {
 	return t.link
-}
-
-func (t *TcpServerStruct) GetLinkNoticeStateCh() link.LinkNoticeStateCh {
-	if t == nil {
-		log.ErrorStack("Nil Method Pointer")
-		return nil
-	}
-
-	return t.link.LinkNoticeStateCh()
-}
-
-func (t *TcpServerStruct) GetLinkStateCh() link.LinkNoticeStateCh {
-	if t == nil {
-		log.ErrorStack("Nil Method Pointer")
-		return nil
-	}
-
-	return t.link.LinkStateCh()
-}
-
-func (t *TcpServerStruct) GetUpCh() link.LinkNoticeStateCh {
-	if t == nil {
-		log.ErrorStack("Nil Method Pointer")
-		return nil
-	}
-
-	return t.link.LinkUpCh()
-}
-
-func (t *TcpServerStruct) GetDownCh() link.LinkNoticeStateCh {
-	if t == nil {
-		log.ErrorStack("Nil Method Pointer")
-		return nil
-	}
-
-	return t.link.LinkDownCh()
-}
-
-func (t *TcpServerStruct) GetLinkCh() link.LinkNoticeStateCh {
-	if t == nil {
-		log.ErrorStack("Nil Method Pointer")
-		return nil
-	}
-
-	return t.link.LinkLinkCh()
-}
-
-func (t *TcpServerStruct) GetState() link.LinkStateType {
-	if t == nil {
-		log.ErrorStack("Nil Method Pointer")
-		return link.LinkStateERROR
-	}
-
-	return t.link.GetState()
 }

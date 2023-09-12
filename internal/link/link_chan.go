@@ -26,8 +26,18 @@ func (ls *LinkChan) LinkCh() (newch LinkNoticeStateCh) {
 }
 
 func (ls *LinkChan) send(ns LinkNoticeStateType) {
+	if ls == nil {
+		log.Error("send() nil method pointer")
+		return
+	}
+
+	if ls.listenChan == nil {
+		log.Warnf("send() listenChan[%s] is nil", ls.name)
+		return
+	}
+
 	if len(ls.listenChan) > 0 {
-		log.Debugf("LinkChan[%s] Send Message:%s", ls.name, ns)
+		log.GDebugf("send() listenChan[%s] count:%d, Msg:%s", ls.name, len(ls.listenChan), ns)
 		length := len(ls.listenChan)
 		for i := 0; i < length; i++ {
 			l := <-ls.listenChan

@@ -21,6 +21,7 @@ type NewConnFunc func(*ctx.Ctx, *settings.ConnectionStruct) (interfaces.ConnInte
 
 type ChanconnStruct struct {
 	cx      *ctx.Ctx
+	name    string
 	link    *link.LinkStateStruct
 	auth    *auth.AuthStruct
 	conn    interfaces.ConnInterface
@@ -43,6 +44,7 @@ func NewConn32(ctx *ctx.Ctx, config *settings.ConnectionStruct, confFunc NewConn
 
 	cs := &ChanconnStruct{
 		cx:      ctx,
+		name:    config.Name,
 		link:    link.NewLinkState(ctx, link.LinkModeUpAND),
 		auth:    auth,
 		width:   packet.PacketWidth32,
@@ -52,8 +54,8 @@ func NewConn32(ctx *ctx.Ctx, config *settings.ConnectionStruct, confFunc NewConn
 		counter: counter.NewCounter32(ctx),
 	}
 
-	cs.link.AddLink(cs.conn.GetLinkNoticeStateCh)
-	cs.link.AddLink(cs.auth.GetLinkCh)
+	cs.link.AddLink(cs.conn.Link().LinkStateCh)
+	cs.link.AddLink(cs.auth.Link().LinkStateCh)
 
 	go cs.goRecv()
 
@@ -83,8 +85,8 @@ func NewConn64(ctx *ctx.Ctx, config *settings.ConnectionStruct, confFunc NewConn
 		counter: counter.NewCounter64(ctx),
 	}
 
-	cs.link.AddLink(cs.conn.GetLinkNoticeStateCh)
-	cs.link.AddLink(cs.auth.GetLinkCh)
+	cs.link.AddLink(cs.conn.Link().LinkStateCh)
+	cs.link.AddLink(cs.auth.Link().LinkStateCh)
 
 	go cs.goRecv()
 
@@ -107,5 +109,15 @@ func (c *ChanconnStruct) MaxLocalMtu() (size packet.PacketSizeType) {
 }
 
 func (c *ChanconnStruct) Link() (link *link.LinkStateStruct) {
+	if c == nil {
+		return nil
+	}
 	return c.link
+}
+
+func (c *ChanconnStruct) Name() string {
+	if c == nil {
+		return ""
+	}
+	return c.name
 }

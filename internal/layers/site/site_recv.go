@@ -6,25 +6,39 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
-func (cs *SiteStruct) RecvChan() <-chan *packet.PacketStruct {
-	return cs.recvch
+func (s *SiteStruct) RecvChan() <-chan *packet.PacketStruct {
+	if s == nil {
+		return nil
+	}
+	return s.recvch
 }
 
-func (cs *SiteStruct) goRecv(channel interfaces.ChannelSiteInterface) {
+func (s *SiteStruct) goRecv(channel interfaces.ChannelSiteInterface) {
+	if s == nil {
+		return
+	}
 
-	//defer
+	s.Cancel()
 
 	for {
 		select {
-		case <-cs.cx.DoneChan():
+		case <-s.doneChan():
 			return
 		case p := <-channel.RecvChan():
-			cs.recv(p, channel)
+			s.recv(p, channel)
 		}
 	}
 }
 
-func (cs *SiteStruct) recv(p *packet.PacketStruct, channel interfaces.ChannelSiteInterface) {
+func (s *SiteStruct) recv(p *packet.PacketStruct, channel interfaces.ChannelSiteInterface) {
+	if s == nil {
+		return
+	}
+
+	if p == nil {
+		log.ErrorStack("recv() Nil Packet")
+		return
+	}
 
 	p.DebugPacket("CHAN RECV")
 
@@ -44,20 +58,20 @@ func (cs *SiteStruct) recv(p *packet.PacketStruct, channel interfaces.ChannelSit
 		}
 
 		channel.Send(copyack)
-		cs.tracker.Recv(copy)
-		cs.recvch <- p
+		s.tracker.Recv(copy)
+		s.recvch <- p
 
 	case packet.SIG_CHAN_32_ACK:
 		fallthrough
 	case packet.SIG_CHAN_64_ACK:
-		cs.tracker.Ack(p.Counter())
+		s.tracker.Ack(p.Counter())
 
 	case packet.SIG_CHAN_32_NAK:
 		fallthrough
 	case packet.SIG_CHAN_64_NAK:
-		cs.tracker.Nak(p.Counter())
+		s.tracker.Nak(p.Counter())
 
 	default:
-		log.Fatalf("Unhandled CHAN TYPE:%d", t)
+		log.FatalfStack("Unhandled CHAN TYPE:%d", t)
 	}
 }

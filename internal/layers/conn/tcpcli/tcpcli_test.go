@@ -60,12 +60,6 @@ func TestNewTcpClient_test_nil_returns(t *testing.T) {
 	var u *TcpClientStruct
 
 	u.goRun()
-	u.GetLinkNoticeStateCh()
-	u.GetLinkStateCh()
-	u.GetUpCh()
-	u.GetLinkCh()
-	u.GetDownCh()
-	u.GetState()
 	u.Send(nil)
 	u.Reset()
 	u.RecvChan()
@@ -75,12 +69,6 @@ func TestNewTcpClient_test_nil_returns(t *testing.T) {
 		t.Fatalf("New Error:%s", err)
 	}
 
-	u.GetLinkNoticeStateCh()
-	u.GetLinkStateCh()
-	u.GetUpCh()
-	u.GetLinkCh()
-	u.GetDownCh()
-	u.GetState()
 	u.Send(nil)
 	u.Send(packet)
 	u.Send(bigpacket)

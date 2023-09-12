@@ -1,2 +1,3 @@
 package errors
 
+type ErrConfigParameterError error

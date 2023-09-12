@@ -35,7 +35,7 @@ func (t *TcpStruct) goSend() {
 		case packet := <-t.sendch:
 			t.sendpacket(packet)
 
-		case <-t.cx.DoneChan():
+		case <-t.doneChan():
 			return
 		}
 
@@ -50,7 +50,7 @@ func (t *TcpStruct) sendpacket(p *packet.PacketStruct) {
 		return
 	}
 
-	log.Debugf("TCP sendpacket:%v", p)
+	p.DebugPacket("TCP Send")
 
 	raw := p.ToByte()
 	l, err := t.conn.Write(raw)
@@ -58,13 +58,12 @@ func (t *TcpStruct) sendpacket(p *packet.PacketStruct) {
 		if err != io.EOF {
 			log.Errorf("TCP Write() Error:%s, Closing Connection", err)
 		}
-		t.cx.Done()
+		t.Cancel()
 	}
 	if l != len(raw) {
 		log.Errorf("TCP Write() Send length:%d, Closing Connection", l, len(raw))
-		t.cx.Done()
+		t.Cancel()
 	}
-
 }
 
 func (t *TcpStruct) emptysend() {

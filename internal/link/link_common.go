@@ -21,36 +21,38 @@ const DefaultListeners int = 2
 const LinkModePassALL LinkModeType = 0x00
 const LinkModePassState LinkModeType = 0x00
 const LinkModePassNotice LinkModeType = 0x00
-const LinkModeUpAND LinkModeType = 0x01
-const LinkModeUpOR LinkModeType = 0x02
-const LinkModeDownAND LinkModeType = 0x04
-const LinkModeDownOR LinkModeType = 0x08
+const LinkModeConnectedAND LinkModeType = 0x01 // All Links are connected
+const LinkModeConnectedOR LinkModeType = 0x02  // One link is connected
+const LinkModeUpAND LinkModeType = 0x01        // All Links are up (any up state)
+const LinkModeUpOR LinkModeType = 0x02         // One link is up (any up state)
+const LinkModeDownAND LinkModeType = 0x04      // All Links are down
+const LinkModeDownOR LinkModeType = 0x08       // One link is down
 
 const LinkModeFilterNotices LinkModeType = 0x08
 
 const LinkStateNONE LinkStateType = 0x00
-const LinkStateDOWN LinkStateType = 0x01
-const LinkStateLINK LinkStateType = 0x02
-const LinkStateCHAL LinkStateType = 0x04
-const LinkStateAUTH LinkStateType = 0x08
-const linkStateUNUSED1 LinkStateType = 0x10
-const linkStateUNUSED2 LinkStateType = 0x20
-const linkStateUNUSED3 LinkStateType = 0x40
-const LinkStateUP LinkStateType = 0x80
+const LinkStateNOLINK LinkStateType = 0x01
+const LinkStateLINK LinkStateType = 0x10
+const LinkStateCHAL LinkStateType = 0x20
+const LinkStateAUTH LinkStateType = 0x30
+const LinkStateCONNECTED LinkStateType = 0x80
 const LinkStateERROR LinkStateType = 0xFF
+const LinkStateUpMASK LinkStateType = 0xF0
+const LinkStateDownMASK LinkStateType = 0x0F
 
 const LinkNoticeNONE LinkNoticeType = 0x00
 const LinkNoticeLOSS LinkNoticeType = 0x01
 const LinkNoticeLATENCY LinkNoticeType = 0x02
 const LinkNoticeSATURATED LinkNoticeType = 0x04
-const linkNoticeUNUSED1 LinkNoticeType = 0x08
-const linkNoticeUNUSED2 LinkNoticeType = 0x10
-const linkNoticeUNUSED3 LinkNoticeType = 0x20
-const linkNoticeUNUSED4 LinkNoticeType = 0x40
 const LinkNoticeCLOSED LinkNoticeType = 0x80
 const LinkNoticeERROR LinkNoticeType = 0xFF
 
 var recvnew chan LinkNoticeStateType
+
+type AddLinkStruct struct {
+	State LinkStateType
+	LinkFunc LinkNoticeStateFunc
+}
 
 type LinkChan struct {
 	name       string
@@ -66,9 +68,14 @@ type LinkStateStruct struct {
 	linkNoticeState *LinkChan
 	linkState       *LinkChan
 	linkNotice      *LinkChan
+	linkUpDown      *LinkChan
 	linkUp          *LinkChan
 	linkDown        *LinkChan
+	linkConnected   *LinkChan
+	linkNoLink      *LinkChan
 	linkLink        *LinkChan
+	linkAuth        *LinkChan
+	linkChal        *LinkChan
 	linkLoss        *LinkChan
 	linkLatency     *LinkChan
 	linkSaturation  *LinkChan
@@ -78,7 +85,7 @@ type LinkStateStruct struct {
 	recvchan        map[counter.Counter]LinkNoticeStateCh
 	recvstate       map[counter.Counter]LinkStateType
 	recvnew         chan LinkNoticeStateType
-	addlinkch       chan LinkNoticeStateFunc
+	addlinkch       chan *AddLinkStruct
 	dellinkch       chan counter.Counter
 }
 
@@ -99,16 +106,16 @@ func (state LinkStateType) String() string {
 	switch state {
 	case LinkStateNONE:
 		return "NONE"
-	case LinkStateDOWN:
-		return "DOWN"
+	case LinkStateNOLINK:
+		return "NOLINK"
 	case LinkStateLINK:
 		return "LINK"
 	case LinkStateCHAL:
 		return "CHALLENGE"
 	case LinkStateAUTH:
 		return "AUTHENTICATED"
-	case LinkStateUP:
-		return "UP"
+	case LinkStateCONNECTED:
+		return "CONNECTED"
 	case LinkStateERROR:
 		return "ERROR"
 	default:

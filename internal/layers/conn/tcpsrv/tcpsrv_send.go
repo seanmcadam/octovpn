@@ -19,7 +19,10 @@ func (t *TcpServerStruct) Send(co *packet.PacketStruct) (err error) {
 	}
 
 	if t.tcpconn != nil {
-		return t.tcpconn.Send(co)
+		if err = t.tcpconn.Send(co); err != nil {
+			log.Errorf("Send() Err", err)
+		}
+		return err
 	}
 
 	return errors.ErrNetChannelDown(log.Errf(""))

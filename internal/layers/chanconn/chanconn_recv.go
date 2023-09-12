@@ -24,17 +24,14 @@ func (cs *ChanconnStruct) RecvChan() <-chan *packet.PacketStruct {
 }
 
 func (cs *ChanconnStruct) goRecv() {
+	if cs == nil {
+		return
+	}
+
 	for {
 		select {
-		case <-cs.link.LinkDownCh():
+		case <-cs.doneChan():
 			return
-		case <-cs.cx.DoneChan():
-			return
-
-		case <-cs.link.LinkUpCh():
-			continue
-		case <-cs.link.LinkLinkCh():
-			continue
 
 		case ap := <-cs.auth.GetSendCh():
 			var p *packet.PacketStruct
@@ -55,7 +52,8 @@ func (cs *ChanconnStruct) goRecv() {
 				return
 			}
 
-			log.Debugf("Conn Recv:%v", p)
+			//log.Debugf("Conn Recv:%v", p)
+			p.DebugPacket("Chanconn Recv")
 
 			switch p.Sig() {
 			case packet.SIG_CONN_32_PACKET:

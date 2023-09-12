@@ -27,13 +27,14 @@ func (u *UdpStruct) goSend() {
 	}
 
 	defer u.emptysend()
+	defer u.Cancel()
 
 	for {
 		select {
 		case packet := <-u.sendch:
 			u.sendpacket(packet)
 
-		case <-u.cx.DoneChan():
+		case <-u.doneChan():
 			return
 		}
 
@@ -51,6 +52,7 @@ func (u *UdpStruct) sendpacket(p *packet.PacketStruct) {
 
 	var l int
 	var err error
+	p.DebugPacket("UDP Send")
 	raw := p.ToByte()
 	if u.srv {
 		l, err = u.conn.WriteToUDP(raw, u.addr)
@@ -64,12 +66,12 @@ func (u *UdpStruct) sendpacket(p *packet.PacketStruct) {
 		if err != io.EOF {
 			log.Errorf("UDP %s Write() Error:%s", u.endpoint(), err)
 		}
-		u.cx.Cancel()
+		u.Cancel()
 	}
 
 	if l != len(raw) {
 		log.Errorf("UDP Write() Length Error:%d != %d", l, len(raw))
-		u.cx.Cancel()
+		u.Cancel()
 	}
 }
 

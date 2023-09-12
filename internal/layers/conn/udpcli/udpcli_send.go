@@ -12,7 +12,6 @@ func (u *UdpClientStruct) Send(co *packet.PacketStruct) (err error) {
 		return errors.ErrNetNilPointerMethod(log.Errf(""))
 	}
 
-
 	if uint16(co.Size()) > uint16(u.config.Mtu) {
 		return errors.ErrNetPacketTooBig(log.Errf(""))
 	}

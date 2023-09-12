@@ -30,7 +30,7 @@ func TestNewTCP_test_nil_returns(t *testing.T) {
 		t.Error("Send() returned nil")
 	}
 	ts.Cancel()
-	_ = ts.DoneChan()
+	_ = ts.doneChan()
 	_ = ts.closed()
 	ts.RecvChan()
 	ts.goRecv()
@@ -47,7 +47,7 @@ func TestNewTCP_test_nil_returns(t *testing.T) {
 	srv.emptysend()
 
 	srv.Link()
-	srv.DoneChan()
+	srv.doneChan()
 	srv.Cancel()
 
 }

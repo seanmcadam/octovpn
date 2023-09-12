@@ -37,6 +37,7 @@ func NewUDPSrv(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
 		recvch: make(chan *packet.PacketStruct),
 	}
 
+	udp.link.Down()
 	udp.run()
 	return udp
 }

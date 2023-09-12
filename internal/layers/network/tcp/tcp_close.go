@@ -1,6 +1,6 @@
 package tcp
 
-func (t *TcpStruct) DoneChan() <-chan struct{} {
+func (t *TcpStruct) doneChan() <-chan struct{} {
 	if t == nil {
 		return nil
 	}
@@ -11,6 +11,7 @@ func (t *TcpStruct) Cancel() {
 	if t == nil {
 		return
 	}
+	t.link.Close()
 	t.cx.Cancel()
 }
 

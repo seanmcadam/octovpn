@@ -1,6 +1,6 @@
 package udp
 
-func (u *UdpStruct) DoneChan() <-chan struct{} {
+func (u *UdpStruct) doneChan() <-chan struct{} {
 	if u == nil {
 		return nil
 	}
@@ -11,6 +11,8 @@ func (u *UdpStruct) Cancel() {
 	if u == nil {
 		return
 	}
+	//u.link.Down()
+	u.link.Close()
 	u.cx.Cancel()
 }
 

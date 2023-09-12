@@ -11,11 +11,16 @@ import (
 
 func (cs *ChanconnStruct) Send(cp *packet.PacketStruct) error {
 
+	if cs == nil {
+		return errors.ErrNetNilPointerMethod(log.Errf(""))
+	}
+
 	if cs.link.GetState() == link.LinkStateUP {
 		packet, err := packet.NewPacket(packet.SIG_CONN_32_PACKET, cp, <-cs.counter.GetCountCh())
 		if err != nil {
 			return err
 		}
+		packet.DebugPacket("Chanconn Send")
 		return cs.send(packet)
 	}
 
@@ -23,13 +28,24 @@ func (cs *ChanconnStruct) Send(cp *packet.PacketStruct) error {
 }
 
 func (cs *ChanconnStruct) send(p *packet.PacketStruct) error {
-	if cs.conn.GetState() == link.LinkStateDOWN {
+	if cs == nil {
+		return errors.ErrNetNilPointerMethod(log.Errf(""))
+	}
+
+	if cs.conn.Link().GetState() == link.LinkStateDOWN {
 		return fmt.Errorf("link shows down")
 	}
+
 	return cs.conn.Send(p)
 }
 
 func (cs *ChanconnStruct) goSend() {
+
+	if cs == nil {
+		return
+	}
+
+	defer cs.Cancel()
 
 	for {
 		select {

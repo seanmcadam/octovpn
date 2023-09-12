@@ -9,8 +9,8 @@ import (
 // All ChanConn objects are ChannleInterfaces
 //
 // Conn Packet implements this for Channel
-//
 type ChannelInterface interface {
+	Name() string
 	Send(*packet.PacketStruct) error
 	RecvChan() <-chan *packet.PacketStruct
 	Link() *link.LinkStateStruct

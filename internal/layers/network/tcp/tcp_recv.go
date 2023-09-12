@@ -26,7 +26,7 @@ func (t *TcpStruct) goRecv() {
 	}
 
 	defer t.emptyrecv()
-	defer t.link.Down()
+	defer t.Cancel()
 
 	for {
 		var buffer bytes.Buffer
@@ -57,29 +57,30 @@ func (t *TcpStruct) goRecv() {
 			//
 			if err != nil {
 				log.Errorf("TCP MakePacket() Err:%s", err)
-				continue
+				return
 			}
 
 			if !sig.ConnLayer() {
 				log.Errorf("Bad Layer Received")
-				continue
+				return
 			}
 
 			if buffer.Len() < int(length) {
+				log.Infof("Not Enough Buffer Data %d < %d", buffer.Len(), int(length))
 				continue
 			}
 
 			p, err := packet.MakePacket(buffer.Next(int(length)))
 			if err != nil {
 				log.Errorf("MakePacket Err:%s", err)
-				continue
+				return
 			}
 
 			if p == nil {
 				log.FatalStack("Got Nil Packet")
 			}
 
-			log.Debugf("TCP Recv:%v", p)
+			p.DebugPacket("TCP Recv")
 			t.recvch <- p
 
 			if t.closed() {

@@ -56,10 +56,10 @@ func TestNewTCP_CliSrv(t *testing.T) {
 
 	srv, cli, err := loopconn.NewTcpConnLoop(cx)
 
-	srvUpCh := srv.GetUpCh()
-	cliUpCh := cli.GetUpCh()
-	srvLinkCh := srv.GetLinkCh()
-	cliLinkCh := cli.GetLinkCh()
+	srvUpCh := srv.Link().LinkUpCh()
+	cliUpCh := cli.Link().LinkUpCh()
+	srvLinkCh := srv.Link().LinkStateCh()
+	cliLinkCh := cli.Link().LinkStateCh()
 
 	<-srvLinkCh
 	<-cliLinkCh
@@ -102,5 +102,4 @@ func TestNewTCP_CliSrv(t *testing.T) {
 	case <-time.After(4 * time.Second):
 		t.Error("Cli Recieve timeout")
 	}
-
 }

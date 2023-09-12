@@ -8,10 +8,9 @@ import (
 
 func (t *TcpServerStruct) RecvChan() <-chan *packet.PacketStruct {
 	if t == nil {
-		log.ErrorStack("TCP Srv Recv Nil")
 		return nil
-
 	}
+
 	if t.tcpconn == nil {
 		log.Debug("TCP Srv nil tcpconn")
 		return nil
