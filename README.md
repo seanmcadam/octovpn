@@ -8,8 +8,8 @@ Router - Router reads the IP info and routes accordingly to the local interfaces
 
 Sites(s) - maintains a set of connections, tracks best path to target
 
-Channel(s) - track connection performance and status details, 
+Channel(s) - track connection performance and link status details, 
 
 Connection(s) - maintans and monitors connectivity
 
-Protocol - Establishes connectivity to or from a target system
+Network - Establishes connectivity to or from a target system
