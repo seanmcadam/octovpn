@@ -9,13 +9,13 @@ import (
 // Send()
 func (t *TcpServerStruct) Send(co *packet.PacketStruct) (err error) {
 	if t == nil {
-		return errors.ErrNetNilPointerMethod(log.Errf(""))
+		return errors.ErrNetNilMethodPointer(log.Errf(""))
 	}
 
 	log.Debugf("TCPSrc Send:%v", co)
 
 	if uint16(co.Size()) > uint16(t.config.Mtu) {
-		return errors.ErrNetPacketTooBig(log.Errf(""))
+		return errors.ErrNetPacketTooBig(log.Errf(" size:%d > %d", uint16(co.Size()), uint16(t.config.Mtu)))
 	}
 
 	if t.tcpconn != nil {

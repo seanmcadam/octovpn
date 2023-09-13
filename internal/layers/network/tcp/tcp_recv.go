@@ -8,18 +8,21 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
+//-
+//
+//-
 func (t *TcpStruct) RecvChan() <-chan *packet.PacketStruct {
 	if t == nil || t.recvch == nil {
-		log.Error("Nil Method")
 		return nil
 	}
 
-	log.Debugf("State:%s", t.link.GetState())
 	return t.recvch
 }
 
+//-
 // Run while connection is running
 // Exit when closed
+//-
 func (t *TcpStruct) goRecv() {
 	if t == nil {
 		return
@@ -40,9 +43,9 @@ func (t *TcpStruct) goRecv() {
 			n, err := t.conn.Read(tmp)
 			if err != nil {
 				if err == io.EOF {
-					log.Errorf("Read() connection closed")
+					log.Errorf("Read() connection closed %s", t.conn.RemoteAddr())
 				} else {
-					log.Errorf("Read() Error:%s", err)
+					log.Errorf("Read() Error:%s on %s", err, t.conn.RemoteAddr())
 				}
 				return
 			}
@@ -50,19 +53,16 @@ func (t *TcpStruct) goRecv() {
 			log.Debugf("Raw Recv len:%d", n)
 			buffer.Write(tmp[:n])
 
-			if t.closed() {
-				return
-			}
-
 			//
 			// Does the buffer have enough data to assemble a packet?
 			//
 			sig, length, err := packet.ReadPacketBuffer(buffer.Bytes()[:6])
+
 			//
 			// Error checking types here
 			//
 			if err != nil {
-				log.Errorf("MakePacket() Err:%s", err)
+				log.Errorf("MakePacket() Err:%s on %s", err, t.conn.RemoteAddr())
 				return
 			}
 
@@ -70,7 +70,7 @@ func (t *TcpStruct) goRecv() {
 			// Only receive CONN layer packets here
 			//
 			if !sig.ConnLayer() {
-				log.Errorf("Bad SIG Layer Received:%04X")
+				log.Errorf("Bad SIG Layer Received:%s, on %s", sig, t.conn.RemoteAddr())
 				return
 			}
 
@@ -78,7 +78,7 @@ func (t *TcpStruct) goRecv() {
 			// Is there enough data?
 			//
 			if buffer.Len() < int(length) {
-				log.Infof("Not Enough Buffer Data %d < %d", buffer.Len(), int(length))
+				log.Warnf("Not Enough Buffer Data %d < %d", buffer.Len(), int(length))
 				continue
 			}
 
@@ -87,27 +87,22 @@ func (t *TcpStruct) goRecv() {
 			//
 			p, err := packet.MakePacket(buffer.Next(int(length)))
 			if err != nil {
-				log.Errorf("MakePacket Err:%s", err)
+				log.Errorf("MakePacket() Err:%s on %s", err, t.conn.RemoteAddr())
 				return
 			}
 
 			if p == nil {
-				log.FatalStack("MakePacket() returned Nil Packet")
+				log.Errorf("MakePacket() returned Nil Packet")
 			}
 
-			p.DebugPacket("TCP Recv() Packet")
 			t.recvch <- p
-
-			if t.closed() {
-				return
-			}
 		}
 	}
 }
 
-//
+// -
 // Clean up the recvch before closing
-//
+// -
 func (t *TcpStruct) emptyrecv() {
 	if t == nil {
 		return

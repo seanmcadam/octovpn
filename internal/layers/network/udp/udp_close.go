@@ -7,21 +7,33 @@ import (
 
 var closePacketByte []byte
 
+//-
+//
+//-
 func init() {
 	if closePacket, err := packet.NewPacket(packet.SIG_CONN_CLOSE); err != nil {
 		log.Fatalf("UDP Initalization Err for closePacket:%s", err)
 	} else {
-		closePacketByte = closePacket.ToByte()
+		if closePacketByte, err = closePacket.ToByte(); err != nil {
+			log.Fatalf("UDP Initalization Err for closePacketByte:%s", err)
+		}
 	}
 }
 
+//-
+//
+//-
 func (u *UdpStruct) doneChan() <-chan struct{} {
 	if u == nil {
 		return nil
 	}
+
 	return u.cx.DoneChan()
 }
 
+//-
+//
+//-
 func (u *UdpStruct) Cancel() {
 	if u == nil {
 		return
@@ -31,6 +43,9 @@ func (u *UdpStruct) Cancel() {
 	u.cx.Cancel()
 }
 
+//-
+//
+//-
 func (u *UdpStruct) closed() bool {
 	if u == nil {
 		return true
@@ -38,6 +53,9 @@ func (u *UdpStruct) closed() bool {
 	return u.cx.Done()
 }
 
+//-
+//
+//-
 func (u *UdpStruct) sendclose() {
 	if u == nil {
 		return

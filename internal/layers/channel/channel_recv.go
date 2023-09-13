@@ -2,6 +2,7 @@ package channel
 
 import (
 	"github.com/seanmcadam/octovpn/internal/packet"
+	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
@@ -13,9 +14,8 @@ func (cs *ChannelStruct) RecvChan() <-chan *packet.PacketStruct {
 }
 
 func (cs *ChannelStruct) goRecv() {
-
 	if cs == nil {
-		return 
+		return
 	}
 
 	defer cs.Cancel()
@@ -25,14 +25,17 @@ func (cs *ChannelStruct) goRecv() {
 		case <-cs.doneChan():
 			return
 		case p := <-cs.channel.RecvChan():
-			cs.recv(p)
+			if err := cs.recv(p); err != nil {
+				log.Error("%s", err)
+				return
+			}
 		}
 	}
 }
 
-func (cs *ChannelStruct) recv(p *packet.PacketStruct) {
+func (cs *ChannelStruct) recv(p *packet.PacketStruct) (err error) {
 	if cs == nil || p == nil {
-		return 
+		return
 	}
 
 	p.DebugPacket("CHAN RECV")
@@ -45,11 +48,11 @@ func (cs *ChannelStruct) recv(p *packet.PacketStruct) {
 
 		copyack, err := p.CopyAck()
 		if err != nil {
-			log.FatalfStack("CopyAck() Err:%s", err)
+			return errors.ErrChanRecv(log.Errf("CopyAck() Err:%s", err))
 		}
 		copy, err := p.Copy()
 		if err != nil {
-			log.FatalfStack("Copy() Err:%s", err)
+			return errors.ErrChanRecv(log.Errf("Copy() Err:%s", err))
 		}
 
 		cs.channel.Send(copyack)
@@ -67,6 +70,7 @@ func (cs *ChannelStruct) recv(p *packet.PacketStruct) {
 		cs.tracker.Nak(p.Counter())
 
 	default:
-		log.Fatalf("Unhandled CHAN TYPE:%d", t)
+		return errors.ErrChanRecv(log.Errf("Default Reached CHAN TYPE:%d", t))
 	}
+	return nil
 }

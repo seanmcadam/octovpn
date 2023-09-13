@@ -1,6 +1,7 @@
 package packet
 
 type PacketSigType uint32
+type PacketChecksumType uint32
 type PacketSize8FieldType uint8
 type PacketSize16FieldType uint16
 type PacketSizeType uint16
@@ -23,6 +24,7 @@ const (
 	PacketPing64Size    PacketSizeType = 8
 	PacketPong32Size    PacketSizeType = 4
 	PacketPong64Size    PacketSizeType = 8
+	PacketChecksumSize  PacketSizeType = 4
 	PacketSizeTypeERROR PacketSizeType = 0xFF
 )
 
@@ -99,7 +101,7 @@ const (
 
 	SIG_CONN_CLOSE  = VERSION_1 | LAYER_CONN | FIELD_SIG | FIELD_SIZE | FIELD_DATA | DATA_CLOSE
 	SIG_CHAN_CLOSE  = VERSION_1 | LAYER_CHAN | FIELD_SIG | FIELD_SIZE | FIELD_DATA | DATA_CLOSE
-	SIG_SITE_CLOSE  = VERSION_1 | LAYER_SITE | FIELD_SIG | FIELD_SIZE | FIELD_DATA | DATA_CLOSE 
+	SIG_SITE_CLOSE  = VERSION_1 | LAYER_SITE | FIELD_SIG | FIELD_SIZE | FIELD_DATA | DATA_CLOSE
 	SIG_ROUTE_CLOSE = VERSION_1 | LAYER_ROUTER | FIELD_SIG | FIELD_SIZE | FIELD_DATA | DATA_CLOSE
 
 	SIG_ROUTE = VERSION_1 | LAYER_ROUTER | FIELD_SIG | FIELD_SIZE

@@ -288,38 +288,60 @@ func ReadPacketBuffer(buf []byte) (sig PacketSigType, length PacketSizeType, err
 	return sig, length, nil
 }
 
+// -
 // MakePacket()
 // Expects that raw is the correct size to create the packet
+// Validates the checksum at the tail end of the packet
+// -
 func MakePacket(raw []byte) (p *PacketStruct, err error) {
 	if raw == nil {
-		return nil, errors.ErrNetNilPointerMethod(log.Errf(""))
+		return nil, errors.ErrNetNilMethodPointer(log.Errf(""))
 	}
 
 	var rawsize uint16 = uint16(len(raw))
 	var calcsize PacketSizeType = 0
 
-	if rawsize < 4 {
+	if rawsize < uint16(PacketSigSize) {
 		log.ErrorStack("size is too small, thats what she said...")
 		return nil, errors.ErrPacketBadParameter(log.Errf("buffer is too small"))
-
 	}
 
 	p = &PacketStruct{}
 
 	p.pSig = PacketSigType(BtoU32(raw[:4]))
 	if !p.pSig.V1() {
-		log.FatalfStack("Bad Sig Version:%s", p.pSig)
+		return nil, errors.ErrPacketBadVersion(log.Errf("Bad Sig Version:%s", p.pSig))
 	}
 
+	//
+	// No checksum for Close() packets
+	//
 	if p.pSig.Close() {
 		return p, nil
 	}
 
-	raw = raw[4:]
-	calcsize += 4
+	//
+	// PacketSig  PacketSize(8) PacketChecksum
+	//
+	minsize := uint16(1) + uint16(PacketSigSize) + uint16(PacketSize8Size) + uint16(PacketChecksumSize)
+	if rawsize < minsize {
+		log.ErrorStack("size is too small, thats what she said...")
+		return nil, errors.ErrPacketBadParameter(log.Errf("buffer is too small < minsize:%d", minsize))
+	}
+
+	checksumindex := len(raw) - int(PacketChecksumSize)
+	checksum_calc := calculateChecksumUint32(raw[:checksumindex])
+	checksum_actual := BtoU32(raw[checksumindex:])
+
+	if !validChecksum(checksum_calc, checksum_actual) {
+		return nil, errors.ErrPacketBadChecksum(log.Errf(""))
+	}
+
+	raw = raw[4 : len(raw)-int(PacketChecksumSize)]
+	calcsize += PacketSigSize + PacketChecksumSize
 
 	//
-	// pSize
+	// pSize (includes checksum at the end)
 	//
 	if p.pSig.Size8() {
 		p.pSize = PacketSizeType(BtoU8(raw))
@@ -331,13 +353,12 @@ func MakePacket(raw []byte) (p *PacketStruct, err error) {
 		raw = raw[2:]
 		calcsize += 2
 	} else {
-		log.FatalStack("No size")
+		return nil, errors.ErrPacketNoSizeParameter(log.Errf(""))
 	}
 
 	// If the buffer does not contain enough data, return now, and leave the start of the packet in tact
 	if rawsize != uint16(p.pSize) {
-		log.Debugf("TCP Recv Buffer has %d, needs:%d", rawsize, p.pSize)
-		return nil, log.Errf("Raw data sizes do not match")
+		return nil, log.Errf("Buffer size has %d, needs:%d", rawsize, p.pSize)
 	}
 
 	if p.pSig.Width32() {
@@ -351,15 +372,19 @@ func MakePacket(raw []byte) (p *PacketStruct, err error) {
 	//
 	if p.pSig.Counter() || p.pSig.Ack() || p.pSig.Nak() {
 		if p.pSig.Width32() {
-			p.counter = counter.NewByteCounter32(raw[:4])
+			if p.counter, err = counter.NewByteCounter32(raw[:4]); err != nil {
+				return nil, err
+			}
 			raw = raw[4:]
 			calcsize += 4
 		} else if p.pSig.Width64() {
-			p.counter = counter.NewByteCounter64(raw[:8])
+			if p.counter, err = counter.NewByteCounter64(raw[:8]); err != nil {
+				return nil, err
+			}
 			raw = raw[8:]
 			calcsize += 8
 		} else {
-			panic("no counter input")
+			return nil, errors.ErrPacketNoCounterParameter(log.Errf("Counter"))
 		}
 	}
 
@@ -368,64 +393,96 @@ func MakePacket(raw []byte) (p *PacketStruct, err error) {
 	//
 	if p.pSig.Ping() {
 		if p.pSig.Width32() {
-			p.ping = pinger.NewBytePing32(raw[:4])
+			if p.ping, err = pinger.NewBytePing32(raw[:4]); err != nil {
+				return nil, err
+			}
 			raw = raw[4:]
 			calcsize += 4
 		} else if p.pSig.Width64() {
-			p.ping = pinger.NewBytePing64(raw[:8])
+			if p.ping, err = pinger.NewBytePing64(raw[:8]); err != nil {
+				return nil, err
+			}
 			raw = raw[8:]
 			calcsize += 8
 		} else {
-			panic("no counter input")
+			return nil, errors.ErrPacketNoCounterParameter(log.Errf("Ping"))
 		}
 	}
 
 	if p.pSig.Pong() {
 		if p.pSig.Width32() {
-			p.ping = pinger.NewBytePong32(raw[:4])
+			if p.ping, err = pinger.NewBytePong32(raw[:4]); err != nil {
+				return nil, err
+			}
 			raw = raw[4:]
 			calcsize += 4
 		} else if p.pSig.Width64() {
-			p.ping = pinger.NewBytePong64(raw[:8])
+			if p.ping, err = pinger.NewBytePong64(raw[:8]); err != nil {
+				return nil, err
+			}
 			raw = raw[8:]
 			calcsize += 8
 		} else {
-			log.FatalStack("no counter input")
+			return nil, errors.ErrPacketNoCounterParameter(log.Errf("Pong"))
 		}
 	}
 
 	if p.pSig.Data() {
+		if len(raw) < int(PacketChecksumSize) {
+			return nil, errors.ErrPacketBadParameter(log.Errf("data len too small for checksum"))
+		}
+
 		if p.pSig.Packet() {
-			p.packet, err = MakePacket(raw)
+			if p.packet, err = MakePacket(raw[:len(raw)-int(PacketChecksumSize)]); err != nil {
+				return nil, err
+			}
 			calcsize += p.packet.Size()
 		} else if p.pSig.IPV4() {
-			p.ipv4, err = MakeIPv4(raw)
+			if p.ipv4, err = MakeIPv4(raw); err != nil {
+				return nil, err
+			}
 			calcsize += p.ipv4.Size()
 		} else if p.pSig.IPV6() {
-			p.ipv6, err = MakeIPv6(raw)
+			if p.ipv6, err = MakeIPv6(raw); err != nil {
+				return nil, err
+			}
 			calcsize += p.ipv6.Size()
 		} else if p.pSig.Eth() {
-			p.eth, err = MakeEth(raw)
+			if p.eth, err = MakeEth(raw); err != nil {
+				return nil, err
+			}
 			calcsize += p.eth.Size()
 		} else if p.pSig.Router() {
-			p.router, err = MakeRouter(raw)
+			if p.router, err = MakeRouter(raw); err != nil {
+				return nil, err
+			}
 			calcsize += p.router.Size()
 		} else if p.pSig.ID() {
-			p.id, err = MakeID(raw)
+			if p.id, err = MakeID(raw); err != nil {
+				return nil, err
+			}
 			calcsize += p.id.Size()
 		} else if p.pSig.Auth() {
-			p.auth, err = MakeAuth(raw)
+			if p.auth, err = MakeAuth(raw); err != nil {
+				return nil, err
+			}
 			calcsize += p.auth.Size()
 		} else if p.pSig.Raw() {
 			p.raw = raw
 			calcsize += PacketSizeType(len(raw))
 		}
+
+		raw = raw[int(PacketChecksumSize):]
 	}
 
 	if calcsize != p.pSize || PacketSizeType(rawsize) != p.pSize {
 		p.DebugPacket("PACKET SIZE ISSUE")
-		log.FatalfStack("Packet Sizes dont match psize:%d rawsize:%d calcsize:%d", p.pSize, rawsize, calcsize)
+		return nil, AuthErrPacketSizeMismatch(log.Errf("Packet Sizes dont match psize:%d rawsize:%d calcsize:%d", p.pSize, rawsize, calcsize))
 	}
+
+	checksum := calculateChecksumByte(raw)
+
+	raw = append(raw, checksum...)
 
 	return p, err
 }
@@ -433,9 +490,9 @@ func MakePacket(raw []byte) (p *PacketStruct, err error) {
 // -
 // ToByte()
 // -
-func (p *PacketStruct) ToByte() (raw []byte) {
+func (p *PacketStruct) ToByte() (raw []byte, err error) {
 	if p == nil {
-		return raw
+		return nil, errors.ErrPacketNilMethodPointer(log.Errf(""))
 	}
 
 	//
@@ -443,19 +500,29 @@ func (p *PacketStruct) ToByte() (raw []byte) {
 	//
 	raw = append(raw, U32toB(uint32(p.pSig))...)
 
+	//
+	// This is a Close packet (4 bytes)
 	if p.pSig.Close() {
-		return raw
+		return raw, nil
 	}
 
 	//
-	// pSize
+	// pSize (account for added checksum)
 	//
+	p.pSize += PacketChecksumSize
+
 	if p.pSig.Size8() {
+		if p.pSize > 255 {
+			return nil, errors.ErrPacketBadParameter(log.Errf("size > 255"))
+		}
 		raw = append(raw, U8toB(uint8(p.pSize))...)
 	} else if p.pSig.Size16() {
+		if p.pSize > 65534 {
+			return nil, errors.ErrPacketBadParameter(log.Errf("size > 65534"))
+		}
 		raw = append(raw, U16toB(uint16(p.pSize))...)
 	} else {
-		log.FatalStack("No size")
+		return nil, errors.ErrPacketBadParameter(log.Errf("No size"))
 	}
 
 	//
@@ -475,7 +542,11 @@ func (p *PacketStruct) ToByte() (raw []byte) {
 	}
 
 	if p.pSig.Packet() {
-		raw = append(raw, p.packet.ToByte()...)
+		if rawpacket, err := p.packet.ToByte(); err != nil {
+			return nil, errors.ErrPacketBadParameter(log.Errf("Sig:%s Err:%s", p.pSig, err))
+		} else {
+			raw = append(raw, rawpacket...)
+		}
 	} else if p.pSig.IPV4() {
 		raw = append(raw, p.ipv4.ToByte()...)
 	} else if p.pSig.IPV6() {
@@ -485,19 +556,23 @@ func (p *PacketStruct) ToByte() (raw []byte) {
 	} else if p.pSig.Router() {
 		raw = append(raw, p.router.ToByte()...)
 	} else if p.pSig.Auth() {
-		raw = append(raw, p.auth.ToByte()...)
+		if rawpacket, err := p.auth.ToByte(); err != nil {
+			return nil, errors.ErrPacketBadParameter(log.Errf("Sig:%s Err:%s", p.pSig, err))
+		} else {
+			raw = append(raw, rawpacket...)
+		}
 	} else if p.pSig.ID() {
 		raw = append(raw, p.id.ToByte()...)
 	} else if p.pSig.Raw() {
 		raw = append(raw, p.raw...)
 	}
 
-	return raw
+	raw = append(raw, calculateChecksumByte(raw)...)
+	return raw, nil
 }
 
 func (p *PacketStruct) Sig() PacketSigType {
 	if p == nil {
-		log.ErrorStack("Nil Method Pointer")
 		return SIG_ERROR
 	}
 

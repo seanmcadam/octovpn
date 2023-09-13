@@ -1,7 +1,6 @@
 package loopconn
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
@@ -51,7 +50,10 @@ func TestNewUdpLoop_SendRecv(t *testing.T) {
 		t.Fatalf("UDP Recv Returned nil")
 	}
 
-	if !reflect.DeepEqual(recv.ToByte(), cp.ToByte()) {
+	recvbyte, err := recv.ToByte()
+	cpbyte, err := cp.ToByte()
+
+	if string(recvbyte) != string(cpbyte) {
 		t.Fatalf("UDP Recv Returned bad Data: '%v', '%v'", recv, cp)
 	}
 }

@@ -1,6 +1,8 @@
 package tcpsrv
 
 import (
+	"strings"
+
 	"github.com/seanmcadam/octovpn/internal/layers/network/tcp"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
@@ -15,7 +17,10 @@ func (t *TcpServerStruct) goListen() {
 	for {
 		conn, err := t.tcplistener.AcceptTCP()
 		if err != nil {
-			log.FFFatalfStack("AcceptTCP Error:%s", err)
+			// Assumed closed due to Cancel()
+			if !strings.Contains(err.Error(), "use of closed network connection") {
+				log.Errorf("AcceptTCP Closing:%s", err)
+			}
 			return
 		}
 

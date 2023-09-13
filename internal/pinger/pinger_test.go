@@ -14,14 +14,14 @@ import (
 
 func TestNewPinger32_compile(t *testing.T) {
 	cx := ctx.NewContext()
-	_ = NewPinger32(cx, 1, 5)
+	_, _ = NewPinger32(cx, 1, 5)
 
 	cx.Cancel()
 }
 
 func TestNewPinger64_compile(t *testing.T) {
 	cx := ctx.NewContext()
-	_ = NewPinger64(cx, 1, 5)
+	_, _ = NewPinger64(cx, 1, 5)
 
 	cx.Cancel()
 }

@@ -1,17 +1,11 @@
 package errors
 
-import "fmt"
-
-var ErrChanBadSig error
-var ErrChanBadPacket error
-var ErrChanShortPacket error
-var ErrChanPayloadLength error
-var ErrChanPayloadType error
-
-func init() {
-	ErrChanBadSig = fmt.Errorf("bad chan signature type")
-	ErrChanBadPacket = fmt.Errorf("bad chan packet type")
-	ErrChanShortPacket = fmt.Errorf("short chan packet")
-	ErrChanPayloadLength = fmt.Errorf("bad chan payload length")
-	ErrChanPayloadType = fmt.Errorf("bad chan payload type")
-}
+type ErrChanBadSig error
+type ErrChanBadPacket error
+type ErrChanShortPacket error
+type ErrChanPayloadLength error
+type ErrChanPayloadType error
+type ErrChanUnhandledProtocol error
+type ErrChanSend error
+type ErrChanRecv error
+type ErrChanNew error

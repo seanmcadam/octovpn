@@ -15,6 +15,6 @@ type Counter interface {
 type CounterStruct interface {
 	Next() Counter
 	GetCountCh() <-chan Counter
-	NewByteCounter([]byte) Counter
+	NewByteCounter([]byte) (Counter, error)
 	Width() CounterWidth
 }

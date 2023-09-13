@@ -134,14 +134,14 @@ func (ap *AuthPacket) Text() []byte {
 	return ap.text
 }
 
-func (ap *AuthPacket) ToByte() (raw []byte) {
+func (ap *AuthPacket) ToByte() (raw []byte, err error) {
 	if ap == nil {
 		log.ErrorStack("Nil Method Pointer")
-		return nil
+		return nil, errors.ErrPacketNilMethodPointer(log.Errf(""))
 	}
 
 	if ap.pSize > 256 {
-		log.FatalStack("pSize > 256")
+		return nil, errors.ErrPacketBadParameter(log.Errf("psize:%d", ap.pSize))
 	}
 
 	raw = append(raw, uint8(ap.pSize))
@@ -156,13 +156,13 @@ func (ap *AuthPacket) ToByte() (raw []byte) {
 			if len(ap.text) != 0 {
 				raw = append(raw, ap.text...)
 			} else {
-				log.Errorf("Text Required, none provided")
+				return nil, errors.ErrPacketBadParameter(log.Errf("no text provided"))
 			}
 		default:
-			log.FatalfStack("Unhandled AuthPacketActionType:%d", uint8(ap.action))
+			return nil, errors.ErrPacketBadParameter(log.Errf("default reached"))
 		}
 	}
-	return raw
+	return raw, nil
 }
 
 func (a AuthPacketActionType) String() (ret string) {

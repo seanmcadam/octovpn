@@ -10,7 +10,7 @@ const PingWidth32 PingWidth = 32
 const PingWidth64 PingWidth = 64
 
 type PingerStruct interface {
-	NewPong([]byte) Pong
+	NewPong([]byte) (Pong, error)
 	TurnOn()
 	TurnOff()
 	Width() PingWidth

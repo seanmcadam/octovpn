@@ -74,8 +74,8 @@ func NewAuthStruct(ctx *ctx.Ctx, secret string) (as *AuthStruct, err error) {
 		md5sum:      "",
 		localtimer:  time.NewTimer(AuthTimeout),
 		remotetimer: time.NewTimer(AuthTimeout),
-		sendch:      make(chan *packet.AuthPacket),
-		recvch:      make(chan *packet.AuthPacket),
+		sendch:      make(chan *packet.AuthPacket, 1),
+		recvch:      make(chan *packet.AuthPacket, 1),
 	}
 
 	as.link.NoLink()
@@ -97,7 +97,6 @@ func (as *AuthStruct) Link() *link.LinkStateStruct {
 	return as.link
 }
 
-
 // -
 //
 // -
@@ -108,6 +107,8 @@ func (as *AuthStruct) goAuth() {
 	defer as.localtimer.Stop()
 	defer as.remotetimer.Stop()
 	defer log.Debugf("Auth Exit Sent:%d, Recv:%d", as.sendcount, as.recvcount)
+
+	log.Debug("Auth Loop Start")
 
 MAINLOOP:
 	for {
@@ -120,12 +121,11 @@ MAINLOOP:
 			return
 		}
 
-		log.Debug("Auth Loop Start")
-
 		select {
 		case <-as.cx.DoneChan():
 			log.Debug("Auth Done, exiting")
 			return
+
 		case ap := <-as.recvch:
 			log.Debug("Auth Recv")
 
@@ -156,7 +156,7 @@ MAINLOOP:
 						as.link.Connected()
 						as.resetCounters()
 					} else {
-						as.link.Auth()
+						as.link.Auth()  // Local is ready, Remote is waiting
 					}
 				} else {
 					as.link.NoLink()
@@ -173,6 +173,8 @@ MAINLOOP:
 				if as.localstate == AuthStateAuthenticated {
 					as.link.Connected()
 					as.resetCounters()
+				} else if as.localstate == AuthStateChallenge {
+					as.link.Chal()  // Remote is ready, Local is waiting
 				}
 
 			case packet.AuthReject:
@@ -188,13 +190,14 @@ MAINLOOP:
 			case packet.AuthError:
 				log.Errorf("Received AuthError:%s", ap.Text())
 				fallthrough
+
 			default:
 				as.link.NoLink()
 				return
 			}
 
 		case <-as.remotetimer.C:
-			log.Debug("Auth Remote Timer")
+			log.Debug("Auth Remote Timer State:%s", as.remotestate)
 			switch as.remotestate {
 			case AuthStateUnauthenticated:
 				fallthrough
@@ -242,7 +245,7 @@ MAINLOOP:
 			}
 
 		case <-as.localtimer.C:
-			log.Debug("Auth Local Timer")
+			log.Debug("Auth Local Timer State:%s", as.localstate)
 			switch as.localstate {
 			case AuthStateStart:
 				as.random = generateChallengePhrase()
@@ -392,4 +395,25 @@ func generateChallengePhrase() (result string) {
 	result = base64.StdEncoding.EncodeToString(random)
 
 	return result
+}
+
+// -
+//
+// -
+func (as AuthStateType) String() string {
+	switch as {
+	case AuthStateStart:
+		return "StateStart"
+	case AuthStateUnauthenticated:
+		return "StateUnAuth"
+	case AuthStateChallenge:
+		return "StateChal"
+	case AuthStateAuthenticated:
+		return "StateAuth"
+	case AuthStateError:
+		return "StateError"
+	default:
+	}
+	log.FatalStack("")
+	return ""
 }

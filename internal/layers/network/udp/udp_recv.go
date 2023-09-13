@@ -10,7 +10,9 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
+//-
 // Recv()
+//-
 func (u *UdpStruct) RecvChan() <-chan *packet.PacketStruct {
 	if u == nil || u.recvch == nil {
 		log.Debug("UPD RecvChan() Nil")
@@ -22,9 +24,11 @@ func (u *UdpStruct) RecvChan() <-chan *packet.PacketStruct {
 	return u.recvch
 }
 
+//-
 // goRecv()
 // Run while Listener is running
 // Exit when closed
+//-
 func (u *UdpStruct) goRecv() {
 	if u == nil {
 		return
@@ -68,6 +72,10 @@ func (u *UdpStruct) goRecv() {
 		log.Debugf("UDP Read %v", buf)
 
 		p, err := packet.MakePacket(buf)
+		if err != nil || p == nil{
+			log.Errorf("MakePacket() Err:%s", err)
+			return
+		}
 
 		//
 		// Did I soft close packet?
@@ -96,6 +104,9 @@ func (u *UdpStruct) goRecv() {
 	}
 }
 
+//-
+//
+//-
 func (u *UdpStruct) goRecvTimeout() {
 	if u == nil {
 		return
@@ -153,6 +164,9 @@ func (u *UdpStruct) goRecvTimeout() {
 	}
 }
 
+//-
+//
+//-
 func (u *UdpStruct) emptyrecv() {
 	if u == nil {
 		return

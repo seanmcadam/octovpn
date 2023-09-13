@@ -14,8 +14,8 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
-const PingFreq = 1 * time.Second
-const PingTimeout = 2 * time.Second
+const ConnPingFreqDefault = 1 * time.Second
+const ConnPingTimeoutDefault = 2 * time.Second
 
 type NewConnFunc func(*ctx.Ctx, *settings.ConnectionStruct) (interfaces.ConnInterface, error)
 
@@ -42,6 +42,9 @@ func NewConn32(ctx *ctx.Ctx, config *settings.ConnectionStruct, confFunc NewConn
 		return nil, err
 	}
 
+	pinger, err := pinger.NewPinger32(ctx, ConnPingFreqDefault, ConnPingTimeoutDefault)
+	counter := counter.NewCounter32(ctx)
+
 	cs := &ChanconnStruct{
 		cx:      ctx,
 		name:    config.Name,
@@ -50,8 +53,8 @@ func NewConn32(ctx *ctx.Ctx, config *settings.ConnectionStruct, confFunc NewConn
 		width:   packet.PacketWidth32,
 		conn:    conn,
 		recvch:  make(chan *packet.PacketStruct, packet.DefaultChannelDepth),
-		pinger:  pinger.NewPinger32(ctx, PingFreq, PingTimeout),
-		counter: counter.NewCounter32(ctx),
+		pinger:  pinger,
+		counter: counter,
 	}
 
 	cs.link.AddLinkStateCh(cs.conn.Link())
@@ -74,6 +77,9 @@ func NewConn64(ctx *ctx.Ctx, config *settings.ConnectionStruct, confFunc NewConn
 		return nil, err
 	}
 
+	pinger, err := pinger.NewPinger64(ctx, ConnPingFreqDefault, ConnPingTimeoutDefault)
+	counter := counter.NewCounter64(ctx)
+
 	cs := &ChanconnStruct{
 		cx:      ctx,
 		link:    link.NewLinkState(ctx),
@@ -81,8 +87,8 @@ func NewConn64(ctx *ctx.Ctx, config *settings.ConnectionStruct, confFunc NewConn
 		width:   packet.PacketWidth64,
 		conn:    conn,
 		recvch:  make(chan *packet.PacketStruct, packet.DefaultChannelDepth),
-		pinger:  pinger.NewPinger64(ctx, PingFreq, PingTimeout),
-		counter: counter.NewCounter64(ctx),
+		pinger:  pinger,
+		counter: counter,
 	}
 
 	cs.link.AddLinkStateCh(cs.conn.Link())

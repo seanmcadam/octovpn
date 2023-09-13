@@ -76,27 +76,26 @@ func TestMakeAuth_packets(t *testing.T) {
 				t.Errorf("NewAuth() did not return error test:%d", test.testno)
 			} else {
 
-				raw := AS.ToByte()
-				if len(raw) != int(AS.Size()) {
+				if raw, err := AS.ToByte(); err != nil || len(raw) != int(AS.Size()) {
 					t.Errorf("ToByte bad len:%d", len(raw))
-				}
-
-				NewAS, err := MakeAuth(raw)
-				if err != nil {
-					if !test.err_newauth {
-						t.Errorf("MakeAuth() did return error test:%d, err:%s", test.testno, err)
-					}
 				} else {
-					if test.err_newauth {
-						t.Errorf("NewAuth() did not return error test:%d", test.testno)
+					NewAS, err := MakeAuth(raw)
+					if err != nil {
+						if !test.err_newauth {
+							t.Errorf("MakeAuth() did return error test:%d, err:%s", test.testno, err)
+						}
 					} else {
+						if test.err_newauth {
+							t.Errorf("NewAuth() did not return error test:%d", test.testno)
+						} else {
 
-						if NewAS.Action() != test.action {
-							t.Errorf("NewAuth() actions dont match test:%d", test.testno)
-						} else if NewAS.Size() != PacketSizeType(len(raw)) {
-							t.Errorf("NewAuth() lengths dont match test:%d", test.testno)
-						} else if string(NewAS.Text()) != string((AS.Text())) {
-							t.Errorf("NewAuth() texts dont match test:%d", test.testno)
+							if NewAS.Action() != test.action {
+								t.Errorf("NewAuth() actions dont match test:%d", test.testno)
+							} else if NewAS.Size() != PacketSizeType(len(raw)) {
+								t.Errorf("NewAuth() lengths dont match test:%d", test.testno)
+							} else if string(NewAS.Text()) != string((AS.Text())) {
+								t.Errorf("NewAuth() texts dont match test:%d", test.testno)
+							}
 						}
 					}
 				}

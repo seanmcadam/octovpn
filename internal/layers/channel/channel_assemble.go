@@ -8,6 +8,7 @@ import (
 	"github.com/seanmcadam/octovpn/internal/layers/conn/udpsrv"
 	"github.com/seanmcadam/octovpn/internal/settings"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
+	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
@@ -51,23 +52,23 @@ func channelAssemble(ctx *ctx.Ctx, config *settings.ConnectionStruct, server boo
 		}
 
 	default:
-		log.FatalStack("default reached")
+		return nil, errors.ErrChanUnhandledProtocol(log.Errf("default reached"))
 	}
 
 	if config.Width == 32 || (config.Width == 0 && settings.Width32 == settings.WidthDefault) {
 		if ci, err := chanconn.NewConn32(ctx, config, connFunc); err != nil {
-			return nil, log.Err("")
+			return nil, errors.ErrChanNew(log.Errf("NewConn32() Err:%s", err))
 		} else {
 			if cs, err = NewChannel32(ctx, ci); err != nil {
-				return nil, log.Errf("New Channel32 Err:%s", err)
+				return nil, errors.ErrChanNew(log.Errf("NewChannel32() Err:%s", err))
 			}
 		}
 	} else if config.Width == 64 || (config.Width == 0 && settings.Width64 == settings.WidthDefault) {
 		if ci, err := chanconn.NewConn64(ctx, config, connFunc); err != nil {
-
+			return nil, errors.ErrChanNew(log.Errf("NewConn64() Err:%s", err))
 		} else {
 			if cs, err = NewChannel64(ctx, ci); err != nil {
-				return nil, log.Errf("New Channel64 Err:%s", err)
+				return nil, errors.ErrChanNew(log.Errf("NewChannel64() Err:%s", err))
 			}
 		}
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/seanmcadam/octovpn/internal/counter"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
+	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
@@ -23,28 +24,40 @@ type Pinger64Struct struct {
 	Errorch chan error
 }
 
-func NewBytePing64(b []byte) (p Ping) {
+func NewBytePing64(b []byte) (p Ping, err error) {
 	if len(b) != 4 {
-		log.FatalfStack("Count data len:%d, :%0x", len(b), b)
+		return nil, errors.ErrCounterBadParameter(log.Errf("Count data len:%d, :%0x", len(b), b))
 	}
 
-	c := counter.NewByteCounter32(b)
+	c, err := counter.NewByteCounter32(b)
+	if err == nil {
+		return nil, err
+	}
+
 	p = counter.Counter(c)
-	return p
+	return p, nil
 
 }
-func NewBytePong64(b []byte) (p Ping) {
+func NewBytePong64(b []byte) (p Ping, err error) {
 	if len(b) != 8 {
-		log.FatalfStack("Count data len:%d, :%0x", len(b), b)
+		return nil, errors.ErrCounterBadParameter(log.Errf("Count data len:%d, :%0x", len(b), b))
 	}
 
-	c := counter.NewByteCounter64(b)
+	c, err := counter.NewByteCounter64(b)
+	if err == nil {
+		return nil, err
+	}
+
 	p = counter.Counter(c)
-	return p
+	return p, nil
 
 }
 
-func NewPinger64(ctx *ctx.Ctx, freq time.Duration, timeout time.Duration) (p PingerStruct) {
+func NewPinger64(ctx *ctx.Ctx, freq time.Duration, timeout time.Duration) (p PingerStruct, err error) {
+	if ctx == nil {
+		return p, errors.ErrPingerBadParameter(log.Errf(""))
+	}
+
 	p64 := &Pinger64Struct{
 		cx:      ctx,
 		active:  false,
@@ -60,7 +73,7 @@ func NewPinger64(ctx *ctx.Ctx, freq time.Duration, timeout time.Duration) (p Pin
 
 	go p64.goRun()
 	p = p64
-	return p
+	return p, nil
 }
 
 func (p *Pinger64Struct) Width() (s PingWidth) {
@@ -68,14 +81,24 @@ func (p *Pinger64Struct) Width() (s PingWidth) {
 }
 
 func (p *Pinger64Struct) TurnOn() {
+	if p == nil {
+		return
+	}
 	p.active = true
 }
 
 func (p *Pinger64Struct) TurnOff() {
+	if p == nil {
+		return
+	}
 	p.active = false
 }
 
 func (p *Pinger64Struct) RecvPong(pong Pong) {
+	if p == nil {
+		return
+	}
+
 	p.pongch <- pong
 }
 
@@ -142,11 +165,16 @@ func (p *Pinger64Struct) goRun() {
 	}
 }
 
-func (ps *Pinger64Struct) NewPong(pong []byte) (p Pong) {
+func (ps *Pinger64Struct) NewPong(pong []byte) (p Pong, err error) {
 	if len(pong) != 8 {
-		log.FatalfStack("Not enough pong data:%0x", pong)
+		return nil, errors.ErrCounterBadParameter(log.Errf("Not enough pong data:%0x", pong))
 	}
-	c64 := ps.counter.NewByteCounter(pong)
+
+	c64, err := ps.counter.NewByteCounter(pong)
+	if p == nil {
+		return nil, err
+	}
+
 	p = c64
-	return p
+	return p, nil
 }

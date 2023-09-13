@@ -28,15 +28,18 @@ type ChannelStruct struct {
 
 func NewChannel32(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStruct, err error) {
 
+	pinger, err := pinger.NewPinger32(ctx, 1, 2)
+	counter := counter.NewCounter32(ctx)
+	tracker := tracker.NewTracker(ctx, time.Second)
 	cs = &ChannelStruct{
 		cx:      ctx,
 		name:    ci.Name(),
 		link:    link.NewLinkState(ctx),
 		width:   packet.PacketWidth32,
 		channel: ci,
-		pinger:  pinger.NewPinger32(ctx, 1, 2),
-		counter: counter.NewCounter32(ctx),
-		tracker: tracker.NewTracker(ctx, time.Second),
+		pinger:  pinger,
+		counter: counter,
+		tracker: tracker,
 		recvch:  make(chan *packet.PacketStruct, 16),
 	}
 
@@ -47,14 +50,17 @@ func NewChannel32(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStru
 
 func NewChannel64(ctx *ctx.Ctx, ci interfaces.ChannelInterface) (cs *ChannelStruct, err error) {
 
+	pinger, err := pinger.NewPinger64(ctx, 1, 2)
+	counter := counter.NewCounter64(ctx)
+	tracker := tracker.NewTracker(ctx, time.Second)
 	cs = &ChannelStruct{
 		cx:      ctx,
 		link:    link.NewLinkState(ctx),
 		width:   packet.PacketWidth64,
 		channel: ci,
-		pinger:  pinger.NewPinger64(ctx, 1, 2),
-		counter: counter.NewCounter64(ctx),
-		tracker: tracker.NewTracker(ctx, time.Second),
+		pinger:  pinger,
+		counter: counter,
+		tracker: tracker,
 		recvch:  make(chan *packet.PacketStruct, 16),
 	}
 
@@ -79,7 +85,7 @@ func (cs *ChannelStruct) Link() *link.LinkStateStruct {
 
 func (cs *ChannelStruct) Reset() error {
 	if cs == nil {
-		return errors.ErrNetNilPointerMethod(log.Errf(""))
+		return errors.ErrNetNilMethodPointer(log.Errf(""))
 	}
 	return cs.channel.Reset()
 }

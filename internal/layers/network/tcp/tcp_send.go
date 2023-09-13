@@ -8,16 +8,16 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
-//
+//-
 // Send()
-//
+//-
 func (t *TcpStruct) Send(p *packet.PacketStruct) (err error) {
 	if t == nil || t.sendch == nil {
-		return errors.ErrNetNilPointerMethod(log.Errf(""))
+		return errors.ErrNetNilMethodPointer(log.Errf(""))
 	}
 
 	log.Debugf("TCP Send:%v", p)
-	select{
+	select {
 	case t.sendch <- p:
 	default:
 		return errors.ErrNetSendBufferFull(log.Errf(""))
@@ -27,21 +27,25 @@ func (t *TcpStruct) Send(p *packet.PacketStruct) (err error) {
 
 }
 
-//
-// goSend() 
+//-
+// goSend()
 // handle the send buffer
-//
+//-
 func (t *TcpStruct) goSend() {
 	if t == nil {
 		return
 	}
 
 	defer t.emptysend()
+	defer t.Cancel()
 
 	for {
 		select {
 		case packet := <-t.sendch:
-			t.sendpacket(packet)
+			if err := t.sendpacket(packet); err != nil {
+				log.Warnf("sendpacket() Err:%s", err)
+				return
+			}
 
 		case <-t.doneChan():
 			return
@@ -49,58 +53,55 @@ func (t *TcpStruct) goSend() {
 	}
 }
 
-//
+//-
 // sendpacket()
-//
-func (t *TcpStruct) sendpacket(p *packet.PacketStruct) {
+//-
+func (t *TcpStruct) sendpacket(p *packet.PacketStruct) (err error) {
 	if t == nil {
-		return
+		return errors.ErrNetNilMethodPointer(log.Err(""))
 	}
 
 	p.DebugPacket("TCP Send")
 
-	raw := p.ToByte()
-	l, err := t.conn.Write(raw)
-	if err != nil {
+	if raw, err := p.ToByte(); err != nil{
+		return errors.ErrNetParameter(log.Errf("Err:%s", err))
+
+	}else if l, err := t.conn.Write(raw); err != nil {
 		if err != io.EOF {
-			log.Errorf("TCP Write() Error:%s, Closing Connection", err)
+			return errors.ErrNetChannelError(log.Errf("TCP Write() Error:%s", err))
 		}
-		t.Cancel()
+		return errors.ErrNetChannelDown(log.Errf("TCP Write() Channel Closed"))
+	} else if l != len(raw) {
+		return errors.ErrNetChannelError(log.Errf("TCP Write() Lenth Error:%d != %d", l, len(raw)))
 	}
-	if l != len(raw) {
-		log.Errorf("TCP Write() Send length:%d, Closing Connection", l, len(raw))
-		t.Cancel()
-	}
+
+	return nil
 }
 
-//
+//-
 // sendtestpacket()
-//
-func (t *TcpStruct) sendtestpacket(raw []byte) {
+//-
+func (t *TcpStruct) sendtestpacket(raw []byte)(err error) {
 	if t == nil {
 		return
 	}
 
 	log.Debugf("TCP RAW Send:%v", raw)
 
-	l, err := t.conn.Write(raw)
-	if err != nil {
+	if l, err := t.conn.Write(raw); err != nil{
 		if err != io.EOF {
-			log.Errorf("TCP RAW Write() Error:%s, Closing Connection", err)
+			return errors.ErrNetChannelError(log.Errf("TCP RAW Write() Error:%s, Closing Connection", err))
 		}
-		t.Cancel()
+	}else if l != len(raw) {
+		return errors.ErrNetChannelError(log.Errf("TCP RAW Write() length Error:%d != %d", l, len(raw)))
 	}
-	if l != len(raw) {
-		log.Errorf("TCP RAW Write() Send length:%d, Closing Connection", l, len(raw))
-		t.Cancel()
-	}
+
+	return nil
 }
 
-
-
-// 
+//-
 // Clean up sendch before exit
-//
+//-
 func (t *TcpStruct) emptysend() {
 	if t == nil {
 		return

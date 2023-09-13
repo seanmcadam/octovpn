@@ -7,14 +7,22 @@ import (
 
 var closePacketByte []byte
 
+// -
+//
+// -
 func init() {
 	if closePacket, err := packet.NewPacket(packet.SIG_CONN_CLOSE); err != nil {
 		log.Fatalf("TCP Initalization Err for closePacket:%s", err)
 	} else {
-		closePacketByte = closePacket.ToByte()
+		if closePacketByte, err = closePacket.ToByte(); err != nil {
+			log.Fatalf("TCP Initalization Err for closePacket:%s", err)
+		}
 	}
 }
 
+// -
+//
+// -
 func (t *TcpStruct) doneChan() <-chan struct{} {
 	if t == nil {
 		return nil
@@ -22,6 +30,9 @@ func (t *TcpStruct) doneChan() <-chan struct{} {
 	return t.cx.DoneChan()
 }
 
+// -
+//
+// -
 func (t *TcpStruct) Cancel() {
 	if t == nil {
 		return
@@ -35,13 +46,11 @@ func (t *TcpStruct) Cancel() {
 	t.cx.Cancel()
 }
 
-func (t *TcpStruct) closed() bool {
-	if t == nil {
-		return true
-	}
-	return t.cx.Done()
-}
-
+// -
+// sendclose()
+// tries to send a last ditch effort close packet
+// letting the other side know that the link is closing out side of the IP protocol
+// -
 func (t *TcpStruct) sendclose() {
 	if t == nil {
 		return
@@ -54,5 +63,4 @@ func (t *TcpStruct) sendclose() {
 			log.Warnf("Err:%s", err)
 		}
 	}
-
 }

@@ -8,7 +8,7 @@ import (
 // Reset()
 func (t *TcpServerStruct) Reset() error {
 	if t == nil {
-		return errors.ErrNetNilPointerMethod(log.Errf(""))
+		return errors.ErrNetNilMethodPointer(log.Errf(""))
 	}
 
 	log.Debugf("TCPSrv Reset()")

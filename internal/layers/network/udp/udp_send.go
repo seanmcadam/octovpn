@@ -8,19 +8,29 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
+// -
+//
 // Send()
+// -
 func (u *UdpStruct) Send(p *packet.PacketStruct) (err error) {
 	if u == nil || u.sendch == nil {
-		return errors.ErrNetNilPointerMethod(log.Errf(""))
+		return errors.ErrNetNilMethodPointer(log.Errf(""))
 	}
 
-	go func(p *packet.PacketStruct) {
-		u.sendch <- p
-	}(p)
-	return err
+	log.Debugf("UDP Send:%v", p)
+	select {
+	case u.sendch <- p:
+	default:
+		return errors.ErrNetSendBufferFull(log.Errf(""))
+	}
+
+	return nil
 
 }
 
+// -
+//
+// -
 func (u *UdpStruct) goSend() {
 	if u == nil {
 		return
@@ -32,82 +42,88 @@ func (u *UdpStruct) goSend() {
 	for {
 		select {
 		case packet := <-u.sendch:
-			u.sendpacket(packet)
+			if err := u.sendpacket(packet); err != nil {
+				log.Warnf("sendpacket() Err:%s", err)
+				return
+			}
 
 		case <-u.doneChan():
 			return
 		}
-
-		if u.closed() {
-			return
-		}
 	}
 }
 
-func (u *UdpStruct) sendpacket(p *packet.PacketStruct) {
+// -
+//
+// -
+func (u *UdpStruct) sendpacket(p *packet.PacketStruct) (err error) {
 	if u == nil {
-		return
+		return errors.ErrNetNilMethodPointer(log.Err(""))
 	}
 
 	var l int
-	var err error
+	var raw []byte
 	p.DebugPacket("UDP Send")
-	raw := p.ToByte()
+	if raw, err = p.ToByte(); err != nil {
+		return errors.ErrNetParameter(log.Errf("Err:%s", err))
+	}
+
 	if u.srv {
 		if u.link.IsUp() {
-			l, err = u.conn.WriteToUDP(raw, u.addr)
-			log.Debugf("UDP WriteToUDP():%v", raw)
+			if l, err = u.conn.WriteToUDP(raw, u.addr); err != nil {
+				if err != io.EOF {
+					return errors.ErrNetChannelError(log.Errf("UDP Srv Write() Error:%s", err))
+				}
+				return errors.ErrNetChannelDown(log.Errf("UDP Srv Write() Channel Closed"))
+			}
+
 		} else {
-			log.Warnf("UDP Srv WriteToUDP() on Down Connection:%v", raw)
+			return errors.ErrNetChannelDown(log.Errf("UDP Write() Channel Down"))
 		}
 	} else {
-		l, err = u.conn.Write(raw)
-		log.Debugf("UDP Write():%v", raw)
-	}
-
-	if err != nil {
-		if err != io.EOF {
-			log.Errorf("UDP %s Write() Error:%s", u.endpoint(), err)
+		if l, err = u.conn.Write(raw); err != nil {
+			if err != io.EOF {
+				return errors.ErrNetChannelError(log.Errf("UDP Srv Write() Error:%s", err))
+			}
+			return errors.ErrNetChannelDown(log.Errf("UDP Srv Write() Channel Closed"))
 		}
-		u.Cancel()
 	}
 
 	if l != len(raw) {
-		log.Errorf("UDP Write() Length Error:%d != %d", l, len(raw))
-		u.Cancel()
+		return errors.ErrNetChannelError(log.Errf("UDP Write() Lenth %d != %d", l, len(raw)))
 	}
+
+	return nil
 }
 
-
-func (u *UdpStruct) sendtestpacket(raw []byte) {
+// -
+//
+// -
+func (u *UdpStruct) sendtestpacket(raw []byte) (err error) {
 	if u == nil {
 		return
 	}
 
 	var l int
-	var err error
-	log.Debugf("UDP Test Send:%v", raw)
 	if u.srv {
-		l, err = u.conn.WriteToUDP(raw, u.addr)
-		log.Debugf("UDP WriteToUDP():%v", raw)
-	} else {
-		l, err = u.conn.Write(raw)
-		log.Debugf("UDP Write():%v", raw)
-	}
-
-	if err != nil {
-		if err != io.EOF {
-			log.Errorf("UDP %s Write() Error:%s", u.endpoint(), err)
+		if l, err = u.conn.WriteToUDP(raw, u.addr); err != nil {
+			return errors.ErrNetSend(log.Errf("UDP Srv WriteToUDP():%v", raw))
+		} else {
+			if l, err = u.conn.Write(raw); err != nil {
+				return errors.ErrNetSend(log.Errf("UDP Cli WriteToUDP():%v", raw))
+			}
 		}
-		u.Cancel()
-	}
 
-	if l != len(raw) {
-		log.Errorf("UDP Write() Length Error:%d != %d", l, len(raw))
-		u.Cancel()
+		if l != len(raw) {
+			return errors.ErrNetParameter(log.Errf("UDP Write() Length Error:%d != %d", l, len(raw)))
+		}
 	}
+	return nil
 }
 
+// -
+//
+// -
 func (u *UdpStruct) emptysend() {
 	if u == nil {
 		return

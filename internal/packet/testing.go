@@ -9,8 +9,50 @@ import (
 // -
 //
 // -
-func Testpacket() (*PacketStruct, error) {
-	return NewPacket(SIG_CONN_32_RAW, []byte("testpacket"), counter.MakeCounter32(1))
+func TestConn32Packet() (*PacketStruct, error) {
+	return NewPacket(SIG_CONN_32_RAW, []byte("conn 32 testpacket"), counter.MakeCounter32(1))
+}
+
+// -
+//
+// -
+func TestChan32Packet() (*PacketStruct, error) {
+	return NewPacket(SIG_CHAN_32_RAW, []byte("chan 32 testpacket"), counter.MakeCounter32(1))
+}
+
+// -
+//
+// -
+func TestSite32Packet() (*PacketStruct, error) {
+	return NewPacket(SIG_SITE_32_RAW, []byte("site 32 testpacket"), counter.MakeCounter32(1))
+}
+
+// -
+//
+// -
+func TestConn64Packet() (*PacketStruct, error) {
+	return NewPacket(SIG_CONN_64_RAW, []byte("conn 64 testpacket"), counter.MakeCounter64(1))
+}
+
+// -
+//
+// -
+func TestChan64Packet() (*PacketStruct, error) {
+	return NewPacket(SIG_CHAN_64_RAW, []byte("chan 64 testpacket"), counter.MakeCounter64(1))
+}
+
+// -
+//
+// -
+func TestSite64Packet() (*PacketStruct, error) {
+	return NewPacket(SIG_SITE_64_RAW, []byte("site 64 testpacket"), counter.MakeCounter64(1))
+}
+
+// -
+//
+// -
+func TestRouterPacket() (*PacketStruct, error) {
+	return NewPacket(SIG_ROUTE_RAW, []byte("testpacket"))
 }
 
 // -

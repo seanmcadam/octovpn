@@ -65,7 +65,7 @@ func TestNewPacket_close_packets(t *testing.T) {
 		t.Errorf("NewPacket Err:%s", err)
 	}
 
-	if buf = p.ToByte(); len(buf) != 4 {
+	if buf, err = p.ToByte(); err != nil || len(buf) != 4 {
 		t.Errorf("NewPacket ToByte return %d", len(buf))
 	}
 
@@ -75,17 +75,16 @@ func TestNewPacket_close_packets(t *testing.T) {
 
 }
 
-
 func TestNewPacket_short_packets(t *testing.T) {
 	var p *PacketStruct
 	var buf []byte
 	var err error
 
-	if p, err = NewPacket(SIG_CONN_64_RAW,counter.MakeCounter32(0), []byte("data")); err != nil {
+	if p, err = NewPacket(SIG_CONN_64_RAW, counter.MakeCounter32(0), []byte("data")); err != nil {
 		t.Fatalf("NewPacket Err:%s", err)
 	}
 
-	if buf = p.ToByte(); len(buf) < 10 {
+	if buf, err = p.ToByte(); err != nil || len(buf) < 10 {
 		t.Errorf("NewPacket ToByte return %d", len(buf))
 	}
 

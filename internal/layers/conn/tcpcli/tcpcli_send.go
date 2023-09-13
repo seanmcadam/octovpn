@@ -9,7 +9,7 @@ import (
 // Send()
 func (t *TcpClientStruct) Send(co *packet.PacketStruct) (err error) {
 	if t == nil {
-		return errors.ErrNetNilPointerMethod(log.Errf(""))
+		return errors.ErrNetNilMethodPointer(log.Errf(""))
 	}
 
 	log.Debugf("TCPCli Send:%v", co)

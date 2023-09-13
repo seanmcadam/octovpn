@@ -173,7 +173,9 @@ func TestNewAuth_test_local_remote_auth(t *testing.T) {
 	cx.Cancel()
 }
 
+// -
 // Remote Auth First, then Local Auth
+// -
 func TestNewAuth_test_remote_local_auth(t *testing.T) {
 
 	cx := ctx.NewContext()
@@ -187,15 +189,20 @@ func TestNewAuth_test_remote_local_auth(t *testing.T) {
 		t.Errorf("NewAuthStruct() Err:%s", err)
 	}
 
-	UpCh := as.link.LinkUpCh()
-	select {
-	case <-UpCh:
-		t.Error("Premature up")
-	default:
+	//
+	// Wait on challenge packet to come first
+	//
+	challenge := <-as.GetSendCh()
+
+	//
+	// Auth should be down
+	//
+	if as.link.IsDown() {
+		t.Error("State should be down")
 	}
 
 	//
-	// Send Challenge
+	// Send Challenge to local
 	//
 	p, err := packet.NewAuth(packet.AuthChallenge, remotephrase)
 	if err != nil {
@@ -203,30 +210,36 @@ func TestNewAuth_test_remote_local_auth(t *testing.T) {
 	}
 	as.GetRecvCh() <- p
 
-	select {
-	case <-UpCh:
-		t.Error("Premature up")
-	default:
-	}
 	//
-	// Get Response
+	// Auth should be down
 	//
-	response := <-as.GetSendCh()
-	if response.Action() != packet.AuthResponse {
-		t.Error("Expected Response Packet")
+	if as.link.IsDown() {
+		t.Error("State should be down")
 	}
 
-	if string(response.Text()) != remotemd5sum {
-		t.Error("Expected matching md5sums")
+	//
+	// Get Response back from local
+	//
+	select {
+	case response := <-as.GetSendCh():
+		if response.Action() != packet.AuthResponse {
+			t.Error("Expected Response Packet")
+		}
+		if string(response.Text()) != remotemd5sum {
+			t.Error("Expected matching md5sums")
+		}
+	case <-time.After(time.Millisecond):
+		t.Error("Timeout Response Packet")
 	}
 
-	select {
-	case <-UpCh:
-		t.Error("Premature up")
-	default:
+	<-time.After(time.Millisecond)
+
+	if as.link.IsDown() {
+		t.Error("State should be down")
 	}
+
 	//
-	// Send Accept
+	// Send Accept to local
 	//
 	p, err = packet.NewAuth(packet.AuthAccept)
 	if err != nil {
@@ -234,25 +247,30 @@ func TestNewAuth_test_remote_local_auth(t *testing.T) {
 	}
 	as.GetRecvCh() <- p
 
-	select {
-	case <-UpCh:
-		t.Error("Premature up")
-	default:
+	<-time.After(time.Millisecond)
+
+	if as.link.IsDown() {
+		t.Error("State should be down")
 	}
+
 	//
-	// Get Challange
+	// Remote side is authenticated now.
 	//
-	challenge := <-as.GetSendCh()
+
+	<-time.After(time.Millisecond)
+
+	//
+	// Now deal with the challege packet
+	//
 	if challenge.Action() != packet.AuthChallenge {
 		t.Error("Expected Challenge Packet")
 	}
 	md5sum := generateMD5Sum(secret, string(challenge.Text()))
 
-	select {
-	case <-UpCh:
-		t.Error("Premature up")
-	default:
+	if as.link.IsDown() {
+		t.Error("State should be down")
 	}
+
 	//
 	// Send Response
 	//
@@ -262,10 +280,8 @@ func TestNewAuth_test_remote_local_auth(t *testing.T) {
 	}
 	as.GetRecvCh() <- p
 
-	select {
-	case <-UpCh:
-		t.Error("Premature up")
-	default:
+	if as.link.IsDown() {
+		t.Error("State should be down")
 	}
 
 	//
@@ -276,10 +292,10 @@ func TestNewAuth_test_remote_local_auth(t *testing.T) {
 		t.Error("Expected Accept Packet")
 	}
 
-	select {
-	case <-UpCh:
-	case <-time.After(10*time.Millisecond):
-		t.Error("Up TimeOut")
+	<-time.After(time.Millisecond)
+
+	if !as.link.IsUp() {
+		t.Error("State should be Up")
 	}
 
 	cx.Cancel()

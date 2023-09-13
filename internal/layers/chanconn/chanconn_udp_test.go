@@ -57,7 +57,7 @@ func TestNewUdp_CliSrv(t *testing.T) {
 	srvUpCh := srv.Link().LinkUpCh()
 	cliUpCh := cli.Link().LinkUpCh()
 
-	p, err := packet.Testpacket()
+	p, err := packet.TestConn32Packet()
 	if err != nil {
 		t.Error(err)
 	}

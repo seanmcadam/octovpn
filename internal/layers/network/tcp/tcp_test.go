@@ -11,13 +11,17 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 )
 
+// -
 // Will the module compile
+// -
 func TestNewTCP_basic(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()
 }
 
+// -
 // Verify the functions handle nil input with out panic
+// -
 func TestNewTCP_test_nil_returns(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()
@@ -25,6 +29,7 @@ func TestNewTCP_test_nil_returns(t *testing.T) {
 	var ts *TcpStruct
 	NewTCP(nil, nil)
 	ts.goSend()
+	ts.sendclose()
 	ts.sendpacket(nil)
 	ts.sendtestpacket(nil)
 	ts.emptysend()
@@ -34,7 +39,6 @@ func TestNewTCP_test_nil_returns(t *testing.T) {
 	}
 	ts.Cancel()
 	_ = ts.doneChan()
-	_ = ts.closed()
 	ts.RecvChan()
 	ts.goRecv()
 	ts.emptyrecv()
@@ -55,7 +59,9 @@ func TestNewTCP_test_nil_returns(t *testing.T) {
 
 }
 
+// -
 // Send a packet, and recieve it
+// -
 func TestNewTCP_send(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()
@@ -65,7 +71,7 @@ func TestNewTCP_send(t *testing.T) {
 		t.Error(err)
 	}
 
-	p, err := packet.Testpacket()
+	p, err := packet.TestConn32Packet()
 	if err != nil {
 		t.Error(err)
 	}
@@ -101,7 +107,9 @@ func TestNewTCP_send(t *testing.T) {
 
 }
 
+// -
 // Validate the link system
+// -
 func TestNewTCP_link_validation(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()
@@ -134,7 +142,7 @@ func TestNewTCP_link_validation(t *testing.T) {
 		}
 	}
 
-	p, err := packet.Testpacket()
+	p, err := packet.TestConn32Packet()
 	if err != nil {
 		t.Error(err)
 	}
@@ -196,6 +204,9 @@ func TestNewTCP_link_validation(t *testing.T) {
 
 }
 
+// -
+//
+// -
 func TestNewTCP_cli_send_bad_sig(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()
@@ -224,6 +235,9 @@ func TestNewTCP_cli_send_bad_sig(t *testing.T) {
 	}
 }
 
+// -
+//
+// -
 func TestNewTCP_srv_send_bad_sig(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()
@@ -252,6 +266,9 @@ func TestNewTCP_srv_send_bad_sig(t *testing.T) {
 	}
 }
 
+// -
+//
+// -
 func TestNewTCP_srv_send_short_packet(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()
@@ -264,15 +281,18 @@ func TestNewTCP_srv_send_short_packet(t *testing.T) {
 	srvCloseCh := srv.link.LinkCloseCh()
 	cliCloseCh := cli.link.LinkCloseCh()
 
-	p, err := packet.Testpacket()
+	p, err := packet.TestConn32Packet()
 	if err != nil {
 		t.Error(err)
 	}
 
-	raw := p.ToByte()
-
-	raw1 := raw[:len(raw)-3]
-	raw2 := raw[len(raw)-3:]
+	var raw1, raw2 []byte
+	if raw, err := p.ToByte(); err != nil {
+		t.Error("ToByte() Err:", err)
+	} else {
+		raw1 = raw[:len(raw)-3]
+		raw2 = raw[len(raw)-3:]
+	}
 
 	srv.sendtestpacket(raw1)
 	<-time.After(time.Millisecond)
@@ -304,6 +324,99 @@ func TestNewTCP_srv_send_short_packet(t *testing.T) {
 	}
 }
 
+// -
+// Server Send a bad Sig packet
+// -
+func TestNewTCP_cli_recv_bad_sig(t *testing.T) {
+	cx := ctx.NewContext()
+	defer cx.Cancel()
+
+	srv, cli, err := connection(cx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	srvCloseCh := srv.link.LinkCloseCh()
+	cliCloseCh := cli.link.LinkCloseCh()
+
+	p, err := packet.TestChan32Packet()
+	if err != nil {
+		t.Error(err)
+	}
+
+	srv.Send(p)
+
+	select {
+	case <-srvCloseCh:
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Srv Close Timeout")
+	}
+
+	select {
+	case <-cliCloseCh:
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Cli Close Timeout")
+	}
+
+}
+
+// -
+//
+// -
+func TestNewTCP_cli_recv_short_packet(t *testing.T) {
+	cx := ctx.NewContext()
+	defer cx.Cancel()
+
+	srv, cli, err := connection(cx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	srvCloseCh := srv.link.LinkCloseCh()
+	cliCloseCh := cli.link.LinkCloseCh()
+
+	p, err := packet.TestConn32Packet()
+	if err != nil {
+		t.Error(err)
+	}
+
+	var raw1, raw2 []byte
+	if raw, err := p.ToByte(); err != nil {
+		t.Error("ToByte() Err:", err)
+	} else {
+		raw1 = raw[:len(raw)-3]
+		raw2 = raw[len(raw)-3:]
+	}
+
+	srv.sendtestpacket(raw1)
+	<-time.After(time.Millisecond)
+	srv.sendtestpacket(raw2)
+
+	select {
+	case r := <-cli.RecvChan():
+		if r == nil {
+			t.Error("Recieved nil")
+			return
+		}
+		err = packet.Validatepackets(p, r)
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Cli Recieve timeout")
+	}
+
+	srv.Cancel()
+
+	select {
+	case <-cliCloseCh:
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Cli Close Timeout")
+	}
+
+	select {
+	case <-srvCloseCh:
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Srv Close Timeout")
+	}
+}
 //-----------------------------------------------------------------------------
 
 // -

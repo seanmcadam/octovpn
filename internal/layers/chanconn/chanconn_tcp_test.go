@@ -66,7 +66,7 @@ func TestNewTCP_CliSrv(t *testing.T) {
 	<-srvUpCh
 	<-cliUpCh
 
-	p, err := packet.Testpacket()
+	p, err := packet.TestConn32Packet()
 	if err != nil {
 		t.Errorf("Testpacket() Err:%s", err)
 	}

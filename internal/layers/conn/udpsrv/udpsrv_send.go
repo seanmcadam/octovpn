@@ -9,7 +9,7 @@ import (
 // Send()
 func (u *UdpServerStruct) Send(co *packet.PacketStruct) (err error) {
 	if u == nil {
-		return errors.ErrNetNilPointerMethod(log.Errf(""))
+		return errors.ErrNetNilMethodPointer(log.Errf(""))
 	}
 
 	if co == nil {

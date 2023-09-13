@@ -9,7 +9,7 @@ import (
 func (cs *ChannelStruct) Send(sp *packet.PacketStruct) (err error) {
 
 	if cs == nil {
-		return errors.ErrNetNilPointerMethod(log.Errf(""))
+		return errors.ErrNetNilMethodPointer(log.Errf(""))
 	}
 
 	var sig packet.PacketSigType
@@ -19,12 +19,12 @@ func (cs *ChannelStruct) Send(sp *packet.PacketStruct) (err error) {
 		if cs.Width() == 32 {
 			sig = packet.SIG_CHAN_32_PACKET
 		} else {
-			sig = packet.SIG_CHAN_32_PACKET
+			sig = packet.SIG_CHAN_64_PACKET
 		}
 
 		p, err = packet.NewPacket(sig, sp, <-cs.counter.GetCountCh())
 		if err != nil {
-			log.Fatalf("NewPacket Err:%s", err)
+			return errors.ErrChanSend(log.Errf("NewPacket Err:%s", err))
 		}
 	} else {
 		p = sp
@@ -32,7 +32,7 @@ func (cs *ChannelStruct) Send(sp *packet.PacketStruct) (err error) {
 
 	cs.tracker.Send(p)
 	if err = cs.channel.Send(p); err != nil {
-		log.ErrorfStack("Send() Err:%s", err)
+		return errors.ErrChanSend(log.Errf("Send() Err:%s", err))
 	}
 
 	return cs.channel.Send(p)

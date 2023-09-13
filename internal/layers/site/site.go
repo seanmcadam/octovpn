@@ -61,15 +61,18 @@ func NewSite32(ctx *ctx.Ctx, config *settings.ConfigSiteStruct, si []interfaces.
 	if config == nil {
 		return nil, errors.ErrConfigParameterError(log.Err("Nil Config"))
 	}
+	pinger, err := pinger.NewPinger32(ctx, pinger.PingDefaultFrequency, pinger.PingDefaultTimeout)
+	counter := counter.NewCounter32(ctx)
+	tracker := tracker.NewTracker(ctx, time.Second)
 	ss := &SiteStruct{
 		cx:       ctx,
 		name:     config.Sitename,
 		width:    packet.PacketWidth32,
 		link:     link.NewLinkState(ctx, link.LinkModeUpOR),
 		channels: si,
-		pinger:   pinger.NewPinger32(ctx, 1, 2),
-		counter:  counter.NewCounter32(ctx),
-		tracker:  tracker.NewTracker(ctx, time.Second),
+		pinger:   pinger,
+		counter:  counter,
+		tracker:  tracker,
 		recvch:   make(chan *packet.PacketStruct, 16),
 	}
 
@@ -81,14 +84,17 @@ func NewSite32(ctx *ctx.Ctx, config *settings.ConfigSiteStruct, si []interfaces.
 
 func NewSite64(ctx *ctx.Ctx, config *settings.ConfigSiteStruct, si []interfaces.ChannelSiteInterface) (s *SiteStruct, err error) {
 
+	pinger, err := pinger.NewPinger64(ctx, pinger.PingDefaultFrequency, pinger.PingDefaultTimeout)
+	counter := counter.NewCounter64(ctx)
+	tracker := tracker.NewTracker(ctx, time.Second)
 	ss := &SiteStruct{
 		cx:       ctx,
 		name:     config.Sitename,
 		width:    packet.PacketWidth64,
 		channels: si,
-		pinger:   pinger.NewPinger64(ctx, 1, 2),
-		counter:  counter.NewCounter64(ctx),
-		tracker:  tracker.NewTracker(ctx, time.Second),
+		pinger:   pinger,
+		counter:  counter,
+		tracker:  tracker,
 		recvch:   make(chan *packet.PacketStruct, 16),
 	}
 

@@ -11,7 +11,7 @@ import (
 func (cs *ChanconnStruct) Send(cp *packet.PacketStruct) error {
 
 	if cs == nil {
-		return errors.ErrNetNilPointerMethod(log.Errf(""))
+		return errors.ErrNetNilMethodPointer(log.Errf(""))
 	}
 
 	if cs.link.IsUp() {
@@ -28,7 +28,7 @@ func (cs *ChanconnStruct) Send(cp *packet.PacketStruct) error {
 
 func (cs *ChanconnStruct) send(p *packet.PacketStruct) error {
 	if cs == nil {
-		return errors.ErrNetNilPointerMethod(log.Errf(""))
+		return errors.ErrNetNilMethodPointer(log.Errf(""))
 	}
 
 	if cs.conn.Link().IsDown() {

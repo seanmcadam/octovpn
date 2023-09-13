@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/seanmcadam/octovpn/octolib/ctx"
+	"github.com/seanmcadam/octovpn/octolib/errors"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
@@ -21,37 +22,57 @@ func MakeCounter32(c32 uint32) (c Counter) {
 }
 
 func (c *Counter32) ToByte() (b []byte) {
+	if c == nil {
+		return b
+	}
+
 	b = make([]byte, 4)
-	binary.LittleEndian.PutUint32(b, uint32(*c))
+	binary.BigEndian.PutUint32(b, uint32(*c))
 	return b
 }
 
 func (c *Counter32) Width() CounterWidth {
+	if c == nil {
+		return 0
+	}
+
 	return CounterWidth32
 }
 
 func (c *Counter32) Uint() interface{} {
+	if c == nil {
+		return nil
+	}
+
 	var c32 uint32
 	c32 = uint32(*c)
 	return c32
 }
 
 func (c *Counter32) Copy() Counter {
+	if c == nil {
+		MakeCounter32(0)
+	}
+
+	log.Debug("Do we need to copy these?")
 	return MakeCounter32(uint32(*c))
 	//var copy = *c
 	//return Counter(&copy)
 }
 
-func NewByteCounter32(b []byte) (c Counter) {
+func NewByteCounter32(b []byte) (c Counter, err error) {
 	if len(b) != 4 {
-		log.FatalfStack("Count data len:%d, :%0x", len(b), b)
+		return nil, errors.ErrCounterBadParameter(log.Errf("Count data len:%d, :%0x", len(b), b))
 	}
-	c32 := Counter32(binary.LittleEndian.Uint32(b))
+	c32 := Counter32(binary.BigEndian.Uint32(b))
 	c = &c32
-	return c
+	return c, nil
 }
 
 func NewCounter32(ctx *ctx.Ctx) (c CounterStruct) {
+	if ctx == nil {
+		log.Fatal()
+	}
 	c32 := &Counter32Struct{
 		cx:      ctx,
 		CountCh: make(chan Counter, 5),
@@ -62,24 +83,36 @@ func NewCounter32(ctx *ctx.Ctx) (c CounterStruct) {
 	return c
 }
 
-func (*Counter32Struct) NewByteCounter(b []byte) (c Counter) {
+func (*Counter32Struct) NewByteCounter(b []byte) (c Counter, err error) {
+	if c == nil {
+		return nil, errors.ErrCounterNilMethod(log.Errf(""))
+	}
+
 	if len(b) != 4 {
 		log.FatalfStack("Count data len:%d, :%0x", len(b), b)
 	}
-	c32 := Counter32(binary.LittleEndian.Uint32(b))
+	c32 := Counter32(binary.BigEndian.Uint32(b))
 	c = &c32
-	return c
+	return c, nil
 }
 
 func (c *Counter32Struct) Width() CounterWidth {
 	return CounterWidth32
 }
 
-func (c *Counter32Struct) Next() (Counter) {
+func (c *Counter32Struct) Next() Counter {
+	if c == nil {
+		return nil
+	}
+
 	return <-c.CountCh
 }
 
 func (c *Counter32Struct) GetCountCh() (ch <-chan Counter) {
+	if c == nil {
+		return nil
+	}
+
 	return c.CountCh
 }
 
@@ -87,6 +120,9 @@ func (c *Counter32Struct) GetCountCh() (ch <-chan Counter) {
 // Generates a UniqueID (int) and returns via supplied channel
 // Runs forever
 func (c *Counter32Struct) goCount() {
+	if c == nil {
+		log.Fatal()
+	}
 
 	defer c.emptych()
 
@@ -103,6 +139,10 @@ func (c *Counter32Struct) goCount() {
 }
 
 func (c *Counter32Struct) emptych() {
+	if c == nil {
+		return
+	}
+
 	for {
 		select {
 		case <-c.CountCh:
