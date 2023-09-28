@@ -11,14 +11,16 @@ func (t *TcpServerStruct) Cancel() {
 	if t == nil {
 		return
 	}
+
 	if t.tcplistener != nil {
 		t.tcplistener.Close()
 		t.tcplistener = nil
 	}
-	if t.tcpconn != nil {
-		t.tcpconn.Cancel()
-		t.tcpconn = nil
-	}
+	t.Reset()
+	//if t.tcpconn != nil {
+	//	t.tcpconn.Cancel()
+	//	t.tcpconn = nil
+	//}
 	t.link.Close()
 	t.cx.Cancel()
 }

@@ -32,7 +32,12 @@ func (cs *ChannelStruct) Send(sp *packet.PacketStruct) (err error) {
 
 	cs.tracker.Send(p)
 	if err = cs.channel.Send(p); err != nil {
-		return errors.ErrChanSend(log.Errf("Send() Err:%s", err))
+		switch err.(type) {
+		case errors.ErrNetChannelDown:
+			return err
+		default:
+			return errors.ErrChanSend(log.Errf("Send() Err:%s", err))
+		}
 	}
 
 	return cs.channel.Send(p)

@@ -109,7 +109,6 @@ func MakeAuth(raw []byte) (p *AuthPacket, err error) {
 
 func (ap *AuthPacket) Size() PacketSizeType {
 	if ap == nil {
-		log.ErrorStack("Nil Method Pointer")
 		return PacketSizeTypeERROR
 	}
 
@@ -118,7 +117,6 @@ func (ap *AuthPacket) Size() PacketSizeType {
 
 func (ap *AuthPacket) Action() AuthPacketActionType {
 	if ap == nil {
-		log.ErrorStack("Nil Method Pointer")
 		return AuthError
 	}
 
@@ -127,7 +125,6 @@ func (ap *AuthPacket) Action() AuthPacketActionType {
 
 func (ap *AuthPacket) Text() []byte {
 	if ap == nil {
-		log.ErrorStack("Nil Method Pointer")
 		return []byte("Nil Method Pointer, will this actually be seen?")
 	}
 
@@ -136,7 +133,6 @@ func (ap *AuthPacket) Text() []byte {
 
 func (ap *AuthPacket) ToByte() (raw []byte, err error) {
 	if ap == nil {
-		log.ErrorStack("Nil Method Pointer")
 		return nil, errors.ErrPacketNilMethodPointer(log.Errf(""))
 	}
 

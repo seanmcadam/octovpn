@@ -32,7 +32,7 @@ func new(ctx *ctx.Ctx, config *settings.ConnectionStruct) (tcpclient *TcpClientS
 
 	t := &TcpClientStruct{
 		cx:      ctx,
-		link:    link.NewLinkState(ctx),
+		link:    link.NewNameLinkState(ctx, "TCPCli", link.LinkModeUpAND),
 		config:  config,
 		address: fmt.Sprintf("%s:%d", config.Host, config.Port),
 		tcpaddr: nil,
@@ -94,9 +94,9 @@ TCPFOR:
 			log.Fatal("tcpconn == nil")
 		}
 
-		t.link.Link()
-		t.link.Connected()
-		t.link.AddLinkStateCh(t.tcpconn.Link())
+
+		// t.link.AddLinkStateCh(t.tcpconn.Link())
+		go t.goTcpStart(t.tcpconn)
 
 	TCPCLOSE:
 		for {

@@ -48,7 +48,7 @@ func NewConn32(ctx *ctx.Ctx, config *settings.ConnectionStruct, confFunc NewConn
 	cs := &ChanconnStruct{
 		cx:      ctx,
 		name:    config.Name,
-		link:    link.NewLinkState(ctx, link.LinkModeUpAND),
+		link:    link.NewNameLinkState(ctx, "Conn32", link.LinkModeUpAND),
 		auth:    auth,
 		width:   packet.PacketWidth32,
 		conn:    conn,
@@ -60,7 +60,7 @@ func NewConn32(ctx *ctx.Ctx, config *settings.ConnectionStruct, confFunc NewConn
 	cs.link.AddLinkStateCh(cs.conn.Link())
 	cs.link.AddLinkStateCh(cs.auth.Link())
 
-	go cs.goRecv()
+	go cs.goStart()
 
 	return cs, err
 }
@@ -82,7 +82,7 @@ func NewConn64(ctx *ctx.Ctx, config *settings.ConnectionStruct, confFunc NewConn
 
 	cs := &ChanconnStruct{
 		cx:      ctx,
-		link:    link.NewLinkState(ctx),
+		link:    link.NewNameLinkState(ctx, "Conn64", link.LinkModeUpAND),
 		auth:    auth,
 		width:   packet.PacketWidth64,
 		conn:    conn,
@@ -91,10 +91,11 @@ func NewConn64(ctx *ctx.Ctx, config *settings.ConnectionStruct, confFunc NewConn
 		counter: counter,
 	}
 
+	cs.link.NoLink()
 	cs.link.AddLinkStateCh(cs.conn.Link())
 	cs.link.AddLinkStateCh(cs.auth.Link())
 
-	go cs.goRecv()
+	go cs.goStart()
 
 	return cs, err
 }

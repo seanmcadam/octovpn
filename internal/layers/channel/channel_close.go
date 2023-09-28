@@ -13,7 +13,7 @@ func (c *ChannelStruct) Cancel() {
 	if c == nil {
 		return
 	}
-	log.GDebug("Cancel() %s", c.name)
+	log.GDebugf("Cancel() %s", c.name)
 	c.link.NoLink()
 	c.link.Close()
 	c.cx.Cancel()

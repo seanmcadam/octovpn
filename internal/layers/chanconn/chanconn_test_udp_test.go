@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/seanmcadam/octovpn/internal/layers/chanconn/loopconn"
 	"github.com/seanmcadam/octovpn/internal/layers/conn/udpcli"
 	"github.com/seanmcadam/octovpn/internal/layers/conn/udpsrv"
 	"github.com/seanmcadam/octovpn/internal/packet"
@@ -52,7 +51,7 @@ func TestNewUdp_CliSrv(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()
 
-	srv, cli, err := loopconn.NewUdpConnLoop(cx)
+	srv, cli, err := NewUdp32ConnLoop(cx)
 
 	srvUpCh := srv.Link().LinkUpCh()
 	cliUpCh := cli.Link().LinkUpCh()

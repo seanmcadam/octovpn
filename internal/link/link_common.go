@@ -1,17 +1,23 @@
 package link
 
 import (
+	"sync"
+
 	"github.com/seanmcadam/octovpn/internal/counter"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
+// The mode of the link object
 type LinkModeType uint8
 type LinkStateType uint8
 type LinkNoticeType uint8
+
+// Combo of LinkStateType and LinkNoticeType
 type LinkNoticeStateType uint16
-type LinkNoticeStateListenCh chan<- LinkNoticeStateType
-type LinkNoticeStateCh <-chan LinkNoticeStateType
+
+type LinkNoticeStateListenCh chan<- *LinkNoticeStateType
+type LinkNoticeStateCh <-chan *LinkNoticeStateType
 type LinkNoticeStateFunc func() LinkNoticeStateCh
 
 const DefaultListeners int = 2
@@ -31,6 +37,7 @@ const LinkModeFilterNotices LinkModeType = 0x08
 const LinkStateNONE LinkStateType = 0x00
 const LinkStateLISTEN LinkStateType = 0x01
 const LinkStateNOLINK LinkStateType = 0x02
+const LinkStateSTART LinkStateType = 0x03
 const LinkStateLINK LinkStateType = 0x10
 const LinkStateCHAL LinkStateType = 0x20
 const LinkStateAUTH LinkStateType = 0x30
@@ -55,6 +62,7 @@ type AddLinkStruct struct {
 
 type LinkChan struct {
 	name       string
+	sendmx     sync.Mutex
 	listenChan chan LinkNoticeStateListenCh
 }
 
@@ -62,30 +70,29 @@ type LinkStateStruct struct {
 	cx              *ctx.Ctx
 	linkname        string
 	mode            LinkModeType
+	laststate       LinkStateType
 	state           LinkStateType
 	linkNoticeState *LinkChan
-	linkState       *LinkChan
-	linkNotice      *LinkChan
-	linkUpDown      *LinkChan
-	linkUp          *LinkChan
-	linkDown        *LinkChan
-	linkConnected   *LinkChan
-	linkNoLink      *LinkChan
-	linkListen      *LinkChan
-	linkLink        *LinkChan
 	linkAuth        *LinkChan
 	linkChal        *LinkChan
-	linkLoss        *LinkChan
-	linkLatency     *LinkChan
-	linkSaturation  *LinkChan
 	linkClose       *LinkChan
+	linkConnected   *LinkChan
+	linkDown        *LinkChan
+	linkNoLink      *LinkChan
+	linkNotice      *LinkChan
+	linkLatency     *LinkChan
+	linkLink        *LinkChan
+	linkListen      *LinkChan
+	linkLoss        *LinkChan
+	linkSaturation  *LinkChan
+	linkStart       *LinkChan
+	linkState       *LinkChan
+	linkUp          *LinkChan
+	linkUpDown      *LinkChan
+	processCh       chan *LinkNoticeStateType
+	recvmx          sync.Mutex
 	recvcounter     counter.CounterStruct
-	recvfn          map[counter.Counter]LinkNoticeStateFunc
-	recvchan        map[counter.Counter]LinkNoticeStateCh
-	recvstate       map[counter.Counter]LinkStateType
-	recvnew         chan LinkNoticeStateType
-	addlinkch       chan *AddLinkStruct
-	dellinkch       chan counter.Counter
+	recvmap         map[uint64]*AddLinkStruct
 }
 
 var instanceCounter counter.CounterStruct
@@ -101,6 +108,12 @@ func (ns LinkNoticeStateType) State() LinkStateType {
 	return LinkStateType(ns & 0xFF)
 }
 
+func noticeState(n LinkNoticeType, s LinkStateType) (ns *LinkNoticeStateType) {
+	var u LinkNoticeStateType
+	u = LinkNoticeStateType(uint16((uint16(n) << 8) | uint16(s)))
+	return &u
+}
+
 func (state LinkStateType) String() string {
 	switch state {
 	case LinkStateNONE:
@@ -109,6 +122,8 @@ func (state LinkStateType) String() string {
 		return "LISTEN"
 	case LinkStateNOLINK:
 		return "NOLINK"
+	case LinkStateSTART:
+		return "START"
 	case LinkStateLINK:
 		return "LINK"
 	case LinkStateCHAL:

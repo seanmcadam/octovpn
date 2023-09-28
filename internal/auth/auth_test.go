@@ -31,6 +31,7 @@ func TestNewAuth_test_local_auth(t *testing.T) {
 	if err != nil {
 		t.Errorf("NewAuthStruct() Err:%s", err)
 	}
+	as.Run()
 
 	challenge := <-as.GetSendCh()
 	if challenge.Action() != packet.AuthChallenge {
@@ -69,6 +70,7 @@ func TestNewAuth_test_remote_auth(t *testing.T) {
 	if err != nil {
 		t.Errorf("NewAuthStruct() Err:%s", err)
 	}
+	as.Run()
 
 	// Ignore the first packet
 	challenge := <-as.GetSendCh()
@@ -113,6 +115,7 @@ func TestNewAuth_test_local_remote_auth(t *testing.T) {
 	if err != nil {
 		t.Errorf("NewAuthStruct() Err:%s", err)
 	}
+	as.Run()
 
 	//
 	// Get Challenge
@@ -188,6 +191,7 @@ func TestNewAuth_test_remote_local_auth(t *testing.T) {
 	if err != nil {
 		t.Errorf("NewAuthStruct() Err:%s", err)
 	}
+	as.Run()
 
 	//
 	// Wait on challenge packet to come first

@@ -50,7 +50,6 @@ func (t *TcpStruct) goRecv() {
 				return
 			}
 
-			log.Debugf("Raw Recv len:%d", n)
 			buffer.Write(tmp[:n])
 
 			//
@@ -58,6 +57,7 @@ func (t *TcpStruct) goRecv() {
 			//
 			sig, length, err := packet.ReadPacketBuffer(buffer.Bytes()[:6])
 
+			// log.Debugf("RecvBuffer:%v",buffer.Bytes()[:n])
 			//
 			// Error checking types here
 			//
@@ -85,7 +85,9 @@ func (t *TcpStruct) goRecv() {
 			//
 			// Extract a packet
 			//
-			p, err := packet.MakePacket(buffer.Next(int(length)))
+			newpacketbuf := buffer.Next(int(length))
+			// log.Debugf("Raw TCP Recv:%v", newpacketbuf)
+			p, err := packet.MakePacket(newpacketbuf)
 			if err != nil {
 				log.Errorf("MakePacket() Err:%s on %s", err, t.conn.RemoteAddr())
 				return
@@ -93,6 +95,12 @@ func (t *TcpStruct) goRecv() {
 
 			if p == nil {
 				log.Errorf("MakePacket() returned Nil Packet")
+			}
+
+			if p.Sig().Close() {
+				log.Debug("TCP received SOFT CLOSE")
+				t.link.NoLink()
+				return
 			}
 
 			t.recvch <- p

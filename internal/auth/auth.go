@@ -64,7 +64,7 @@ type AuthStruct struct {
 func NewAuthStruct(ctx *ctx.Ctx, secret string) (as *AuthStruct, err error) {
 	as = &AuthStruct{
 		cx:          ctx,
-		link:        link.NewLinkState(ctx),
+		link:        link.NewNameLinkState(ctx,"Auth"),
 		localstate:  AuthStateStart,
 		remotestate: AuthStateStart,
 		sendcount:   0,
@@ -80,8 +80,6 @@ func NewAuthStruct(ctx *ctx.Ctx, secret string) (as *AuthStruct, err error) {
 
 	as.link.NoLink()
 
-	go as.goAuth()
-
 	return as, nil
 }
 
@@ -95,6 +93,10 @@ func (as *AuthStruct) GetSendCh() (ch <-chan *packet.AuthPacket) {
 
 func (as *AuthStruct) Link() *link.LinkStateStruct {
 	return as.link
+}
+
+func (as *AuthStruct) Run() {
+	go as.goAuth()
 }
 
 // -
@@ -156,7 +158,7 @@ MAINLOOP:
 						as.link.Connected()
 						as.resetCounters()
 					} else {
-						as.link.Auth()  // Local is ready, Remote is waiting
+						as.link.Auth() // Local is ready, Remote is waiting
 					}
 				} else {
 					as.link.NoLink()
@@ -174,7 +176,7 @@ MAINLOOP:
 					as.link.Connected()
 					as.resetCounters()
 				} else if as.localstate == AuthStateChallenge {
-					as.link.Chal()  // Remote is ready, Local is waiting
+					as.link.Chal() // Remote is ready, Local is waiting
 				}
 
 			case packet.AuthReject:
@@ -197,7 +199,7 @@ MAINLOOP:
 			}
 
 		case <-as.remotetimer.C:
-			log.Debug("Auth Remote Timer State:%s", as.remotestate)
+			log.Debugf("Auth Remote Timer State:%s", as.remotestate)
 			switch as.remotestate {
 			case AuthStateUnauthenticated:
 				fallthrough
@@ -245,7 +247,7 @@ MAINLOOP:
 			}
 
 		case <-as.localtimer.C:
-			log.Debug("Auth Local Timer State:%s", as.localstate)
+			log.Debugf("Auth Local Timer State:%s", as.localstate)
 			switch as.localstate {
 			case AuthStateStart:
 				as.random = generateChallengePhrase()

@@ -18,13 +18,22 @@ func (t *TcpServerStruct) Send(co *packet.PacketStruct) (err error) {
 		return errors.ErrNetPacketTooBig(log.Errf(" size:%d > %d", uint16(co.Size()), uint16(t.config.Mtu)))
 	}
 
-	if t.tcpconn != nil {
-		if err = t.tcpconn.Send(co); err != nil {
-			log.Errorf("Send() Err", err)
+	for i, conn := range t.tcpconn {
+		if conn.Link().IsUp() {
+			if err = conn.Send(co); err != nil {
+				log.Errorf("Send() on %s Err", i, err)
+				return err
+			}
+			return nil
 		}
-		return err
 	}
+	//if t.tcpconn != nil {
+	//	if err = t.tcpconn.Send(co); err != nil {
+	//		log.Errorf("Send() Err", err)
+	//	}
+	//	return err
+	//}
 
-	return errors.ErrNetChannelDown(log.Errf(""))
+	return errors.ErrNetChannelDown(log.Errf("No open chanels in tcp server"))
 
 }

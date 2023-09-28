@@ -3,6 +3,7 @@ package tcpsrv
 import (
 	"fmt"
 	"net"
+	"sync"
 
 	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/layers/network/tcp"
@@ -15,12 +16,13 @@ import (
 
 type TcpServerStruct struct {
 	cx          *ctx.Ctx
+	mx          sync.Mutex
 	link        *link.LinkStateStruct
 	config      *settings.ConnectionStruct
 	address     string
 	tcplistener *net.TCPListener
 	tcpaddr     *net.TCPAddr
-	tcpconn     *tcp.TcpStruct
+	tcpconn     map[string]*tcp.TcpStruct
 	tcpconnch   chan *tcp.TcpStruct
 	recvch      chan *packet.PacketStruct
 }
@@ -33,12 +35,12 @@ func new(ctx *ctx.Ctx, config *settings.ConnectionStruct) (tcpserver *TcpServerS
 
 	t := &TcpServerStruct{
 		cx:          ctx,
-		link:        link.NewLinkState(ctx, link.LinkModeUpAND), // If more then 1 is connected, they all have to be up
+		link:        link.NewNameLinkState(ctx, "TCPSrv", link.LinkModeUpOR),
 		config:      config,
 		address:     fmt.Sprintf("%s:%d", config.Host, config.Port),
 		tcplistener: nil,
 		tcpaddr:     nil,
-		tcpconn:     nil,
+		tcpconn:     make(map[string]*tcp.TcpStruct),
 		tcpconnch:   make(chan *tcp.TcpStruct),
 		recvch:      make(chan *packet.PacketStruct, 16),
 	}
@@ -64,12 +66,13 @@ func new(ctx *ctx.Ctx, config *settings.ConnectionStruct) (tcpserver *TcpServerS
 
 }
 
+// -
 // goRun()
 // Loop on
 // 	Establish Connection
 // 	Start Send and Recv Goroutines
 // 	Monitor reset request
-//
+// -
 
 func (t *TcpServerStruct) goRun() {
 
@@ -77,7 +80,7 @@ func (t *TcpServerStruct) goRun() {
 		log.ErrorStack("Nil Method Pointer")
 		return
 	}
-	
+
 	defer t.Cancel()
 
 	for {
@@ -85,23 +88,10 @@ func (t *TcpServerStruct) goRun() {
 
 		select {
 		case conn := <-t.tcpconnch:
-			log.Debugf("New incoming TCP Connection")
-
-			// Terminate last connection
-			log.Debug("Need to do more here with closing old connections")
-
-			if t.tcpconn != nil {
-				log.Debug("Shutdown Previous connection")
-				t.tcpconn.Cancel()
-				t.tcpconn = nil
-			}
-
-			t.tcpconn = conn
-			t.link.Link()
-			t.link.Connected()
-			t.link.AddLinkStateCh(t.tcpconn.Link())
-
-			log.Debugf("TCP Srv state:%s", conn.Link().GetState())
+			log.Debugf("New incoming TCP Server Connection")
+			t.addNewConnection(conn)
+			//t.link.AddLinkStateCh(conn.Link())
+			go t.goTcpStart(conn)
 
 		case <-tcpconnclosech:
 			continue
@@ -129,4 +119,22 @@ func (t *TcpServerStruct) emptyconn() {
 
 func (t *TcpServerStruct) Link() *link.LinkStateStruct {
 	return t.link
+}
+
+func (t *TcpServerStruct) addNewConnection(tcp *tcp.TcpStruct) {
+	t.mx.Lock()
+	defer t.mx.Unlock()
+
+	addr := tcp.RemoteAddrString()
+	t.tcpconn[addr] = tcp
+
+}
+
+func (t *TcpServerStruct) removeConnection(tcp *tcp.TcpStruct) {
+	t.mx.Lock()
+	defer t.mx.Unlock()
+
+	addr := tcp.RemoteAddrString()
+	delete(t.tcpconn, addr)
+	tcp.Cancel()
 }

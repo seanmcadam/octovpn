@@ -1,37 +1,63 @@
 package chanconn
 
 import (
+	"time"
+
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
-func (cs *ChanconnStruct) RecvChan() <-chan *packet.PacketStruct {
-	if cs == nil {
-		log.FatalStack("nil ChanconnStruct")
-		return nil
-	}
-	if cs.recvch == nil {
-		log.Error("Nil recvch pointer")
-		return nil
-	}
-
-	if cs.link.IsDown() {
-		return nil
-	}
-
-	return cs.recvch
-}
-
-func (cs *ChanconnStruct) goRecv() {
+func (cs *ChanconnStruct) goStart() {
 	if cs == nil {
 		return
 	}
 
 	log.Debugf("starting %s", cs.name)
 
+	linkupch := cs.conn.Link().LinkUpCh()
+
+	log.Debugf("conn link status:%s", cs.conn.Link().GetState())
+
+	if cs.conn.Link().IsUp() {
+		go cs.goAuth()
+		return
+	}
+
 	for {
 		select {
 		case <-cs.doneChan():
+			return
+
+		case <-linkupch:
+			log.Debug("Channel Link Up")
+			go cs.goAuth()
+			return
+
+		case <-time.After(5 * time.Second):
+			log.Debugf("conn link status:%s", cs.conn.Link().GetState())
+			log.Debug("Channel Link Up - Timeout...")
+			return
+		}
+	}
+}
+
+func (cs *ChanconnStruct) goAuth() {
+	if cs == nil {
+		return
+	}
+
+	log.Debugf("starting %s", cs.name)
+
+	cs.auth.Run()
+
+	for {
+		select {
+		case <-cs.doneChan():
+			return
+
+		case <-cs.auth.Link().LinkUpCh():
+			log.Debug("Channel Authenticated")
+			go cs.goRecv()
 			return
 
 		case ap := <-cs.auth.GetSendCh():
@@ -57,32 +83,9 @@ func (cs *ChanconnStruct) goRecv() {
 			p.DebugPacket("Chanconn Recv")
 
 			switch p.Sig() {
-			case packet.SIG_CONN_32_PACKET:
-			case packet.SIG_CONN_64_PACKET:
-				if p.Packet() == nil {
-					log.FatalfStack("nil Packet(): %v", p)
-				}
-				cs.recvch <- p.Packet()
-
 			case packet.SIG_CONN_32_AUTH:
 			case packet.SIG_CONN_64_AUTH:
 				cs.auth.GetRecvCh() <- p.Auth()
-
-			case packet.SIG_CONN_32_PING:
-			case packet.SIG_CONN_64_PING:
-				pong, err := p.CopyPong()
-				if err != nil {
-					log.FatalfStack("CopyPong() Err:%s", err)
-				}
-				cs.send(pong)
-
-			case packet.SIG_CONN_32_PONG:
-			case packet.SIG_CONN_64_PONG:
-				cs.pinger.RecvPong(p.Pong())
-
-			case packet.SIG_CHAN_32_RAW:
-			case packet.SIG_CHAN_64_RAW:
-				log.Debug("Discarded Sig")
 
 			default:
 				log.Fatalf("Unhandled Packet Type:%d", p.Sig())

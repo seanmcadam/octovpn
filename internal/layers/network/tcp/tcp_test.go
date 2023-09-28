@@ -9,6 +9,7 @@ import (
 
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
+	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 // -
@@ -43,7 +44,7 @@ func TestNewTCP_test_nil_returns(t *testing.T) {
 	ts.goRecv()
 	ts.emptyrecv()
 	ts.Link()
-	ts.run()
+	ts.Run()
 
 	srv, cli, err := connection(cx)
 	if err != nil {
@@ -57,6 +58,33 @@ func TestNewTCP_test_nil_returns(t *testing.T) {
 	srv.doneChan()
 	srv.Cancel()
 
+}
+
+// -
+// Send a packet, and recieve it
+// -
+func TestNewTCP_send_and_compare_size(t *testing.T) {
+	cx := ctx.NewContext()
+	defer cx.Cancel()
+
+	_, cli, err := connection(cx)
+	if err != nil {
+		t.Error(err)
+	}
+
+	p, err := packet.TestConn32Packet()
+	if err != nil {
+		t.Error(err)
+	}
+
+	size1 := p.Size()
+	cli.Send(p)
+	size2 := p.Size()
+
+	log.Infof("Size1:%d, Size2:%d", size1, size2)
+	if size1 != size2 {
+		t.Error("Packet Size altered by Send()")
+	}
 }
 
 // -
@@ -76,6 +104,23 @@ func TestNewTCP_send(t *testing.T) {
 		t.Error(err)
 	}
 
+	srv.Send(p)
+
+	select {
+	case r := <-cli.RecvChan():
+		if r == nil {
+			t.Error("Recieved nil")
+			return
+		}
+		err = packet.Validatepackets(p, r)
+		if r == nil {
+			t.Error("Recieved nil")
+			return
+		}
+	case <-time.After(2 * time.Second):
+		t.Error("CLI Recieve timeout")
+	}
+
 	cli.Send(p)
 	select {
 	case r := <-srv.RecvChan():
@@ -89,22 +134,8 @@ func TestNewTCP_send(t *testing.T) {
 			return
 		}
 	case <-time.After(2 * time.Second):
-		t.Error("Recieve timeout")
-		return
+		t.Error("SRV Recieve timeout")
 	}
-
-	srv.Send(p)
-	select {
-	case r := <-cli.RecvChan():
-		if r == nil {
-			t.Error("Recieved nil")
-			return
-		}
-		err = packet.Validatepackets(p, r)
-	case <-time.After(2 * time.Second):
-		t.Error("Recieve timeout")
-	}
-
 }
 
 // -
@@ -165,13 +196,18 @@ func TestNewTCP_link_validation(t *testing.T) {
 	}
 
 	srv.Send(p)
+	time.After(time.Millisecond)
+
 	select {
 	case r := <-cli.RecvChan():
 		if r == nil {
 			t.Error("Recieved nil")
 			return
 		}
-		err = packet.Validatepackets(p, r)
+		if err = packet.Validatepackets(p, r); err != nil {
+			t.Error("Pacet Validation problem")
+		}
+
 	case <-time.After(time.Second):
 		t.Error("Cli Recieve timeout")
 	}
@@ -201,7 +237,6 @@ func TestNewTCP_link_validation(t *testing.T) {
 	case <-time.After(time.Millisecond):
 		t.Error("Cli Close Timeout")
 	}
-
 }
 
 // -
@@ -417,6 +452,7 @@ func TestNewTCP_cli_recv_short_packet(t *testing.T) {
 		t.Error("Srv Close Timeout")
 	}
 }
+
 //-----------------------------------------------------------------------------
 
 // -

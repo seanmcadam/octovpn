@@ -1,7 +1,5 @@
 package link
 
-import "github.com/seanmcadam/octovpn/octolib/log"
-
 // Msg       UP     DOWN
 // Cond   -----------------
 // ANY    | Send    Send
@@ -18,7 +16,7 @@ import "github.com/seanmcadam/octovpn/octolib/log"
 //
 
 // State has already assumed to have changed
-func (ls *LinkStateStruct) processMessage(ns LinkNoticeStateType) {
+func (ls *LinkStateStruct) processIncomingMessage(ns *LinkNoticeStateType) {
 	if ls == nil {
 		return
 	}
@@ -27,16 +25,19 @@ func (ls *LinkStateStruct) processMessage(ns LinkNoticeStateType) {
 	noticechange := (ns.Notice() != LinkNoticeNONE)
 
 	if noticechange {
-		log.Debugf("[%s] Notice:%s", ls.linkname, ns)
+		// log.Debugf("[%s] Notice:%s", ls.linkname, ns)
 		ls.processNotice(noticeState(ns.Notice(), LinkStateNONE))
 	}
+
 	if statechange {
 		ls.processStateChange(noticeState(LinkNoticeNONE, ns.State()))
 	}
 
 }
 
-func (ls *LinkStateStruct) processNotice(ns LinkNoticeStateType) {
+// processNotice()
+// Just send it
+func (ls *LinkStateStruct) processNotice(ns *LinkNoticeStateType) {
 	if ls == nil {
 		return
 	}
@@ -57,25 +58,26 @@ func (ls *LinkStateStruct) processNotice(ns LinkNoticeStateType) {
 	}
 }
 
-func (ls *LinkStateStruct) processStateChange(ns LinkNoticeStateType) {
+//
+// processStateChange()
+//
+func (ls *LinkStateStruct) processStateChange(ns *LinkNoticeStateType) {
 	if ls == nil {
 		return
 	}
 
-	currentState := ls.state
 	newState := ns.State()
-	if currentState == newState {
+
+	if newState == ls.state {
 		return
 	}
-
-	var sendTransition = false
 
 	switch ls.mode {
 	case LinkModePassALL:
 		//
 		// Send all packets Always
 		//
-		sendTransition = true
+		ls.setState(newState)
 
 	case LinkModeUpAND:
 		fallthrough
@@ -84,13 +86,13 @@ func (ls *LinkStateStruct) processStateChange(ns LinkNoticeStateType) {
 		// Msg is Down so Send packet
 		//
 		if (ns.State() & LinkStateDownMASK) > 0 {
-			sendTransition = true
+			ls.setState(newState)
 		} else {
 			//
 			// Send Msg UP All links UP
 			//
 			allup := true
-			for _, v := range ls.recvstate {
+			for _, v := range ls.getStates() {
 				if (v & LinkStateUpMASK) == 0 {
 					allup = false
 					break
@@ -98,7 +100,7 @@ func (ls *LinkStateStruct) processStateChange(ns LinkNoticeStateType) {
 			}
 
 			if allup {
-				sendTransition = true
+				ls.setState(newState)
 			}
 		}
 
@@ -109,13 +111,13 @@ func (ls *LinkStateStruct) processStateChange(ns LinkNoticeStateType) {
 		// Msg is UP so Send packet
 		//
 		if (ns.State() & LinkStateUpMASK) > 0 {
-			sendTransition = true
+			ls.setState(newState)
 		} else {
 			//
 			// Send if All Links DOWN
 			//
 			alldown := true
-			for _, v := range ls.recvstate {
+			for _, v := range ls.getStates() {
 				if (v & LinkStateDownMASK) == 0 {
 					alldown = false
 					break
@@ -123,400 +125,8 @@ func (ls *LinkStateStruct) processStateChange(ns LinkNoticeStateType) {
 			}
 
 			if alldown {
-				sendTransition = true
+				ls.setState(newState)
 			}
 		}
-
 	}
-
-	if sendTransition {
-
-		ls.state = newState
-
-		ls.linkNoticeState.send(ns)
-		ls.linkState.send(ns)
-		switch ns.State() {
-		case LinkStateCONNECTED:
-			ls.linkConnected.send(ns)
-			ls.linkUp.send(ns)
-			ls.linkUpDown.send(ns)
-		case LinkStateAUTH:
-			ls.linkAuth.send(ns)
-			ls.linkUp.send(ns)
-			ls.linkUpDown.send(ns)
-		case LinkStateCHAL:
-			ls.linkChal.send(ns)
-			ls.linkUp.send(ns)
-			ls.linkUpDown.send(ns)
-		case LinkStateLINK:
-			ls.linkLink.send(ns)
-			ls.linkUp.send(ns)
-			ls.linkUpDown.send(ns)
-		case LinkStateLISTEN:
-			ls.linkListen.send(ns)
-			ls.linkDown.send(ns)
-			ls.linkUpDown.send(ns)
-		case LinkStateNOLINK:
-			ls.linkNoLink.send(ns)
-			ls.linkDown.send(ns)
-			ls.linkUpDown.send(ns)
-		}
-
-		if (currentState&LinkStateUpMASK) > 0 && (newState&LinkStateDownMASK) > 0 {
-			// UP -> DOWN
-			ls.linkDown.send(ns)
-		} else if (currentState&LinkStateDownMASK) > 0 && (newState&LinkStateUpMASK) > 0 {
-			// DOWN -> UP
-			ls.linkUp.send(ns)
-		}
-
-	}
-}
-
-func (ls *LinkStateStruct) LinkStateCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkState.LinkCh()
-}
-
-func (ls *LinkStateStruct) LinkNoticeCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkNotice.LinkCh()
-}
-
-func (ls *LinkStateStruct) LinkNoticeStateCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkNoticeState.LinkCh()
-}
-
-func (ls *LinkStateStruct) LinkChalCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkChal.LinkCh()
-}
-
-func (ls *LinkStateStruct) LinkAuthCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkAuth.LinkCh()
-}
-
-func (ls *LinkStateStruct) LinkLinkCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkLink.LinkCh()
-}
-
-func (ls *LinkStateStruct) LinkConnectCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkConnected.LinkCh()
-}
-
-func (ls *LinkStateStruct) LinkUpDownCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkUpDown.LinkCh()
-}
-
-func (ls *LinkStateStruct) LinkListenCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkListen.LinkCh()
-}
-
-func (ls *LinkStateStruct) LinkNoLinkCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkNoLink.LinkCh()
-}
-
-func (ls *LinkStateStruct) LinkUpCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkUp.LinkCh()
-}
-
-func (ls *LinkStateStruct) LinkDownCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkDown.LinkCh()
-}
-
-func (ls *LinkStateStruct) LinkCloseCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkClose.LinkCh()
-}
-
-func (ls *LinkStateStruct) LinkLossCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkLoss.LinkCh()
-}
-
-func (ls *LinkStateStruct) LinkLatencyCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkLatency.LinkCh()
-}
-
-func (ls *LinkStateStruct) LinkSaturationCh() (newch LinkNoticeStateCh) {
-	if ls == nil {
-		return nil
-	}
-
-	log.Debug("")
-
-	return ls.linkSaturation.LinkCh()
-}
-
-func (ls *LinkStateStruct) refreshRecvLinks() {
-	if ls == nil {
-		return
-	}
-	ls.recvnew <- noticeState(LinkNoticeNONE, LinkStateNONE)
-}
-
-func (ls *LinkStateStruct) AddLinkStateCh(link *LinkStateStruct) {
-	if ls == nil {
-		return
-	}
-	state := link.GetState()
-
-	add := &AddLinkStruct{
-		State:    state,
-		LinkFunc: link.LinkStateCh,
-	}
-
-	ls.addlinkch <- add
-	ls.refreshRecvLinks()
-
-}
-func (ls *LinkStateStruct) AddLinkNoticeCh(link *LinkStateStruct) {
-	if ls == nil {
-		return
-	}
-	state := LinkStateNONE
-
-	add := &AddLinkStruct{
-		State:    state,
-		LinkFunc: link.LinkNoticeCh,
-	}
-
-	ls.addlinkch <- add
-	ls.refreshRecvLinks()
-
-}
-func (ls *LinkStateStruct) AddLinkNoticeStateCh(link *LinkStateStruct) {
-	if ls == nil {
-		return
-	}
-	state := link.GetState()
-
-	add := &AddLinkStruct{
-		State:    state,
-		LinkFunc: link.LinkNoticeStateCh,
-	}
-
-	ls.addlinkch <- add
-	ls.refreshRecvLinks()
-
-}
-func (ls *LinkStateStruct) AddLinkLinkCh(link *LinkStateStruct) {
-	if ls == nil {
-		return
-	}
-	state := LinkStateNONE
-
-	add := &AddLinkStruct{
-		State:    state,
-		LinkFunc: link.LinkLinkCh,
-	}
-
-	ls.addlinkch <- add
-	ls.refreshRecvLinks()
-
-}
-func (ls *LinkStateStruct) AddLinkUpDownCh(link *LinkStateStruct) {
-	if ls == nil {
-		return
-	}
-	state := link.GetState()
-
-	add := &AddLinkStruct{
-		State:    state,
-		LinkFunc: link.LinkUpDownCh,
-	}
-
-	ls.addlinkch <- add
-	ls.refreshRecvLinks()
-
-}
-func (ls *LinkStateStruct) AddLinkUpCh(link *LinkStateStruct) {
-	if ls == nil {
-		return
-	}
-	state := LinkStateNONE
-
-	add := &AddLinkStruct{
-		State:    state,
-		LinkFunc: link.LinkUpCh,
-	}
-
-	ls.addlinkch <- add
-	ls.refreshRecvLinks()
-
-}
-func (ls *LinkStateStruct) AddLinkConnectCh(link *LinkStateStruct) {
-	if ls == nil {
-		return
-	}
-	state := LinkStateNONE
-
-	add := &AddLinkStruct{
-		State:    state,
-		LinkFunc: link.LinkConnectCh,
-	}
-
-	ls.addlinkch <- add
-	ls.refreshRecvLinks()
-
-}
-func (ls *LinkStateStruct) AddLinkDownCh(link *LinkStateStruct) {
-	if ls == nil {
-		return
-	}
-	state := LinkStateNONE
-
-	add := &AddLinkStruct{
-		State:    state,
-		LinkFunc: link.LinkDownCh,
-	}
-
-	ls.addlinkch <- add
-	ls.refreshRecvLinks()
-
-}
-func (ls *LinkStateStruct) AddLinkCloseCh(link *LinkStateStruct) {
-	if ls == nil {
-		return
-	}
-	state := LinkStateNONE
-
-	add := &AddLinkStruct{
-		State:    state,
-		LinkFunc: link.LinkCloseCh,
-	}
-
-	ls.addlinkch <- add
-	ls.refreshRecvLinks()
-
-}
-func (ls *LinkStateStruct) AddLinkLossCh(link *LinkStateStruct) {
-	if ls == nil {
-		return
-	}
-	state := LinkStateNONE
-
-	add := &AddLinkStruct{
-		State:    state,
-		LinkFunc: link.LinkLossCh,
-	}
-
-	ls.addlinkch <- add
-	ls.refreshRecvLinks()
-
-}
-func (ls *LinkStateStruct) AddLinkLatencyCh(link *LinkStateStruct) {
-	if ls == nil {
-		return
-	}
-	state := LinkStateNONE
-
-	add := &AddLinkStruct{
-		State:    state,
-		LinkFunc: link.LinkLatencyCh,
-	}
-
-	ls.addlinkch <- add
-	ls.refreshRecvLinks()
-
-}
-func (ls *LinkStateStruct) AddLinkSaturationCh(link *LinkStateStruct) {
-	if ls == nil {
-		return
-	}
-	state := LinkStateNONE
-
-	add := &AddLinkStruct{
-		State:    state,
-		LinkFunc: link.LinkSaturationCh,
-	}
-
-	ls.addlinkch <- add
-	ls.refreshRecvLinks()
-
 }

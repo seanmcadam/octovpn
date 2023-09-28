@@ -7,6 +7,7 @@ import (
 	"github.com/seanmcadam/octovpn/internal/counter"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
+	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
 func TestNewTcpLoop_compile(t *testing.T) {
@@ -51,7 +52,22 @@ func TestNewTcpLoop_SendRecv(t *testing.T) {
 		t.Fatalf("TCP Error:%s", err)
 	}
 
-	time.Sleep(2 * time.Second)
+	select {
+	case <-l1.Link().LinkUpCh():
+		log.Debug("L1 Up")
+	case <-l2.Link().LinkUpCh():
+		log.Debug("L2 Up")
+	case <-time.After(2 * time.Second):
+		t.Error("Timeout waiting for channels to come up")
+	}
+
+	if l1.Link().IsDown()  {
+		t.Fatalf("TCP Send Channel 1 down")
+	}
+
+	if l2.Link().IsDown()  {
+		t.Fatalf("TCP Send Channel 2 down")
+	}
 
 	err = l1.Send(cp)
 	if err != nil {

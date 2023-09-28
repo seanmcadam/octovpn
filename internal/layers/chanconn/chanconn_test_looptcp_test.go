@@ -1,4 +1,4 @@
-package loopconn
+package chanconn
 
 import (
 	"testing"
@@ -13,13 +13,15 @@ func TestNewTcpLoop_OpenClose(t *testing.T) {
 
 	cx := ctx.NewContext()
 
-	_, _, err := NewTcpConnLoop(cx)
+	srv, _, err := NewTcp32ConnLoop(cx)
 
 	if err != nil {
 		t.Fatalf("TCP Error:%s", err)
 	}
 
 	time.Sleep(5 * time.Second)
+
+	srv.Reset()
 
 }
 
@@ -35,13 +37,21 @@ func TestNewTcpLoop_SendRecv(t *testing.T) {
 		t.Fatalf("NewPacket Err:%s", err)
 	}
 
-	l1, l2, err := NewTcpConnLoop(cx)
+	l1, l2, err := NewTcp32ConnLoop(cx)
 
 	if err != nil {
 		t.Fatalf("TCP Error:%s", err)
 	}
 
-	time.Sleep(2 * time.Second)
+	select {
+	case <-l1.Link().LinkUpCh():
+		break
+	case <-l2.Link().LinkUpCh():
+		break
+	case <-time.After(30*time.Second):
+		t.Error("Connection Timeout")
+		return
+	}
 
 	err = l1.Send(cp)
 	if err != nil {
@@ -73,7 +83,7 @@ func TestNewTcpLoop_SendRecvReset(t *testing.T) {
 		t.Fatalf("NewPacket Err:%s", err)
 	}
 
-	l1, l2, err := NewTcpConnLoop(cx)
+	l1, l2, err := NewTcp32ConnLoop(cx)
 
 	if err != nil {
 		t.Fatalf("TCP Error:%s", err)

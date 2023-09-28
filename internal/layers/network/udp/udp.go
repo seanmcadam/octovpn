@@ -30,7 +30,7 @@ func NewUDPSrv(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
 		return nil
 	}
 
-	log.Debug("Local Addr %s", conn.LocalAddr())
+	log.Debugf("Local Addr %s", conn.LocalAddr())
 
 	udp = &UdpStruct{
 		cx:     ctx,
@@ -53,7 +53,7 @@ func NewUDPCli(ctx *ctx.Ctx, conn *net.UDPConn) (udp *UdpStruct) {
 		return nil
 	}
 
-	log.Debug("Local Addr %s", conn.LocalAddr())
+	log.Debugf("Local Addr %s <-> %s", conn.LocalAddr(), conn.RemoteAddr())
 
 	udp = &UdpStruct{
 		cx:     ctx,

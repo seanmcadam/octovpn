@@ -112,7 +112,7 @@ func (p *Pinger64Struct) goRun() {
 	tickch := tick.C
 	countch := p.counter.GetCountCh()
 
-	log.GDebug("Pinger Start")
+	log.GDebug("Pinger64 Run")
 	defer log.GDebug("Pinger Stop")
 
 	defer tick.Stop()

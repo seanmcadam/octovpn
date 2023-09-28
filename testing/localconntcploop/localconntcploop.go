@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/seanmcadam/octovpn/internal/counter"
-	"github.com/seanmcadam/octovpn/internal/layers/chanconn/loopconn"
+	"github.com/seanmcadam/octovpn/internal/layers/chanconn"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
@@ -17,7 +17,7 @@ func main() {
 	cx := ctx.NewContext()
 	c32 := counter.NewCounter32(cx)
 
-	srv, cli, err := loopconn.NewTcpConnLoop(cx)
+	srv, cli, err := chanconn.NewTcp32ConnLoop(cx)
 	if err != nil {
 		log.FatalfStack("NewTcpConnLoop Err:%s", err)
 	}

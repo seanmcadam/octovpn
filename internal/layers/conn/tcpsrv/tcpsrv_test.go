@@ -74,6 +74,7 @@ func TestNewTcpClient_test_nil_returns(t *testing.T) {
 	u.Send(bigpacket)
 	u.Reset()
 	u.RecvChan()
-	//u.goListen()
+
+	u.Cancel()
 
 }

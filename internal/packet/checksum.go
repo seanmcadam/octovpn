@@ -2,32 +2,25 @@ package packet
 
 import (
 	"encoding/binary"
-
-	"github.com/seanmcadam/octovpn/octolib/log"
+	"hash/crc32"
 )
 
 // -
 //
 // -
-func calculateChecksumUint32(data []byte) uint32 {
-	var sum uint32 = 0
-	for _, b := range data {
-		sum += uint32(b)
-	}
-
-	return sum
-}
-func calculateChecksumByte(data []byte) (b []byte) {
-	b = make([]byte,4)
-	if binary.BigEndian.PutUint32(b, calculateChecksumUint32(data)); len(b) != 4 {
-		log.FatalStack("bad value returned")
-	}
-	return b
+func calculateCRC32Checksum(data []byte) []byte {
+	checksum := crc32.ChecksumIEEE(data)
+	checksumBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(checksumBytes, checksum)
+	return checksumBytes
 }
 
 // -
 //
 // -
-func validChecksum(sum1, sum2 uint32) bool {
-	return sum1 == sum2
+func equalCRC2Checksums(sum1, sum2 []byte) bool {
+	if int(PacketChecksumSize) != len(sum1) && len(sum1) != len(sum2) {
+		return false
+	}
+	return string(sum1) == string(sum2)
 }

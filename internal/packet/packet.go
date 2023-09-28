@@ -1,8 +1,6 @@
 package packet
 
 import (
-	"fmt"
-
 	"github.com/seanmcadam/octovpn/internal/counter"
 	"github.com/seanmcadam/octovpn/internal/pinger"
 	"github.com/seanmcadam/octovpn/octolib/errors"
@@ -67,7 +65,7 @@ func NewPacket(sig PacketSigType, v ...interface{}) (ps *PacketStruct, err error
 		raw:     nil,
 	}
 
-	if sig.Close() {
+	if sig.Close() || sig.Start() {
 		return ps, nil
 	}
 
@@ -269,13 +267,13 @@ func ReadPacketBuffer(buf []byte) (sig PacketSigType, length PacketSizeType, err
 
 	sig = PacketSigType(BtoU32(buf[:4]))
 	if !sig.V1() {
-		return SIG_ERROR, 0, errors.ErrPacketBadParameter(log.Errf("Bad Sig Version:%04X", sig))
+		return SIG_ERROR, 0, errors.ErrPacketBadParameter(log.Errf("Bad Sig Version:%s", sig))
 	}
 	buf = buf[4:]
 	//
 	// pSize
 	//
-	if sig.Close() {
+	if sig.Close() || sig.Start() {
 		length = 4
 	} else if sig.Size8() {
 		length = PacketSizeType(BtoU8(buf))
@@ -316,7 +314,7 @@ func MakePacket(raw []byte) (p *PacketStruct, err error) {
 	//
 	// No checksum for Close() packets
 	//
-	if p.pSig.Close() {
+	if p.pSig.Close() || p.pSig.Start(){
 		return p, nil
 	}
 
@@ -330,35 +328,38 @@ func MakePacket(raw []byte) (p *PacketStruct, err error) {
 	}
 
 	checksumindex := len(raw) - int(PacketChecksumSize)
-	checksum_calc := calculateChecksumUint32(raw[:checksumindex])
-	checksum_actual := BtoU32(raw[checksumindex:])
+	//checksum_calc := calculateChecksumUint32(raw[:checksumindex])
+	//checksum_actual := BtoU32(raw[checksumindex:])
 
-	if !validChecksum(checksum_calc, checksum_actual) {
-		return nil, errors.ErrPacketBadChecksum(log.Errf(""))
+	if !equalCRC2Checksums(calculateCRC32Checksum(raw[:checksumindex]), raw[checksumindex:]) {
+		return nil, errors.ErrPacketBadChecksum(log.Errf("BadCheckSum"))
 	}
 
+	//
+	// Remove Sig and Checksum from the raw packet
+	//
 	raw = raw[4 : len(raw)-int(PacketChecksumSize)]
-	calcsize += PacketSigSize + PacketChecksumSize
+	calcsize += PacketSigSize
 
 	//
-	// pSize (includes checksum at the end)
+	// pSize (includes checksum at the end, so remove that part here)
 	//
 	if p.pSig.Size8() {
-		p.pSize = PacketSizeType(BtoU8(raw))
+		p.pSize = PacketSizeType(BtoU8(raw)) - PacketChecksumSize
 		raw = raw[1:]
 		calcsize += 1
 
 	} else if p.pSig.Size16() {
-		p.pSize = PacketSizeType(BtoU16(raw))
+		p.pSize = PacketSizeType(BtoU16(raw)) - PacketChecksumSize
 		raw = raw[2:]
 		calcsize += 2
 	} else {
 		return nil, errors.ErrPacketNoSizeParameter(log.Errf(""))
 	}
 
-	// If the buffer does not contain enough data, return now, and leave the start of the packet in tact
-	if rawsize != uint16(p.pSize) {
-		return nil, log.Errf("Buffer size has %d, needs:%d", rawsize, p.pSize)
+	// If the buffer does not contain enough data, Error out now
+	if rawsize != (uint16(p.pSize) + uint16(PacketChecksumSize)) {
+		return nil, log.Errf("Buffer size has %d, needs:%d", rawsize, p.pSize+PacketChecksumSize)
 	}
 
 	if p.pSig.Width32() {
@@ -428,12 +429,8 @@ func MakePacket(raw []byte) (p *PacketStruct, err error) {
 	}
 
 	if p.pSig.Data() {
-		if len(raw) < int(PacketChecksumSize) {
-			return nil, errors.ErrPacketBadParameter(log.Errf("data len too small for checksum"))
-		}
-
 		if p.pSig.Packet() {
-			if p.packet, err = MakePacket(raw[:len(raw)-int(PacketChecksumSize)]); err != nil {
+			if p.packet, err = MakePacket(raw); err != nil {
 				return nil, err
 			}
 			calcsize += p.packet.Size()
@@ -472,15 +469,15 @@ func MakePacket(raw []byte) (p *PacketStruct, err error) {
 			calcsize += PacketSizeType(len(raw))
 		}
 
-		raw = raw[int(PacketChecksumSize):]
 	}
 
-	if calcsize != p.pSize || PacketSizeType(rawsize) != p.pSize {
+	if calcsize != p.pSize || PacketSizeType(rawsize) != p.pSize+PacketChecksumSize {
 		p.DebugPacket("PACKET SIZE ISSUE")
 		return nil, AuthErrPacketSizeMismatch(log.Errf("Packet Sizes dont match psize:%d rawsize:%d calcsize:%d", p.pSize, rawsize, calcsize))
 	}
 
-	checksum := calculateChecksumByte(raw)
+	//checksum := calculateChecksumByte(raw)
+	checksum := calculateCRC32Checksum(raw)
 
 	raw = append(raw, checksum...)
 
@@ -489,6 +486,9 @@ func MakePacket(raw []byte) (p *PacketStruct, err error) {
 
 // -
 // ToByte()
+//
+// Adds the checksum on the end and adjusts the sending size to account for it (but not the original object - dont touch the original)
+//
 // -
 func (p *PacketStruct) ToByte() (raw []byte, err error) {
 	if p == nil {
@@ -502,25 +502,25 @@ func (p *PacketStruct) ToByte() (raw []byte, err error) {
 
 	//
 	// This is a Close packet (4 bytes)
-	if p.pSig.Close() {
+	if p.pSig.Close() || p.pSig.Start() {
 		return raw, nil
 	}
 
 	//
 	// pSize (account for added checksum)
 	//
-	p.pSize += PacketChecksumSize
+	var packetsendsize PacketSizeType = p.pSize + PacketChecksumSize
 
 	if p.pSig.Size8() {
-		if p.pSize > 255 {
+		if packetsendsize > 255 {
 			return nil, errors.ErrPacketBadParameter(log.Errf("size > 255"))
 		}
-		raw = append(raw, U8toB(uint8(p.pSize))...)
+		raw = append(raw, U8toB(uint8(packetsendsize))...)
 	} else if p.pSig.Size16() {
-		if p.pSize > 65534 {
+		if packetsendsize > 65534 {
 			return nil, errors.ErrPacketBadParameter(log.Errf("size > 65534"))
 		}
-		raw = append(raw, U16toB(uint16(p.pSize))...)
+		raw = append(raw, U16toB(uint16(packetsendsize))...)
 	} else {
 		return nil, errors.ErrPacketBadParameter(log.Errf("No size"))
 	}
@@ -567,7 +567,7 @@ func (p *PacketStruct) ToByte() (raw []byte, err error) {
 		raw = append(raw, p.raw...)
 	}
 
-	raw = append(raw, calculateChecksumByte(raw)...)
+	raw = append(raw, calculateCRC32Checksum(raw)...)
 	return raw, nil
 }
 
@@ -694,38 +694,4 @@ func (p *PacketStruct) Raw() []byte {
 	}
 
 	return p.raw
-}
-
-func (p *PacketStruct) DebugPacket(prefix string) {
-	if p == nil {
-		return
-	}
-
-	debug := fmt.Sprintf("\n\t----------- PACKET ------------------\n")
-	debug += fmt.Sprintf("\t%s\n", prefix)
-	debug += fmt.Sprintf("\tSIG:%s\n", p.Sig())
-	debug += fmt.Sprintf("\tSIZE:%d\n", p.Size())
-	debug += fmt.Sprintf("\tWIDTH:%d\n", p.Width())
-	if p.Sig().Counter() {
-		debug += fmt.Sprintf("\tCOUNTER:%d\n", p.Counter().Uint())
-	}
-	if p.Sig().Ping() {
-		debug += fmt.Sprintf("\tPING:%d\n", p.Ping().Uint())
-	}
-	if p.Sig().Pong() {
-		debug += fmt.Sprintf("\tPONG:%d\n", p.Pong().Uint())
-	}
-	if p.Sig().Data() {
-		debug += fmt.Sprintf("\tPck:%v IP4:%v IP6:%v Eth:%v Rout:%v Auth:%v ID:%v Raw:%v\n",
-			p.Sig().Packet(),
-			p.Sig().IPV4(),
-			p.Sig().IPV6(),
-			p.Sig().Eth(),
-			p.Sig().Router(),
-			p.Sig().Auth(),
-			p.Sig().ID(),
-			p.Sig().Raw())
-	}
-
-	log.Debug(debug)
 }

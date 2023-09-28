@@ -13,7 +13,7 @@ func (c *ChanconnStruct) Cancel() {
 	if c == nil {
 		return
 	}
-	log.GDebug("Cancel() %s", c.name)
+	log.GDebugf("Cancel() %s", c.name)
 	c.link.Close()
 	c.cx.Cancel()
 }

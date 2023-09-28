@@ -1,4 +1,4 @@
-package loopconn
+package chanconn
 
 import (
 	"testing"
@@ -12,7 +12,7 @@ import (
 func TestNewUdpLoop_OpenClose(t *testing.T) {
 
 	cx := ctx.NewContext()
-	_, _, err := NewUdpConnLoop(cx)
+	_, _, err := NewUdp32ConnLoop(cx)
 
 	if err != nil {
 		t.Fatalf("UDP Error:%s", err)
@@ -28,7 +28,7 @@ func TestNewUdpLoop_SendRecv(t *testing.T) {
 	data := []byte("data")
 	cp, err := packet.NewPacket(packet.SIG_CONN_32_RAW, data, counter.MakeCounter32(1))
 
-	srv, cli, err := NewUdpConnLoop(cx)
+	srv, cli, err := NewUdp32ConnLoop(cx)
 
 	if err != nil {
 		t.Fatalf("UDP Error:%s", err)

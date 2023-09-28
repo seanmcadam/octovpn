@@ -106,6 +106,9 @@ func TestNewUdp_send_over_cli_srv(t *testing.T) {
 	}
 
 	cli.Send(p)
+
+	<-time.After(time.Millisecond)
+
 	select {
 	case r := <-srv.RecvChan():
 		if r == nil {
@@ -118,11 +121,14 @@ func TestNewUdp_send_over_cli_srv(t *testing.T) {
 			return
 		}
 	case <-time.After(2 * time.Second):
-		t.Error("Recieve timeout")
+		t.Error("Srv Recieve timeout")
 		return
 	}
 
 	srv.Send(p)
+
+	<-time.After(time.Millisecond)
+
 	select {
 	case r := <-cli.RecvChan():
 		if r == nil {
@@ -131,9 +137,8 @@ func TestNewUdp_send_over_cli_srv(t *testing.T) {
 		}
 		err = packet.Validatepackets(p, r)
 	case <-time.After(2 * time.Second):
-		t.Error("Recieve timeout")
+		t.Error("Cli Recieve timeout")
 	}
-
 }
 
 // Validate the link system
@@ -231,6 +236,11 @@ func TestNewUDP_link_validation(t *testing.T) {
 
 }
 
+//-
+// The Server should send a close... and go back to listening
+// The Client should get the close, and close
+// 
+//-
 func TestNewUDP_cli_send_bad_sig(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()
@@ -246,11 +256,15 @@ func TestNewUDP_cli_send_bad_sig(t *testing.T) {
 	raw := []byte{0, 0, 0, 0}
 	cli.sendtestpacket(raw)
 
+	<-time.After(time.Millisecond)
+
 	select {
 	case <-srvCloseCh:
 	case <-time.After(100 * time.Millisecond):
 		t.Error("Srv Close Timeout")
 	}
+
+	<-time.After(time.Millisecond)
 
 	select {
 	case <-cliCloseCh:

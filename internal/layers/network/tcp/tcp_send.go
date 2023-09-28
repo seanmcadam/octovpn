@@ -8,15 +8,15 @@ import (
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
 
-//-
+// -
 // Send()
-//-
+// -
 func (t *TcpStruct) Send(p *packet.PacketStruct) (err error) {
 	if t == nil || t.sendch == nil {
 		return errors.ErrNetNilMethodPointer(log.Errf(""))
 	}
 
-	log.Debugf("TCP Send:%v", p)
+	// log.Debugf("TCP Send packet:%v", p)
 	select {
 	case t.sendch <- p:
 	default:
@@ -27,10 +27,10 @@ func (t *TcpStruct) Send(p *packet.PacketStruct) (err error) {
 
 }
 
-//-
+// -
 // goSend()
 // handle the send buffer
-//-
+// -
 func (t *TcpStruct) goSend() {
 	if t == nil {
 		return
@@ -53,20 +53,21 @@ func (t *TcpStruct) goSend() {
 	}
 }
 
-//-
+// -
 // sendpacket()
-//-
+// -
 func (t *TcpStruct) sendpacket(p *packet.PacketStruct) (err error) {
 	if t == nil {
 		return errors.ErrNetNilMethodPointer(log.Err(""))
 	}
 
-	p.DebugPacket("TCP Send")
+	//p.DebugPacket("TCP Send")
 
-	if raw, err := p.ToByte(); err != nil{
+	var raw []byte
+	if raw, err = p.ToByte(); err != nil {
 		return errors.ErrNetParameter(log.Errf("Err:%s", err))
 
-	}else if l, err := t.conn.Write(raw); err != nil {
+	} else if l, err := t.conn.Write(raw); err != nil {
 		if err != io.EOF {
 			return errors.ErrNetChannelError(log.Errf("TCP Write() Error:%s", err))
 		}
@@ -75,33 +76,36 @@ func (t *TcpStruct) sendpacket(p *packet.PacketStruct) (err error) {
 		return errors.ErrNetChannelError(log.Errf("TCP Write() Lenth Error:%d != %d", l, len(raw)))
 	}
 
+	//p.DebugPacket("Send()")
+	//log.Debugf("TCP Send %v", raw)
+
 	return nil
 }
 
-//-
+// -
 // sendtestpacket()
-//-
-func (t *TcpStruct) sendtestpacket(raw []byte)(err error) {
+// -
+func (t *TcpStruct) sendtestpacket(raw []byte) (err error) {
 	if t == nil {
 		return
 	}
 
 	log.Debugf("TCP RAW Send:%v", raw)
 
-	if l, err := t.conn.Write(raw); err != nil{
+	if l, err := t.conn.Write(raw); err != nil {
 		if err != io.EOF {
 			return errors.ErrNetChannelError(log.Errf("TCP RAW Write() Error:%s, Closing Connection", err))
 		}
-	}else if l != len(raw) {
+	} else if l != len(raw) {
 		return errors.ErrNetChannelError(log.Errf("TCP RAW Write() length Error:%d != %d", l, len(raw)))
 	}
 
 	return nil
 }
 
-//-
+// -
 // Clean up sendch before exit
-//-
+// -
 func (t *TcpStruct) emptysend() {
 	if t == nil {
 		return

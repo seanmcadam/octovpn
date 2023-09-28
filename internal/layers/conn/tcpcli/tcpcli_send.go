@@ -19,12 +19,12 @@ func (t *TcpClientStruct) Send(co *packet.PacketStruct) (err error) {
 	}
 
 	if t.tcpconn != nil {
-		if err = t.tcpconn.Send(co); err != nil{
+		if err = t.tcpconn.Send(co); err != nil {
 			log.Errorf("Send() Err:%s", err)
 		}
 		return err
 	}
 
-	return errors.ErrNetChannelDown(log.Errf(""))
+	return errors.ErrNetChannelDown(log.Errf("TCPCli Channel down"))
 
 }

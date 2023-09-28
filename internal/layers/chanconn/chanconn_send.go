@@ -23,7 +23,7 @@ func (cs *ChanconnStruct) Send(cp *packet.PacketStruct) error {
 		return cs.send(packet)
 	}
 
-	return errors.ErrNetChannelDown(log.Errf(""))
+	return errors.ErrNetChannelDown(log.Errf("Channel is Down"))
 }
 
 func (cs *ChanconnStruct) send(p *packet.PacketStruct) error {

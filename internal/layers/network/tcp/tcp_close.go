@@ -41,8 +41,8 @@ func (t *TcpStruct) Cancel() {
 		t.sendclose()
 		t.conn.Close()
 	}
-	t.link.NoLink() // Let upstream know we are down.
-	t.link.Close()  // Send notify
+	t.link.NoLink() // Let upstream know we are down quickly.
+	t.link.Close()  // Send notice as well
 	t.cx.Cancel()
 }
 
