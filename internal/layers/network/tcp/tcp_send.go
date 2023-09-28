@@ -9,25 +9,6 @@ import (
 )
 
 // -
-// Send()
-// -
-func (t *TcpStruct) Send(p *packet.PacketStruct) (err error) {
-	if t == nil || t.sendch == nil {
-		return errors.ErrNetNilMethodPointer(log.Errf(""))
-	}
-
-	// log.Debugf("TCP Send packet:%v", p)
-	select {
-	case t.sendch <- p:
-	default:
-		return errors.ErrNetSendBufferFull(log.Errf(""))
-	}
-
-	return nil
-
-}
-
-// -
 // goSend()
 // handle the send buffer
 // -
@@ -36,7 +17,6 @@ func (t *TcpStruct) goSend() {
 		return
 	}
 
-	defer t.emptysend()
 	defer t.Cancel()
 
 	for {
@@ -76,8 +56,8 @@ func (t *TcpStruct) sendpacket(p *packet.PacketStruct) (err error) {
 		return errors.ErrNetChannelError(log.Errf("TCP Write() Lenth Error:%d != %d", l, len(raw)))
 	}
 
-	//p.DebugPacket("Send()")
-	//log.Debugf("TCP Send %v", raw)
+	p.DebugPacket("Send()")
+	log.Debugf("TCP Send %v", raw)
 
 	return nil
 }
@@ -101,22 +81,4 @@ func (t *TcpStruct) sendtestpacket(raw []byte) (err error) {
 	}
 
 	return nil
-}
-
-// -
-// Clean up sendch before exit
-// -
-func (t *TcpStruct) emptysend() {
-	if t == nil {
-		return
-	}
-
-	for {
-		select {
-		case <-t.sendch:
-		default:
-			close(t.sendch)
-			return
-		}
-	}
 }

@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"sync"
 	"testing"
-	"time"
 
+	"github.com/seanmcadam/octovpn/internal/msgbus"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/ctx"
 	"github.com/seanmcadam/octovpn/octolib/log"
@@ -27,47 +28,42 @@ func TestNewTCP_test_nil_returns(t *testing.T) {
 	cx := ctx.NewContext()
 	defer cx.Cancel()
 
+	parent := msgbus.MsgTarget("Parent")
+
+	mb := msgbus.New()
+
 	var ts *TcpStruct
-	NewTCP(nil, nil)
 	ts.goSend()
 	ts.sendclose()
 	ts.sendpacket(nil)
 	ts.sendtestpacket(nil)
-	ts.emptysend()
-	err := ts.Send(nil)
-	if err == nil {
-		t.Error("Send() returned nil")
-	}
 	ts.Cancel()
 	_ = ts.doneChan()
-	ts.RecvChan()
 	ts.goRecv()
-	ts.emptyrecv()
-	ts.Link()
-	ts.Run()
 
-	srv, cli, err := connection(cx)
+	srv, cli, err := connection(cx, mb, parent)
 	if err != nil {
 		t.Error(err)
 	}
 
-	cli.emptyrecv()
-	srv.emptysend()
-
-	srv.Link()
+	cli.doneChan()
+	cli.Cancel()
 	srv.doneChan()
 	srv.Cancel()
-
 }
 
 // -
 // Send a packet, and recieve it
 // -
 func TestNewTCP_send_and_compare_size(t *testing.T) {
+	var wg sync.WaitGroup
 	cx := ctx.NewContext()
 	defer cx.Cancel()
 
-	_, cli, err := connection(cx)
+	mb := msgbus.New()
+	parent := msgbus.MsgTarget("Parent")
+
+	srv, cli, err := connection(cx, mb, parent)
 	if err != nil {
 		t.Error(err)
 	}
@@ -77,396 +73,266 @@ func TestNewTCP_send_and_compare_size(t *testing.T) {
 		t.Error(err)
 	}
 
-	size1 := p.Size()
-	cli.Send(p)
-	size2 := p.Size()
+	err = mb.ReceiveHandler(parent, func(data ...interface{}) {
+		if len(data) == 0 {
+			t.Fatal("Retrned Data is zero length")
+		}
+		defer wg.Done()
 
-	log.Infof("Size1:%d, Size2:%d", size1, size2)
-	if size1 != size2 {
-		t.Error("Packet Size altered by Send()")
-	}
-}
-
-// -
-// Send a packet, and recieve it
-// -
-func TestNewTCP_send(t *testing.T) {
-	cx := ctx.NewContext()
-	defer cx.Cancel()
-
-	srv, cli, err := connection(cx)
+		switch tp := data[0].(type) {
+		case *packet.PacketStruct:
+			log.Infof("Received *Packet:%s", tp.Sig().String())
+		case *msgbus.StateStruct:
+			log.Infof("Received *State:%s", tp.State)
+		case *msgbus.NoticeStruct:
+			log.Infof("Received *Notice:%s", tp.Notice)
+		default:
+			t.Fatalf("Handler Default reached: %T", data[0])
+		}
+	})
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("ReceiveHandle Err:%s", err)
 	}
 
-	p, err := packet.TestConn32Packet()
-	if err != nil {
-		t.Error(err)
-	}
-
-	srv.Send(p)
-
-	select {
-	case r := <-cli.RecvChan():
-		if r == nil {
-			t.Error("Recieved nil")
-			return
-		}
-		err = packet.Validatepackets(p, r)
-		if r == nil {
-			t.Error("Recieved nil")
-			return
-		}
-	case <-time.After(2 * time.Second):
-		t.Error("CLI Recieve timeout")
-	}
-
-	cli.Send(p)
-	select {
-	case r := <-srv.RecvChan():
-		if r == nil {
-			t.Error("Recieved nil")
-			return
-		}
-		err = packet.Validatepackets(p, r)
-		if r == nil {
-			t.Error("Recieved nil")
-			return
-		}
-	case <-time.After(2 * time.Second):
-		t.Error("SRV Recieve timeout")
-	}
-}
-
-// -
-// Validate the link system
-// -
-func TestNewTCP_link_validation(t *testing.T) {
-	cx := ctx.NewContext()
-	defer cx.Cancel()
-
-	srv, cli, err := connection(cx)
-	if err != nil {
-		t.Error(err)
-	}
-
-	srvUpCh := srv.link.LinkUpCh()
-	cliUpCh := srv.link.LinkUpCh()
-	srvDnCh := srv.link.LinkDownCh()
-	cliDnCh := srv.link.LinkDownCh()
-	srvCloseCh := srv.link.LinkCloseCh()
-	cliCloseCh := srv.link.LinkCloseCh()
-
-	select {
-	case <-srvUpCh:
-	case <-time.After(time.Millisecond):
-		if srv.link.IsDown() {
-			t.Error("Srv Up Timeout")
-		}
-	}
-
-	select {
-	case <-cliUpCh:
-	case <-time.After(time.Millisecond):
-		if cli.link.IsDown() {
-			t.Error("Cli Up Timeout")
-		}
-	}
-
-	p, err := packet.TestConn32Packet()
-	if err != nil {
-		t.Error(err)
-	}
-
-	cli.Send(p)
-	select {
-	case r := <-srv.RecvChan():
-		if r == nil {
-			t.Error("Recieved nil")
-			return
-		}
-		err = packet.Validatepackets(p, r)
-		if r == nil {
-			t.Error("Recieved nil")
-			return
-		}
-	case <-time.After(time.Second):
-		t.Error("Srv Recieve timeout")
-		return
-	}
-
-	srv.Send(p)
-	time.After(time.Millisecond)
-
-	select {
-	case r := <-cli.RecvChan():
-		if r == nil {
-			t.Error("Recieved nil")
-			return
-		}
-		if err = packet.Validatepackets(p, r); err != nil {
-			t.Error("Pacet Validation problem")
-		}
-
-	case <-time.After(time.Second):
-		t.Error("Cli Recieve timeout")
-	}
-
+	wg.Add(1)
+	mb.Send(cli.InstanceName(), p)
+	wg.Add(1)
+	mb.Send(srv.InstanceName(), p)
+	wg.Add(2)
 	srv.Cancel()
 
-	select {
-	case <-srvDnCh:
-	case <-time.After(time.Millisecond):
-		t.Error("Srv Dn Timeout")
-	}
+	wg.Wait()
 
-	select {
-	case <-cliDnCh:
-	case <-time.After(time.Millisecond):
-		t.Error("Cli Dn Timeout")
-	}
-
-	select {
-	case <-srvCloseCh:
-	case <-time.After(time.Millisecond):
-		t.Error("Srv Close Timeout")
-	}
-
-	select {
-	case <-cliCloseCh:
-	case <-time.After(time.Millisecond):
-		t.Error("Cli Close Timeout")
-	}
 }
 
-// -
+//// -
+////
+//// -
+//func TestNewTCP_cli_send_bad_sig(t *testing.T) {
+//	cx := ctx.NewContext()
+//	defer cx.Cancel()
 //
-// -
-func TestNewTCP_cli_send_bad_sig(t *testing.T) {
-	cx := ctx.NewContext()
-	defer cx.Cancel()
-
-	srv, cli, err := connection(cx)
-	if err != nil {
-		t.Error(err)
-	}
-
-	srvCloseCh := srv.link.LinkCloseCh()
-	cliCloseCh := cli.link.LinkCloseCh()
-
-	raw := []byte{0, 0, 0, 0}
-	cli.sendtestpacket(raw)
-
-	select {
-	case <-srvCloseCh:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Srv Close Timeout")
-	}
-
-	select {
-	case <-cliCloseCh:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Cli Close Timeout")
-	}
-}
-
-// -
+//	srv, cli, err := connection(cx)
+//	if err != nil {
+//		t.Error(err)
+//	}
 //
-// -
-func TestNewTCP_srv_send_bad_sig(t *testing.T) {
-	cx := ctx.NewContext()
-	defer cx.Cancel()
-
-	srv, cli, err := connection(cx)
-	if err != nil {
-		t.Error(err)
-	}
-
-	srvCloseCh := srv.link.LinkCloseCh()
-	cliCloseCh := cli.link.LinkCloseCh()
-
-	raw := []byte{0, 0, 0, 0}
-	srv.sendtestpacket(raw)
-
-	select {
-	case <-cliCloseCh:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Cli Close Timeout")
-	}
-
-	select {
-	case <-srvCloseCh:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Srv Close Timeout")
-	}
-}
-
-// -
+//	srvCloseCh := srv.link.LinkCloseCh()
+//	cliCloseCh := cli.link.LinkCloseCh()
 //
-// -
-func TestNewTCP_srv_send_short_packet(t *testing.T) {
-	cx := ctx.NewContext()
-	defer cx.Cancel()
-
-	srv, cli, err := connection(cx)
-	if err != nil {
-		t.Error(err)
-	}
-
-	srvCloseCh := srv.link.LinkCloseCh()
-	cliCloseCh := cli.link.LinkCloseCh()
-
-	p, err := packet.TestConn32Packet()
-	if err != nil {
-		t.Error(err)
-	}
-
-	var raw1, raw2 []byte
-	if raw, err := p.ToByte(); err != nil {
-		t.Error("ToByte() Err:", err)
-	} else {
-		raw1 = raw[:len(raw)-3]
-		raw2 = raw[len(raw)-3:]
-	}
-
-	srv.sendtestpacket(raw1)
-	<-time.After(time.Millisecond)
-	srv.sendtestpacket(raw2)
-
-	select {
-	case r := <-cli.RecvChan():
-		if r == nil {
-			t.Error("Recieved nil")
-			return
-		}
-		err = packet.Validatepackets(p, r)
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Cli Recieve timeout")
-	}
-
-	srv.Cancel()
-
-	select {
-	case <-cliCloseCh:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Cli Close Timeout")
-	}
-
-	select {
-	case <-srvCloseCh:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Srv Close Timeout")
-	}
-}
-
-// -
-// Server Send a bad Sig packet
-// -
-func TestNewTCP_cli_recv_bad_sig(t *testing.T) {
-	cx := ctx.NewContext()
-	defer cx.Cancel()
-
-	srv, cli, err := connection(cx)
-	if err != nil {
-		t.Error(err)
-	}
-
-	srvCloseCh := srv.link.LinkCloseCh()
-	cliCloseCh := cli.link.LinkCloseCh()
-
-	p, err := packet.TestChan32Packet()
-	if err != nil {
-		t.Error(err)
-	}
-
-	srv.Send(p)
-
-	select {
-	case <-srvCloseCh:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Srv Close Timeout")
-	}
-
-	select {
-	case <-cliCloseCh:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Cli Close Timeout")
-	}
-
-}
-
-// -
+//	raw := []byte{0, 0, 0, 0}
+//	cli.sendtestpacket(raw)
 //
-// -
-func TestNewTCP_cli_recv_short_packet(t *testing.T) {
-	cx := ctx.NewContext()
-	defer cx.Cancel()
-
-	srv, cli, err := connection(cx)
-	if err != nil {
-		t.Error(err)
-	}
-
-	srvCloseCh := srv.link.LinkCloseCh()
-	cliCloseCh := cli.link.LinkCloseCh()
-
-	p, err := packet.TestConn32Packet()
-	if err != nil {
-		t.Error(err)
-	}
-
-	var raw1, raw2 []byte
-	if raw, err := p.ToByte(); err != nil {
-		t.Error("ToByte() Err:", err)
-	} else {
-		raw1 = raw[:len(raw)-3]
-		raw2 = raw[len(raw)-3:]
-	}
-
-	srv.sendtestpacket(raw1)
-	<-time.After(time.Millisecond)
-	srv.sendtestpacket(raw2)
-
-	select {
-	case r := <-cli.RecvChan():
-		if r == nil {
-			t.Error("Recieved nil")
-			return
-		}
-		err = packet.Validatepackets(p, r)
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Cli Recieve timeout")
-	}
-
-	srv.Cancel()
-
-	select {
-	case <-cliCloseCh:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Cli Close Timeout")
-	}
-
-	select {
-	case <-srvCloseCh:
-	case <-time.After(100 * time.Millisecond):
-		t.Error("Srv Close Timeout")
-	}
-}
-
+//	select {
+//	case <-srvCloseCh:
+//	case <-time.After(100 * time.Millisecond):
+//		t.Error("Srv Close Timeout")
+//	}
+//
+//	select {
+//	case <-cliCloseCh:
+//	case <-time.After(100 * time.Millisecond):
+//		t.Error("Cli Close Timeout")
+//	}
+//}
+//
+//// -
+////
+//// -
+//func TestNewTCP_srv_send_bad_sig(t *testing.T) {
+//	cx := ctx.NewContext()
+//	defer cx.Cancel()
+//
+//	srv, cli, err := connection(cx)
+//	if err != nil {
+//		t.Error(err)
+//	}
+//
+//	srvCloseCh := srv.link.LinkCloseCh()
+//	cliCloseCh := cli.link.LinkCloseCh()
+//
+//	raw := []byte{0, 0, 0, 0}
+//	srv.sendtestpacket(raw)
+//
+//	select {
+//	case <-cliCloseCh:
+//	case <-time.After(100 * time.Millisecond):
+//		t.Error("Cli Close Timeout")
+//	}
+//
+//	select {
+//	case <-srvCloseCh:
+//	case <-time.After(100 * time.Millisecond):
+//		t.Error("Srv Close Timeout")
+//	}
+//}
+//
+//// -
+////
+//// -
+//func TestNewTCP_srv_send_short_packet(t *testing.T) {
+//	cx := ctx.NewContext()
+//	defer cx.Cancel()
+//
+//	srv, cli, err := connection(cx)
+//	if err != nil {
+//		t.Error(err)
+//	}
+//
+//	srvCloseCh := srv.link.LinkCloseCh()
+//	cliCloseCh := cli.link.LinkCloseCh()
+//
+//	p, err := packet.TestConn32Packet()
+//	if err != nil {
+//		t.Error(err)
+//	}
+//
+//	var raw1, raw2 []byte
+//	if raw, err := p.ToByte(); err != nil {
+//		t.Error("ToByte() Err:", err)
+//	} else {
+//		raw1 = raw[:len(raw)-3]
+//		raw2 = raw[len(raw)-3:]
+//	}
+//
+//	srv.sendtestpacket(raw1)
+//	<-time.After(time.Millisecond)
+//	srv.sendtestpacket(raw2)
+//
+//	select {
+//	case r := <-cli.RecvChan():
+//		if r == nil {
+//			t.Error("Recieved nil")
+//			return
+//		}
+//		err = packet.Validatepackets(p, r)
+//	case <-time.After(100 * time.Millisecond):
+//		t.Error("Cli Recieve timeout")
+//	}
+//
+//	srv.Cancel()
+//
+//	select {
+//	case <-cliCloseCh:
+//	case <-time.After(100 * time.Millisecond):
+//		t.Error("Cli Close Timeout")
+//	}
+//
+//	select {
+//	case <-srvCloseCh:
+//	case <-time.After(100 * time.Millisecond):
+//		t.Error("Srv Close Timeout")
+//	}
+//}
+//
+//// -
+//// Server Send a bad Sig packet
+//// -
+//func TestNewTCP_cli_recv_bad_sig(t *testing.T) {
+//	cx := ctx.NewContext()
+//	defer cx.Cancel()
+//
+//	srv, cli, err := connection(cx)
+//	if err != nil {
+//		t.Error(err)
+//	}
+//
+//	srvCloseCh := srv.link.LinkCloseCh()
+//	cliCloseCh := cli.link.LinkCloseCh()
+//
+//	p, err := packet.TestChan32Packet()
+//	if err != nil {
+//		t.Error(err)
+//	}
+//
+//	srv.Send(p)
+//
+//	select {
+//	case <-srvCloseCh:
+//	case <-time.After(100 * time.Millisecond):
+//		t.Error("Srv Close Timeout")
+//	}
+//
+//	select {
+//	case <-cliCloseCh:
+//	case <-time.After(100 * time.Millisecond):
+//		t.Error("Cli Close Timeout")
+//	}
+//
+//}
+//
+//// -
+////
+//// -
+//func TestNewTCP_cli_recv_short_packet(t *testing.T) {
+//	cx := ctx.NewContext()
+//	defer cx.Cancel()
+//
+//	srv, cli, err := connection(cx)
+//	if err != nil {
+//		t.Error(err)
+//	}
+//
+//	srvCloseCh := srv.link.LinkCloseCh()
+//	cliCloseCh := cli.link.LinkCloseCh()
+//
+//	p, err := packet.TestConn32Packet()
+//	if err != nil {
+//		t.Error(err)
+//	}
+//
+//	var raw1, raw2 []byte
+//	if raw, err := p.ToByte(); err != nil {
+//		t.Error("ToByte() Err:", err)
+//	} else {
+//		raw1 = raw[:len(raw)-3]
+//		raw2 = raw[len(raw)-3:]
+//	}
+//
+//	srv.sendtestpacket(raw1)
+//	<-time.After(time.Millisecond)
+//	srv.sendtestpacket(raw2)
+//
+//	select {
+//	case r := <-cli.RecvChan():
+//		if r == nil {
+//			t.Error("Recieved nil")
+//			return
+//		}
+//		err = packet.Validatepackets(p, r)
+//	case <-time.After(100 * time.Millisecond):
+//		t.Error("Cli Recieve timeout")
+//	}
+//
+//	srv.Cancel()
+//
+//	select {
+//	case <-cliCloseCh:
+//	case <-time.After(100 * time.Millisecond):
+//		t.Error("Cli Close Timeout")
+//	}
+//
+//	select {
+//	case <-srvCloseCh:
+//	case <-time.After(100 * time.Millisecond):
+//		t.Error("Srv Close Timeout")
+//	}
+//}
+//
 //-----------------------------------------------------------------------------
 
 // -
 //
 // -
-func connection(cx *ctx.Ctx) (srvconn *TcpStruct, cliconn *TcpStruct, err error) {
+func connection(cx *ctx.Ctx, mb *msgbus.MsgBus, p msgbus.MsgTarget) (srvconn *TcpStruct, cliconn *TcpStruct, err error) {
 
 	srv, cli, err := createPairedConnections()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	srvconn = NewTCP(cx, srv)
-	cliconn = NewTCP(cx, cli)
+	srvconn = NewTCP(cx, mb, p, srv)
+	cliconn = NewTCP(cx, mb, p, cli)
 
 	return srvconn, cliconn, err
 

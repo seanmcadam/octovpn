@@ -10,6 +10,6 @@ The recv function reads an receive buffer to determine how large the next packet
 - Send Error
 - Recv Error
 
-On Error the Link is set to NoLink and Cancel() is called
+On Error the State is set to NoLink and Cancel() is called
 
 once Cancel is called link.Closed() is called

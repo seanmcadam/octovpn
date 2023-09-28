@@ -47,5 +47,5 @@ func New() (i *Instance) {
 //
 // -
 func (i *Instance) Next() string {
-	return fmt.Sprintf("%s-%d", i.module, i.counter.Next())
+	return fmt.Sprintf("%s-%d", i.module, i.counter.Next().Uint().(uint32))
 }

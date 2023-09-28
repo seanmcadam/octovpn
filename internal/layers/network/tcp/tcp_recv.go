@@ -9,17 +9,6 @@ import (
 )
 
 //-
-//
-//-
-func (t *TcpStruct) RecvChan() <-chan *packet.PacketStruct {
-	if t == nil || t.recvch == nil {
-		return nil
-	}
-
-	return t.recvch
-}
-
-//-
 // Run while connection is running
 // Exit when closed
 //-
@@ -28,7 +17,6 @@ func (t *TcpStruct) goRecv() {
 		return
 	}
 
-	defer t.emptyrecv()
 	defer t.Cancel()
 
 	for {
@@ -99,29 +87,13 @@ func (t *TcpStruct) goRecv() {
 
 			if p.Sig().Close() {
 				log.Debug("TCP received SOFT CLOSE")
-				t.link.NoLink()
+				//t.link.NoLink()
 				return
 			}
 
-			t.recvch <- p
+			t.msgbus.Send(t.parent, p)
+			// t.recvch <- p
 		}
 	}
 }
 
-// -
-// Clean up the recvch before closing
-// -
-func (t *TcpStruct) emptyrecv() {
-	if t == nil {
-		return
-	}
-
-	for {
-		select {
-		case <-t.recvch:
-		default:
-			close(t.recvch)
-			return
-		}
-	}
-}

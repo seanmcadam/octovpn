@@ -1,6 +1,7 @@
 package tcp
 
 import (
+	"github.com/seanmcadam/octovpn/internal/msgbus"
 	"github.com/seanmcadam/octovpn/internal/packet"
 	"github.com/seanmcadam/octovpn/octolib/log"
 )
@@ -37,12 +38,13 @@ func (t *TcpStruct) Cancel() {
 	if t == nil {
 		return
 	}
+
+	t.setState(msgbus.StateNOLINK)
+
 	if t.conn != nil {
 		t.sendclose()
 		t.conn.Close()
 	}
-	t.link.NoLink() // Let upstream know we are down quickly.
-	t.link.Close()  // Send notice as well
 	t.cx.Cancel()
 }
 
