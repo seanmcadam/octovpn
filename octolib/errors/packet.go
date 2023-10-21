@@ -1,0 +1,17 @@
+package errors
+
+type ErrPacketBadChecksum error
+type ErrPacketBadParameter error
+type ErrPacketBadVersion error
+type ErrPacketNilMethodPointer error
+type ErrPacketNoCounterParameter error
+type ErrPacketNoEthParameter error
+type ErrPacketNoIPv4Parameter error
+type ErrPacketNoIPv6Parameter error
+type ErrPacketNoPacketParameter error
+type ErrPacketNoPingParameter error
+type ErrPacketNoPongParameter error
+type ErrPacketNoRouterParameter error
+type ErrPacketNoRawParameter error
+type ErrPacketNoSizeParameter error
+type ErrPacketNoWidthParameter error
