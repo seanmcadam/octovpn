@@ -3,7 +3,7 @@ package errors
 import (
 	"fmt"
 
-	"github.com/seanmcadam/octovpn/octolib/log"
+	log "github.com/seanmcadam/loggy"
 )
 
 func ErrorNilMethodPointer() error {
