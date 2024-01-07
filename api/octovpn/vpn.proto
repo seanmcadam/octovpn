@@ -1,0 +1,33 @@
+
+syntax = "proto3";
+
+option go_package = "gitbub.com/seanmcadam/octovpn/";
+
+package octovpn;
+
+// The greeting service definition.
+service PingPong {
+  rpc PingPong (PingRequest) returns (PongReply) {}
+  // rpc ClientPacket (PacketSend) returns (PacketReply) {}
+  // rpc ServerPacket (PacketSend) returns (PacketReply) {}
+}
+
+
+// The request message containing the user's name.
+message PingRequest {
+  uint64 ping = 1;
+}
+
+// The response message containing the greetings
+message PongReply {
+  uint64 pong = 1;
+}
+
+message PacketSend {
+  int64 PacketCount = 2;
+  bytes Packet = 3;
+}
+message PacketReply {
+  int64 PacketCount = 2;
+  bytes Packet = 3;
+}
