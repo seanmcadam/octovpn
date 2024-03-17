@@ -1,4 +1,4 @@
-package tcp
+package connection
 
 import (
 	"io"
@@ -13,7 +13,7 @@ import (
 
 var pool bufferpool.Pool
 
-type TcpConn struct {
+type Conn struct {
 	cx       *ctx.Ctx
 	conn     net.Conn
 	recvch   chan *bufferpool.Buffer
@@ -26,7 +26,7 @@ func init() {
 }
 
 func connection(cx *ctx.Ctx, conn net.Conn) (t interfaces.LayerInterface) {
-	t = &TcpConn{
+	t = &Conn{
 		cx:       cx,
 		conn:     conn,
 		recvch:   make(chan *bufferpool.Buffer, 5),
@@ -34,7 +34,9 @@ func connection(cx *ctx.Ctx, conn net.Conn) (t interfaces.LayerInterface) {
 		statusch: make(chan common.LayerStatus, 1),
 	}
 
-	go func(t *TcpConn) {
+	go t.goRecv()
+
+	go func(t *Conn) {
 		defer func() {
 			cx.Cancel()
 			close(t.sendch)
@@ -47,25 +49,23 @@ func connection(cx *ctx.Ctx, conn net.Conn) (t interfaces.LayerInterface) {
 		case buf := <-t.sendch:
 			n, err := t.conn.Write(buf.Data())
 			if err != nil {
-				log.Errorf("TCP[%s] Write Err: %s", t.conn.RemoteAddr(), err)
+				log.Errorf("Conn[%s] Write Err: %s", t.conn.RemoteAddr(), err)
 				buf.ReturnToPool()
 				return
 			}
 			if n != buf.Size() {
-				log.Errorf("TCP[%s] Size mismatch: Want:%d Sena:t%d", t.conn.RemoteAddr(), buf.Size(), n)
+				log.Errorf("Conn[%s] Size mismatch: Want:%d Sena:t%d", t.conn.RemoteAddr(), buf.Size(), n)
 				buf.ReturnToPool()
 				return
 			}
 			buf.ReturnToPool()
 		}
-		// Need to recv here
-
-	}(t.(*TcpConn))
+	}(t.(*Conn))
 
 	return t
 }
 
-func (t *TcpConn) goRecv() {
+func (t *Conn) goRecv() {
 	for {
 		func() {
 			t.cx.Cancel()
@@ -152,18 +152,18 @@ func (t *TcpConn) goRecv() {
 	}
 }
 
-func (t *TcpConn) Send(b *bufferpool.Buffer) {
+func (t *Conn) Send(b *bufferpool.Buffer) {
 	t.sendch <- b
 }
 
-func (t *TcpConn) Reset() {
+func (t *Conn) Reset() {
 	t.cx.Cancel()
 }
 
-func (t *TcpConn) RecvCh() (ch chan *bufferpool.Buffer) {
+func (t *Conn) RecvCh() (ch chan *bufferpool.Buffer) {
 	return t.recvch
 }
 
-func (t *TcpConn) StatusCh() (statusch chan common.LayerStatus) {
+func (t *Conn) StatusCh() (statusch chan common.LayerStatus) {
 	return t.statusch
 }
