@@ -3,7 +3,6 @@ package connmgr
 import (
 	"reflect"
 
-	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/bufferpool"
 	"github.com/seanmcadam/counter/counter16"
 	"github.com/seanmcadam/counter/counterint"
@@ -56,10 +55,10 @@ func New(cx ctx.Ctx, config string) (cm interfaces.LayerInterface, err error) {
 		cx:               cx,
 		connectionch:     ch,
 		connections:      make([]interfaces.LayerInterface, 0),
-		connectionstatus: make([]interfaces.LayerStatus, 0),
+		connectionstatus: make([]common.LayerStatus, 0),
 		recvch:           make(chan *bufferpool.Buffer, 5),
-		statusch:         make(chan interfaces.LayerStatus, 1),
-		status:           interfaces.Down,
+		statusch:         make(chan common.LayerStatus, 1),
+		status:           common.LayerDown,
 	}
 
 	go func(cm *Connmgr) {
@@ -67,7 +66,7 @@ func New(cx ctx.Ctx, config string) (cm interfaces.LayerInterface, err error) {
 		// Close down the structure here
 		//
 		defer func() {
-			cm.sendStatus(interfaces.Closed)
+			cm.sendStatus(common.LayerClosed)
 			close(cm.statusch)
 			close(cm.recvch)
 			for i := 0; i < len(cm.connections); i++ {
@@ -77,7 +76,7 @@ func New(cx ctx.Ctx, config string) (cm interfaces.LayerInterface, err error) {
 
 		for {
 			connlen := len(cm.connections)
-			if connlen == 0 && cm.status != interfaces.Down {
+			if connlen == 0 && cm.status != common.LayerDown {
 				cm.updateStatus()
 			}
 
@@ -104,7 +103,7 @@ func New(cx ctx.Ctx, config string) (cm interfaces.LayerInterface, err error) {
 					return
 				}
 				cm.connections = append(cm.connections, recv.Interface().(interfaces.LayerInterface))
-				cm.connectionstatus = append(cm.connectionstatus, interfaces.Down)
+				cm.connectionstatus = append(cm.connectionstatus, common.LayerDown)
 				// cm.updateStatus()
 
 			default:
@@ -133,7 +132,7 @@ func New(cx ctx.Ctx, config string) (cm interfaces.LayerInterface, err error) {
 // Send()
 func (cm *Connmgr) Send(b *bufferpool.Buffer) {
 	for i := 0; i < len(cm.connectionstatus); i++ {
-		if cm.connectionstatus[i] == interfaces.Up {
+		if cm.connectionstatus[i] == common.LayerUp {
 			cm.connections[i].Send(b)
 			return
 		}
@@ -149,7 +148,7 @@ func (cm *Connmgr) RecvCh() chan *bufferpool.Buffer {
 }
 
 // StatusCh()
-func (cm *Connmgr) StatusCh() chan interfaces.LayerStatus {
+func (cm *Connmgr) StatusCh() chan common.LayerStatus {
 	return cm.statusch
 }
 
@@ -171,18 +170,18 @@ func (cm *Connmgr) remove(index int) {
 }
 
 // sendStatus()
-func (cm *Connmgr) sendStatus(s interfaces.LayerStatus) {
+func (cm *Connmgr) sendStatus(s common.LayerStatus) {
 	cm.statusch <- s
 }
 
 // updateStatus()
 // If one connection change to up up, send up, otherwise change to down
 func (cm *Connmgr) updateStatus() {
-	status := interfaces.Down
+	status := common.LayerDown
 
 	for i := 0; i < len(cm.connectionstatus); i++ {
-		if cm.connectionstatus[i] == interfaces.Up {
-			status = interfaces.Up
+		if cm.connectionstatus[i] == common.LayerUp {
+			status = common.LayerUp
 			break
 		}
 	}

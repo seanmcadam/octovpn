@@ -4,10 +4,39 @@ import (
 	"net"
 
 	"github.com/seanmcadam/ctx"
-	log "github.com/seanmcadam/loggy"
 	"github.com/seanmcadam/octovpn/interfaces"
 )
 
-func Client(cx ctx.Ctx, addr net.Addr) (chan interfaces.LayerInterface, error) {
-	log.Printf("tcp Client")
+// Client()
+// Will connect to a target host:port
+// If the connection closes it will reconnect
+func Client(cx *ctx.Ctx, addr net.Addr) (ch chan interfaces.LayerInterface, err error) {
+
+	ch = make(chan interfaces.LayerInterface, 1)
+
+	go func() {
+		defer func() {
+			close(ch)
+		}()
+		for {
+			conn, err := net.Dial("tcp", addr.String())
+			if err != nil {
+				return
+			}
+
+			clientcx := cx.WithCancel()
+			ch <- connection(clientcx, conn)
+
+			select {
+			case <-clientcx.DoneChan():
+			}
+
+			if cx.Done() {
+				return
+			}
+
+		}
+	}()
+
+	return ch, err
 }

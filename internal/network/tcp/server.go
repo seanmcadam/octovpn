@@ -8,6 +8,12 @@ import (
 	"github.com/seanmcadam/octovpn/interfaces"
 )
 
-func Server(cx ctx.Ctx, addr net.Addr) (chan interfaces.LayerInterface, error) {
-	log.Printf("tcp Server")
+func Server(cx *ctx.Ctx, addr net.Addr) (ch chan interfaces.LayerInterface, err error) {
+
+	ch = make(chan interfaces.LayerInterface, 1)
+
+
+
+
+	return ch, err
 }

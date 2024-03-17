@@ -1,2 +1,4 @@
 github.com/seanmcadam/bufferpool v0.0.0-20240317025223-5679d90504c8 h1:fBz6WJoXUYCouQr1IlwCQ7/9Hq2KOZ1EI2w2gLeJsu0=
 github.com/seanmcadam/bufferpool v0.0.0-20240317025223-5679d90504c8/go.mod h1:Ld+tFU0lAWCmLk1Pr4Fr6U5qHlNqjJXMcbU2cLSHLJQ=
+github.com/seanmcadam/octovpn/common v0.0.0-20240317184340-582a4aa03d61 h1:Ncb7zGSWMO595Lq6dqSPa+c7sGPNRJMoxjz/k4o9oP8=
+github.com/seanmcadam/octovpn/common v0.0.0-20240317184340-582a4aa03d61/go.mod h1:EErikhf6zAsuopeceTcyzyOLIL5MVvDWNda0MIAYBko=

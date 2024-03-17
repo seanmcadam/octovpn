@@ -8,6 +8,7 @@ import (
 
 func TestCompile(t *testing.T) {
 }
+
 func TestNew(t *testing.T) {
 
 	cx := ctx.Ctx.New()
