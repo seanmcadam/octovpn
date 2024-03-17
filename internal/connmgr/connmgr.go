@@ -3,12 +3,13 @@ package connmgr
 import (
 	"reflect"
 
-	"gitbuh.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/bufferpool"
 	"github.com/seanmcadam/counter/counter16"
 	"github.com/seanmcadam/counter/counterint"
 	"github.com/seanmcadam/ctx"
 	log "github.com/seanmcadam/loggy"
+	"github.com/seanmcadam/octovpn/common"
 	"github.com/seanmcadam/octovpn/interfaces"
 	"github.com/seanmcadam/octovpn/internal/network"
 )
@@ -25,16 +26,16 @@ type Connmgr struct {
 	cx               ctx.Ctx
 	connectionch     chan interfaces.LayerInterface
 	connections      []interfaces.LayerInterface
-	connectionstatus []interfaces.LayerStatus
+	connectionstatus []common.LayerStatus
 	recvch           chan *bufferpool.Buffer
-	statusch         chan interfaces.LayerStatus
-	status           interfaces.LayerStatus
+	statusch         chan common.LayerStatus
+	status           common.LayerStatus
 }
 
 var counter counter16
 
 func init() {
-	counter = counter16.New()
+	counter = counter16.New(ctx.New().WithoutCancel())
 }
 
 // Takes a configuration object
@@ -118,7 +119,7 @@ func New(cx ctx.Ctx, config string) (cm interfaces.LayerInterface, err error) {
 					if (i - 2) < l {
 						cm.recvch <- recv.Interface().(*bufferpool.Buffer)
 					} else {
-						cm.connectionstatus[i-(2+l)] = recv.Interface().(interfaces.LayerStatus)
+						cm.connectionstatus[i-(2+l)] = recv.Interface().(common.LayerStatus)
 						cm.updateStatus()
 					}
 				}

@@ -1,18 +1,13 @@
 package interfaces
 
-import "github.com/seanmcadam/bufferpool"
-
-type LayerStatus uint8
-
-const (
-	Closed LayerStatus = 0
-	Down   LayerStatus = 1
-	Up     LayerStatus = 2
+import (
+	"github.com/seanmcadam/bufferpool"
+	"github.com/seanmcadam/octovpn/common"
 )
 
 type LayerInterface interface {
 	Send(b *bufferpool.Buffer)
+	Reset() // Closes or restart the layer
 	RecvCh() chan *bufferpool.Buffer
-	Reset()
-	StatusCh() chan LayerStatus
+	StatusCh() chan common.LayerStatus
 }
