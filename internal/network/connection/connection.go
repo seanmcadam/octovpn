@@ -25,7 +25,7 @@ func init() {
 	pool = *bufferpool.New()
 }
 
-func connection(cx *ctx.Ctx, conn net.Conn) (t interfaces.LayerInterface) {
+func Connection(cx *ctx.Ctx, conn net.Conn) (t interfaces.LayerInterface) {
 	t = &Conn{
 		cx:       cx,
 		conn:     conn,
@@ -34,7 +34,7 @@ func connection(cx *ctx.Ctx, conn net.Conn) (t interfaces.LayerInterface) {
 		statusch: make(chan common.LayerStatus, 1),
 	}
 
-	go t.goRecv()
+	go t.(*Conn).goRecv()
 
 	go func(t *Conn) {
 		defer func() {

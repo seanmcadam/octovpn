@@ -4,6 +4,7 @@ import (
 	"net"
 
 	"github.com/seanmcadam/ctx"
+	"github.com/seanmcadam/network/connection"
 	"github.com/seanmcadam/octovpn/interfaces"
 )
 
@@ -25,7 +26,7 @@ func Client(cx *ctx.Ctx, addr net.Addr) (ch chan interfaces.LayerInterface, err 
 			}
 
 			clientcx := cx.WithCancel()
-			ch <- connection(clientcx, conn)
+			ch <- connection.Connection(clientcx, conn)
 
 			select {
 			case <-clientcx.DoneChan():
