@@ -6,3 +6,5 @@ github.com/seanmcadam/ctx v1.0.0 h1:JhNJpMXoPXIU1lh+t08yHQQGPdquRnY9Io46JMw4DL8=
 github.com/seanmcadam/ctx v1.0.0/go.mod h1:N3ARM65sVBGFMZuo7XBs1Wuu5Wog/PrQIjm3pX36R2s=
 github.com/seanmcadam/loggy v1.0.0 h1:rKvlCoerBWg0wR/JAXNqYv6d5RICYHHRHbJ2cFHws/M=
 github.com/seanmcadam/loggy v1.0.0/go.mod h1:No3SEUbhuHiwJSNGG/UBR3fpC+qUPZyCWrue8MKBZJ0=
+github.com/seanmcadam/testlib v0.0.0-20240318015540-79f53e66dde6 h1:lyMM58D7nCtdSfKTXV5qJrfB750gbAMvMQMP7k8Ofis=
+github.com/seanmcadam/testlib v0.0.0-20240318015540-79f53e66dde6/go.mod h1:4TYEvofQgDFluKR64HIdDhz6yOicLvCUxo66bsUfIuw=

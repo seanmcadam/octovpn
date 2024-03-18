@@ -1,10 +1,11 @@
 package connmgr
 
 import (
+	"net"
 	"reflect"
 
 	"github.com/seanmcadam/bufferpool"
-	"github.com/seanmcadam/counter/counter16"
+	"github.com/seanmcadam/counter"
 	"github.com/seanmcadam/counter/counterint"
 	"github.com/seanmcadam/ctx"
 	log "github.com/seanmcadam/loggy"
@@ -22,7 +23,7 @@ import (
 
 type Connmgr struct {
 	serial           counterint.CounterStructInt
-	cx               ctx.Ctx
+	cx               *ctx.Ctx
 	connectionch     chan interfaces.LayerInterface
 	connections      []interfaces.LayerInterface
 	connectionstatus []common.LayerStatus
@@ -31,10 +32,10 @@ type Connmgr struct {
 	status           common.LayerStatus
 }
 
-var counter counter16
+var cnt counterint.CounterStructInt
 
 func init() {
-	counter = counter16.New(ctx.New().WithoutCancel())
+	cnt = counter.New(ctx.New(), counter.BIT16)
 }
 
 // Takes a configuration object
@@ -42,16 +43,21 @@ func init() {
 // Calls new Network
 // Waits on, and managed connections
 // Multiplexes the connections
-func New(cx ctx.Ctx, config string) (cm interfaces.LayerInterface, err error) {
+func New(cx *ctx.Ctx, server bool, addr net.Addr) (cm interfaces.LayerInterface, err error) {
 	var ch chan interfaces.LayerInterface
-	ch, err = network.New(config)
+
+	if server {
+		ch, err = network.Server(cx, addr)
+	} else {
+		ch, err = network.Client(cx, addr)
+	}
 
 	if err != nil {
 		return nil, err
 	}
 
 	cm = &Connmgr{
-		serial:           counter.Next(),
+		serial:           cnt,
 		cx:               cx,
 		connectionch:     ch,
 		connections:      make([]interfaces.LayerInterface, 0),
@@ -124,7 +130,7 @@ func New(cx ctx.Ctx, config string) (cm interfaces.LayerInterface, err error) {
 				}
 			}
 		}
-	}(cm)
+	}(cm.(*Connmgr))
 
 	return cm, nil
 }
@@ -138,7 +144,7 @@ func (cm *Connmgr) Send(b *bufferpool.Buffer) {
 		}
 	}
 
-	log.Warnf("Connmgr[%s] Send Drop...", cm.serial.String())
+	log.Warnf("Connmgr[%s] Send Drop...", cm.serial.Next())
 
 }
 

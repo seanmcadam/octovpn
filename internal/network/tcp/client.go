@@ -4,8 +4,9 @@ import (
 	"net"
 
 	"github.com/seanmcadam/ctx"
-	"github.com/seanmcadam/network/connection"
+	"github.com/seanmcadam/loggy"
 	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/internal/network/connection"
 )
 
 // Client()
@@ -15,11 +16,13 @@ func Client(cx *ctx.Ctx, addr net.Addr) (ch chan interfaces.LayerInterface, err 
 
 	ch = make(chan interfaces.LayerInterface, 1)
 
-	go func() {
+	go func(cx *ctx.Ctx) {
 		defer func() {
 			close(ch)
 		}()
 		for {
+			loggy.Debugf("Net Client() %s", addr.String())
+
 			conn, err := net.Dial("tcp", addr.String())
 			if err != nil {
 				return
@@ -30,6 +33,7 @@ func Client(cx *ctx.Ctx, addr net.Addr) (ch chan interfaces.LayerInterface, err 
 
 			select {
 			case <-clientcx.DoneChan():
+				loggy.Debugf("Net Client() Closed %s", addr.String())
 			}
 
 			if cx.Done() {
@@ -37,7 +41,7 @@ func Client(cx *ctx.Ctx, addr net.Addr) (ch chan interfaces.LayerInterface, err 
 			}
 
 		}
-	}()
+	}(cx)
 
 	return ch, err
 }
