@@ -1,0 +1,19 @@
+{
+    "nodename": "TestNodeName",
+    "sites": [
+        {
+            "sitename": "Site1",
+            "mtu": 1400,
+            "servers": [
+                {
+                    "name": "Site1Server1",
+                    "proto": "tcp",
+                    "host": "localhost",
+                    "port": 10000,
+                    "mtu": 1400,
+                    "auth": "myauthstring"
+                }
+            ]
+        }
+    ]
+}
