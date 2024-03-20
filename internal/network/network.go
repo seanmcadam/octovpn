@@ -23,15 +23,15 @@ func Client(cx *ctx.Ctx, addr net.Addr) (chan interfaces.LayerInterface, error) 
 	return nil, nil
 }
 
-func Server(cx *ctx.Ctx, addr net.Addr) (chan interfaces.LayerInterface, error) {
+func Server(cx *ctx.Ctx, addr net.Addr) (ch chan interfaces.LayerInterface, err error) {
 	switch addr.Network() {
 	case "tcp":
-		return tcp.Server(cx, addr)
+		ch, _, err = tcp.Server(cx, addr)
 	case "udp":
-		return udp.Server(cx, addr)
+		ch, err = udp.Server(cx, addr)
 	default:
 		log.Panic()
 	}
 
-	return nil, nil
+	return
 }

@@ -10,4 +10,5 @@ type LayerInterface interface {
 	Reset() // Closes or restart the layer
 	RecvCh() chan *bufferpool.Buffer
 	StatusCh() chan common.LayerStatus
+	//MtuCh() chan common.MtuType
 }

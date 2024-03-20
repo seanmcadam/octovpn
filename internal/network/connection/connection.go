@@ -1,19 +1,26 @@
 package connection
 
 import (
+	"errors"
 	"io"
 	"net"
 
 	"github.com/seanmcadam/bufferpool"
+	"github.com/seanmcadam/counter"
 	"github.com/seanmcadam/ctx"
-	log "github.com/seanmcadam/loggy"
+	"github.com/seanmcadam/loggy"
 	"github.com/seanmcadam/octovpn/common"
 	"github.com/seanmcadam/octovpn/interfaces"
 )
 
-var pool bufferpool.Pool
+var connCount counter.Counter
+
+func init() {
+	connCount = counter.New(ctx.New(), counter.BIT32)
+}
 
 type Conn struct {
+	serial   counter.Count
 	cx       *ctx.Ctx
 	conn     net.Conn
 	recvch   chan *bufferpool.Buffer
@@ -21,139 +28,163 @@ type Conn struct {
 	statusch chan common.LayerStatus
 }
 
+var pool bufferpool.Pool
+
 func init() {
 	pool = *bufferpool.New()
 }
 
-func Connection(cx *ctx.Ctx, conn net.Conn) (t interfaces.LayerInterface) {
-	t = &Conn{
+func Connection(cx *ctx.Ctx, conn net.Conn) interfaces.LayerInterface {
+
+	t := &Conn{
+		serial:   connCount.Next(),
 		cx:       cx,
 		conn:     conn,
 		recvch:   make(chan *bufferpool.Buffer, 5),
 		sendch:   make(chan *bufferpool.Buffer, 5),
-		statusch: make(chan common.LayerStatus, 1),
+		statusch: make(chan common.LayerStatus, 2),
 	}
 
-	go t.(*Conn).goRecv()
+	loggy.Debugf("[%d] NEW %s:%s:%s", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr().String())
+
+	//err := t.conn.SetDeadline(time.Now())
+	//if err != nil {
+	//	loggy.Debugf("[%d] SetDeadLine() Error %s:%s:%s %s", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr().String(), err)
+	//	return nil
+	//}
 
 	go func(t *Conn) {
 		defer func() {
+			loggy.Debugf("[%d] Calling Closing Defer() %s:%s:%s", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr().String())
 			cx.Cancel()
+			t.conn.Close()
 			close(t.sendch)
 			close(t.statusch)
 		}()
 
-		select {
-		case <-t.cx.DoneChan():
-			return
-		case buf := <-t.sendch:
-			n, err := t.conn.Write(buf.Data())
-			if err != nil {
-				log.Errorf("Conn[%s] Write Err: %s", t.conn.RemoteAddr(), err)
-				buf.ReturnToPool()
-				return
-			}
-			if n != buf.Size() {
-				log.Errorf("Conn[%s] Size mismatch: Want:%d Sena:t%d", t.conn.RemoteAddr(), buf.Size(), n)
-				buf.ReturnToPool()
-				return
-			}
-			buf.ReturnToPool()
-		}
-	}(t.(*Conn))
+		for {
+			loggy.Debugf("[%d] mainloop called %s:%s:%s", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr().String())
 
-	return t
+			select {
+			case <-t.cx.DoneChan():
+				loggy.Debugf("[%d] DoneChan() called %s:%s:%s", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr().String())
+				return
+			case buf := <-t.sendch:
+				if buf == nil {
+					loggy.Debugf("[%d] sendch closed %s:%s:%s", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr().String())
+					return
+				}
+
+				loggy.Debugf("[%d] Got Send() Buffer[%d]", t.serial.Uint(), buf.Serial())
+
+				if buf.Size() > 0 {
+					n, err := t.conn.Write(buf.Data())
+					if err != nil {
+						loggy.Debugf("[%s] Write Error: %s", t.conn.RemoteAddr(), err)
+						buf.ReturnToPool()
+						return
+					}
+					if n != buf.Size() {
+						loggy.Debugf("[%s] Size mismatch: Want:%d Size:%d", t.conn.RemoteAddr(), buf.Size(), n)
+						buf.ReturnToPool()
+						return
+					}
+				} else {
+					loggy.Debugf("[%s]Send Buffer Size Zero", t.conn.RemoteAddr())
+				}
+				buf.ReturnToPool()
+			}
+		}
+	}(t)
+
+	go t.goRecv()
+
+	return interfaces.LayerInterface(t)
 }
 
 func (t *Conn) goRecv() {
+	loggy.Debugf("[%d] goRecv() %s:%s:%s", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr().String())
+
+	defer func() {
+		loggy.Debugf("[%d] Recv Closing Defer() %s:%s:%s", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr().String())
+		t.cx.Cancel()
+		close(t.recvch)
+	}()
+
+	//var buffer bytes.Buffer
+	//tmp := make([]byte, 2048)
+
+INNERLOOP:
 	for {
-		func() {
-			t.cx.Cancel()
-			close(t.recvch)
-		}()
-
-		//var buffer bytes.Buffer
-		//tmp := make([]byte, 2048)
-
-		for {
-			//
-			// Load the receive buffer
-			//
-			buf := pool.Get()
-			_, err := t.conn.Read(buf.Data())
-			if err != nil {
-				if err == io.EOF {
-					log.Errorf("Read() connection closed %s", t.conn.RemoteAddr())
-				} else {
-					log.Errorf("Read() Error:%s on %s", err, t.conn.RemoteAddr())
-				}
-				return
+		//err := t.conn.SetReadDeadline(time.Now().Add(time.Second))
+		//if err != nil {
+		//	loggy.FatalfStack("[%d] SetDeadLine() Error %s:%s:%s %s", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr().String(), err)
+		//	//return
+		//}
+		//
+		// Load the receive buffer
+		//
+		b := make([]byte, 2048)
+		n, err := t.conn.Read(b)
+		if err != nil {
+			if err == io.EOF || isNetClosingError(err) {
+				loggy.Debugf("[%d] Read() %s:%s:%s Error: %s", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr(), err)
+			} else {
+				loggy.FatalfStack("Read() Error:%s on %s", err, t.conn.RemoteAddr())
 			}
+			loggy.Debugf("[%d]ERROR Read() %s:%s:%s >> %s", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr(), err)
+			return
+		}
 
-			//buffer.Write(tmp[:n])
-			// buf := pool.Get()
-			//buf.Append(buffer.Bytes())
-			// buf.Append(tmp[:n])
-			t.recvch <- buf
+		if n == 0 {
+			loggy.Debugf("[%d] Zero Read() %s:%s:%s", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr())
+			continue INNERLOOP
+		}
 
-			//
-			// Does the buffer have enough data to assemble a packet?
-			//
-			// sig, length, err := packet.ReadPacketBuffer(buffer.Bytes()[:6])
+		loggy.Debugf("[%d] Read() %s:%s:%s Size=%d", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr(), n)
+		buf := pool.Get()
+		buf.Append(b[:n])
 
-			// log.Debugf("RecvBuffer:%v",buffer.Bytes()[:n])
-			//
-			// Error checking types here
-			//
-			// if err != nil {
-			// 	log.Errorf("MakePacket() Err:%s on %s", err, t.conn.RemoteAddr())
-			// 	return
-			// }
-
-			//
-			// Only receive CONN layer packets here
-			//
-			// if !sig.ConnLayer() {
-			// 	log.Errorf("Bad SIG Layer Received:%s, on %s", sig, t.conn.RemoteAddr())
-			// 	return
-			// }
-
-			//
-			// Is there enough data?
-			//
-			// if buffer.Len() < int(length) {
-			// 	log.Warnf("Not Enough Buffer Data %d < %d", buffer.Len(), int(length))
-			// 	continue
-			// }
-
-			//
-			// Extract a packet
-			//
-			// newpacketbuf := buffer.Next(int(length))
-			// log.Debugf("Raw TCP Recv:%v", newpacketbuf)
-			// p, err := packet.MakePacket(newpacketbuf)
-			// if err != nil {
-			// 	log.Errorf("MakePacket() Err:%s on %s", err, t.conn.RemoteAddr())
-			// 	return
-			// }
-
-			// if p == nil {
-			// 	log.Errorf("MakePacket() returned Nil Packet")
-			// }
-
-			// if p.Sig().Close() {
-			// 	log.Debug("TCP received SOFT CLOSE")
-			// 	return
-			// }
-
-			// packet := msg.NewPacket(t.me, p)
-			// log.Debug("TCP Recv PAcket %v", packet)
+		select {
+		case <-t.cx.DoneChan():
+			loggy.Debugf("[%d] DoneCh() Read() %s:%s:%s Size=%d", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr(), n)
+			return
+		case t.recvch <- buf:
+		default:
+			loggy.Debugf("[%d] Failed recvch Read() %s:%s:%s Size=%d", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr(), n)
+			buf.ReturnToPool()
 		}
 	}
 }
 
 func (t *Conn) Send(b *bufferpool.Buffer) {
-	t.sendch <- b
+	if t == nil {
+		loggy.Panicf("nil method pointer")
+	}
+	if b == nil {
+		loggy.Panicf("nil data pointer")
+	}
+
+	loggy.Debugf("[%d] Send() Buffer[%d]", t.serial.Uint(), b.Serial())
+	select {
+
+	case <-t.cx.DoneChan():
+		loggy.Debugf("[%d] Closed, Dropping Buffer %s:%s:%s", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr().String())
+		return
+	default:
+	}
+
+	select {
+	case <-t.cx.DoneChan():
+		loggy.Debugf("[%d] DoneCh() Send() %s:%s:%s", t.serial.Uint(), t.conn.LocalAddr().Network(), t.conn.LocalAddr().String(), t.conn.RemoteAddr())
+		return
+	case t.sendch <- b:
+		loggy.Debugf("Send() Data:'%s'", string(b.Data()))
+	default:
+		loggy.Debugf("[%d] Failed Send() Buffer[%d]", t.serial.Uint(), b.Serial())
+		b.ReturnToPool()
+	}
+
 }
 
 func (t *Conn) Reset() {
@@ -166,4 +197,12 @@ func (t *Conn) RecvCh() (ch chan *bufferpool.Buffer) {
 
 func (t *Conn) StatusCh() (statusch chan common.LayerStatus) {
 	return t.statusch
+}
+
+func isNetClosingError(err error) bool {
+	var netOpError *net.OpError
+	if errors.As(err, &netOpError) {
+		return netOpError.Err.Error() == "use of closed network connection"
+	}
+	return false
 }

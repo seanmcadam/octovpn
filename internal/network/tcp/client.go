@@ -18,6 +18,7 @@ func Client(cx *ctx.Ctx, addr net.Addr) (ch chan interfaces.LayerInterface, err 
 
 	go func(cx *ctx.Ctx) {
 		defer func() {
+			loggy.Debugf("Net Client() Defer Close %s", addr.String())
 			close(ch)
 		}()
 		for {
