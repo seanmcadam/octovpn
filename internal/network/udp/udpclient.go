@@ -6,12 +6,12 @@ import (
 	"github.com/seanmcadam/bufferpool"
 	"github.com/seanmcadam/ctx"
 	"github.com/seanmcadam/loggy"
-	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/interfaces/layers"
 )
 
 type UDPClientStruct struct {
 	cx    *ctx.Ctx
-	ch    chan interfaces.LayerInterface
+	ch    chan layers.LayerInterface
 	conn  *net.UDPConn
 	raddr *net.UDPAddr
 }
@@ -19,9 +19,9 @@ type UDPClientStruct struct {
 // Client()
 // Will connect to a target host:port
 // If the connection closes it will reconnect
-func Client(cx *ctx.Ctx, raddr *net.UDPAddr) (ch chan interfaces.LayerInterface, err error) {
+func Client(cx *ctx.Ctx, raddr *net.UDPAddr) (ch chan layers.LayerInterface, err error) {
 
-	ch = make(chan interfaces.LayerInterface, 1)
+	ch = make(chan layers.LayerInterface, 1)
 	client := &UDPClientStruct{
 		cx:    cx,
 		ch:    ch,
@@ -64,7 +64,7 @@ func (uc *UDPClientStruct) goRecv() {
 		loggy.Debugf("Dialed() %s", raddrstr)
 
 		connection := NewConnection(uc.cx.WithCancel(), uc.conn, uc.raddr, nil)
-		uc.ch <- interfaces.LayerInterface(connection)
+		uc.ch <- layers.LayerInterface(connection)
 
 		for !uc.cx.Done() {
 			n, err := uc.conn.Read(buffer)

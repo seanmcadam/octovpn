@@ -7,7 +7,7 @@ import (
 
 	"github.com/seanmcadam/bufferpool"
 	"github.com/seanmcadam/ctx"
-	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/interfaces/layers"
 	"github.com/seanmcadam/testlib/netlib"
 )
 
@@ -60,10 +60,7 @@ func TestConnection(t *testing.T) {
 	server.Close()
 }
 
-func MakeConnection(t *testing.T) (server *TCPServer, srvcomm interfaces.LayerInterface, clicomm interfaces.LayerInterface) {
-
-	//var srvcomm interfaces.LayerInterface
-	//var clicomm interfaces.LayerInterface
+func MakeConnection(t *testing.T) (server *TCPServer, srvcomm layers.LayerInterface, clicomm layers.LayerInterface) {
 
 	cx := ctx.New()
 	ip := net.IPv4(127, 0, 0, 1)

@@ -8,12 +8,12 @@ import (
 	"github.com/seanmcadam/bufferpool"
 	"github.com/seanmcadam/ctx"
 	"github.com/seanmcadam/loggy"
-	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/interfaces/layers"
 )
 
 type UDPServerStruct struct {
 	cx            *ctx.Ctx
-	ch            chan interfaces.LayerInterface
+	ch            chan layers.LayerInterface
 	laddr         *net.UDPAddr
 	conn          *net.UDPConn
 	connections   map[netip.AddrPort]*UDPConnection
@@ -28,7 +28,7 @@ type UDPServerStruct struct {
 //
 //
 
-func Server(cx *ctx.Ctx, laddr *net.UDPAddr) (ch chan interfaces.LayerInterface, server *UDPServerStruct, err error) {
+func Server(cx *ctx.Ctx, laddr *net.UDPAddr) (ch chan layers.LayerInterface, server *UDPServerStruct, err error) {
 
 	laddr, err = net.ResolveUDPAddr(laddr.Network(), laddr.String())
 	if err != nil {
@@ -43,7 +43,7 @@ func Server(cx *ctx.Ctx, laddr *net.UDPAddr) (ch chan interfaces.LayerInterface,
 
 	loggy.Debugf("Listening %s", laddr)
 
-	ch = make(chan interfaces.LayerInterface, 1)
+	ch = make(chan layers.LayerInterface, 1)
 	server = &UDPServerStruct{
 		cx:          cx,
 		ch:          ch,
@@ -81,7 +81,7 @@ func (u *UDPServerStruct) goRecv() {
 			u.connectionsmx.Lock()
 			u.connections[addrPort] = NewConnection(u.cx.WithCancel(), u.conn, clientAddr, u.remove)
 			u.connectionsmx.Unlock()
-			u.ch <- interfaces.LayerInterface(u.connections[addrPort])
+			u.ch <- layers.LayerInterface(u.connections[addrPort])
 		}
 
 		u.connections[addrPort].PushRecv(b)

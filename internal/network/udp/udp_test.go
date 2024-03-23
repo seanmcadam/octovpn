@@ -8,7 +8,7 @@ import (
 	"github.com/seanmcadam/bufferpool"
 	"github.com/seanmcadam/ctx"
 	"github.com/seanmcadam/loggy"
-	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/interfaces/layers"
 	"github.com/seanmcadam/testlib/netlib"
 )
 
@@ -72,7 +72,7 @@ func TestConnection(t *testing.T) {
 	server.Close()
 }
 
-func MakeConnection(t *testing.T) (server *UDPServerStruct, srvlayer interfaces.LayerInterface, clilayer interfaces.LayerInterface) {
+func MakeConnection(t *testing.T) (server *UDPServerStruct, srvlayer layers.LayerInterface, clilayer layers.LayerInterface) {
 
 	pool := bufferpool.New()
 

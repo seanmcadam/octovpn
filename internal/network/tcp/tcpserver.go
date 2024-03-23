@@ -6,7 +6,7 @@ import (
 
 	"github.com/seanmcadam/ctx"
 	"github.com/seanmcadam/loggy"
-	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/interfaces/layers"
 )
 
 type TCPServer struct {
@@ -14,13 +14,13 @@ type TCPServer struct {
 	listener *net.TCPListener
 }
 
-func Server(cx *ctx.Ctx, addr net.Addr) (ch chan interfaces.LayerInterface, server *TCPServer, err error) {
+func Server(cx *ctx.Ctx, addr net.Addr) (ch chan layers.LayerInterface, server *TCPServer, err error) {
 
 	server = &TCPServer{
 		cx: cx,
 	}
 
-	ch = make(chan interfaces.LayerInterface, 1)
+	ch = make(chan layers.LayerInterface, 1)
 	laddr, err := net.ResolveTCPAddr(addr.Network(), addr.String())
 
 	go func(cx *ctx.Ctx) {

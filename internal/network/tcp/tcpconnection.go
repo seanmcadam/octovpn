@@ -11,7 +11,7 @@ import (
 	"github.com/seanmcadam/ctx"
 	"github.com/seanmcadam/loggy"
 	"github.com/seanmcadam/octovpn/common"
-	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/interfaces/layers"
 )
 
 var connCount counter.Counter
@@ -36,7 +36,7 @@ func init() {
 	pool = *bufferpool.New()
 }
 
-func connection(cx *ctx.Ctx, conn net.Conn) interfaces.LayerInterface {
+func connection(cx *ctx.Ctx, conn net.Conn) layers.LayerInterface {
 
 	tc := &TCPConnection{
 		serial:   connCount.Next(),
@@ -54,7 +54,7 @@ func connection(cx *ctx.Ctx, conn net.Conn) interfaces.LayerInterface {
 	go tc.goSend()
 	go tc.goRecv()
 
-	return interfaces.LayerInterface(tc)
+	return layers.LayerInterface(tc)
 }
 
 func (tc *TCPConnection) goSend() {

@@ -5,15 +5,15 @@ import (
 
 	"github.com/seanmcadam/ctx"
 	"github.com/seanmcadam/loggy"
-	"github.com/seanmcadam/octovpn/interfaces"
+	"github.com/seanmcadam/octovpn/interfaces/layers"
 )
 
 // Client()
 // Will connect to a target host:port
 // If the connection closes it will reconnect
-func Client(cx *ctx.Ctx, addr net.Addr) (ch chan interfaces.LayerInterface, err error) {
+func Client(cx *ctx.Ctx, addr net.Addr) (ch chan layers.LayerInterface, err error) {
 
-	ch = make(chan interfaces.LayerInterface, 1)
+	ch = make(chan layers.LayerInterface, 1)
 
 	go func(cx *ctx.Ctx) {
 		defer func() {
