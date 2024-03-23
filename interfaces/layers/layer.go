@@ -1,4 +1,4 @@
-package interfaces
+package layers
 
 import (
 	"github.com/seanmcadam/bufferpool"
