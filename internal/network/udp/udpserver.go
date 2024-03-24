@@ -63,8 +63,6 @@ func (u *UDPServerStruct) goRecv() {
 
 	pool := bufferpool.New()
 
-	loggy.Debugf("Running %s", u.laddr.String())
-
 	for !u.cx.Done() {
 		var buffer = make([]byte, 2048)
 		n, clientAddr, err := u.conn.ReadFromUDP(buffer)
@@ -72,7 +70,7 @@ func (u *UDPServerStruct) goRecv() {
 			loggy.Fatalf("Err:%s", err)
 		}
 
-		loggy.Debugf("UDPPacket %s->%s", u.laddr.String(), clientAddr.String())
+		loggy.Debugf("%s->%s ReadFromUDP()", u.laddr.String(), clientAddr.String())
 
 		b := pool.Get().Append(buffer[:n])
 		addrPort := clientAddr.AddrPort()

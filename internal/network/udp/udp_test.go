@@ -15,8 +15,7 @@ import (
 // Used for debugging, set high for manual, low for automated
 var establishTimeout time.Duration = time.Second
 
-func TestCompile(t *testing.T) {
-}
+func TestCompile(t *testing.T) {}
 
 func TestMakeConnection(t *testing.T) {
 	//establishTimeout = time.Minute
@@ -67,6 +66,78 @@ func TestConnection(t *testing.T) {
 		}
 	case <-time.After(establishTimeout):
 		t.Errorf("Select Time out")
+	}
+
+	server.Close()
+}
+
+func Test10SecPacketSend(t *testing.T) {
+
+	establishTimeout = time.Minute
+
+	var pool *bufferpool.Pool
+	pool = bufferpool.New()
+	senddone := make(chan bool)
+	recvdone := make(chan bool)
+
+	b1data := []byte("Hi There Cli")
+	b2data := []byte("Hi There Srv")
+
+	server, srvconn, cliconn := MakeConnection(t)
+
+	bufcli := pool.Get()
+	bufcli.Append(b1data)
+	bufsrv := pool.Get()
+	bufsrv.Append(b2data)
+
+	go func() {
+		time.Sleep(10 * time.Second)
+		senddone <- true
+		time.Sleep(1 * time.Second)
+		recvdone <- true
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-senddone:
+				break
+			default:
+			}
+			cliconn.Send(bufcli.Copy())
+			srvconn.Send(bufsrv.Copy())
+			time.Sleep(time.Millisecond * 10)
+		}
+	}()
+
+FORREAD:
+	for {
+		select {
+		case clidata := <-cliconn.RecvCh():
+			if clidata == nil {
+				t.Errorf("Cli RecvCh return nil")
+				return
+			}
+			loggy.Debug("Select Cli")
+			b1 := clidata.Data()
+			if string(b1) != string(b2data) {
+				t.Errorf("Cli Read not equal")
+			}
+			clidata.ReturnToPool()
+		case srvdata := <-srvconn.RecvCh():
+			if srvdata == nil {
+				t.Errorf("Srv RecvCh return nil")
+				return
+			}
+			loggy.Debug("Select Srv")
+			b2 := srvdata.Data()
+			if string(b2) != string(b1data) {
+				t.Errorf("Srv Read not equal")
+			}
+			srvdata.ReturnToPool()
+		case <-recvdone:
+			break FORREAD
+		}
 	}
 
 	server.Close()

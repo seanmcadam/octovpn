@@ -7,12 +7,15 @@ import (
 
 	"github.com/seanmcadam/bufferpool"
 	"github.com/seanmcadam/ctx"
+	"github.com/seanmcadam/loggy"
 	"github.com/seanmcadam/octovpn/interfaces/layers"
 	"github.com/seanmcadam/testlib/netlib"
 )
 
-func TestCompile(t *testing.T) {
-}
+// Used for debugging, set high for manual, low for automated
+var establishTimeout time.Duration = time.Second
+
+func TestCompile(t *testing.T) {}
 
 // Setup a listen socket
 // Create a client to connect to listen socket
@@ -56,6 +59,77 @@ func TestConnection(t *testing.T) {
 		t.Errorf("Srv Read not equal")
 	}
 
+	server.Close()
+}
+
+func Test10SecPacketSend(t *testing.T) {
+
+	establishTimeout = time.Minute
+
+	var pool *bufferpool.Pool
+	pool = bufferpool.New()
+	senddone := make(chan bool)
+	recvdone := make(chan bool)
+
+	b1data := []byte("Hi There Cli")
+	b2data := []byte("Hi There Srv")
+
+	server, srvconn, cliconn := MakeConnection(t)
+
+	bufcli := pool.Get()
+	bufcli.Append(b1data)
+	bufsrv := pool.Get()
+	bufsrv.Append(b2data)
+
+	go func() {
+		time.Sleep(10 * time.Second)
+		senddone <- true
+		time.Sleep(1 * time.Second)
+		recvdone <- true
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-senddone:
+				break
+			default:
+			}
+			cliconn.Send(bufcli.Copy())
+			srvconn.Send(bufsrv.Copy())
+			time.Sleep(time.Millisecond * 10)
+		}
+	}()
+
+FORREAD:
+	for {
+		select {
+		case clidata := <-cliconn.RecvCh():
+			if clidata == nil {
+				t.Errorf("Cli RecvCh return nil")
+				return
+			}
+			loggy.Debug("Select Cli")
+			b1 := clidata.Data()
+			if string(b1) != string(b2data) {
+				t.Errorf("Cli Read not equal")
+			}
+			clidata.ReturnToPool()
+		case srvdata := <-srvconn.RecvCh():
+			if srvdata == nil {
+				t.Errorf("Srv RecvCh return nil")
+				return
+			}
+			loggy.Debug("Select Srv")
+			b2 := srvdata.Data()
+			if string(b2) != string(b1data) {
+				t.Errorf("Srv Read not equal")
+			}
+			srvdata.ReturnToPool()
+		case <-recvdone:
+			break FORREAD
+		}
+	}
 
 	server.Close()
 }
@@ -78,7 +152,6 @@ func MakeConnection(t *testing.T) (server *TCPServer, srvcomm layers.LayerInterf
 	if clierr != nil {
 		t.Errorf("Server Error:%s", clierr)
 	}
-
 
 	srvcomm = <-srvch
 	clicomm = <-clich

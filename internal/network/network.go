@@ -1,3 +1,7 @@
+// 
+// network package allows for generic access to the underlying protocols (TCP and UDP for now)
+// It returns layer interfaces, to seemlessly integrate with the above layers
+//
 package network
 
 import (

@@ -2,10 +2,12 @@ package udp
 
 import (
 	"net"
+	"time"
 
 	"github.com/seanmcadam/bufferpool"
 	"github.com/seanmcadam/ctx"
 	"github.com/seanmcadam/loggy"
+	"github.com/seanmcadam/octovpn/common/status"
 	"github.com/seanmcadam/octovpn/interfaces/layers"
 )
 
@@ -14,6 +16,7 @@ type UDPClientStruct struct {
 	ch    chan layers.LayerInterface
 	conn  *net.UDPConn
 	raddr *net.UDPAddr
+	status status.LayerStatus
 }
 
 // Client()
@@ -26,6 +29,7 @@ func Client(cx *ctx.Ctx, raddr *net.UDPAddr) (ch chan layers.LayerInterface, err
 		cx:    cx,
 		ch:    ch,
 		raddr: raddr,
+		status: status.LayerStatusInit,
 	}
 	go client.goRecv()
 
@@ -42,8 +46,6 @@ func (uc *UDPClientStruct) goRecv() {
 
 	var raddrstr = uc.raddr.AddrPort().String()
 
-	loggy.Debugf("Running(%s)", raddrstr)
-
 	defer func() {
 		loggy.Debugf(" Defer() Close %s", raddrstr)
 		close(uc.ch)
@@ -57,8 +59,9 @@ func (uc *UDPClientStruct) goRecv() {
 
 		uc.conn, err = net.DialUDP(uc.raddr.Network(), nil, uc.raddr)
 		if err != nil {
-			loggy.Debugf("DialUDP() Err:%s", err)
-			return
+			loggy.Debugf("DialUDP() Err:%s, retry", err)
+			time.Sleep(time.Second)
+			continue
 		}
 
 		loggy.Debugf("Dialed() %s", raddrstr)
@@ -73,7 +76,6 @@ func (uc *UDPClientStruct) goRecv() {
 			}
 			b := pool.Get().Append(buffer[:n])
 			connection.PushRecv(b)
-			//buffer = buffer[:0]
 		}
 	}
 }

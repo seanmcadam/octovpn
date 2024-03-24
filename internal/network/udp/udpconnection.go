@@ -10,7 +10,7 @@ import (
 	"github.com/seanmcadam/counter"
 	"github.com/seanmcadam/ctx"
 	"github.com/seanmcadam/loggy"
-	"github.com/seanmcadam/octovpn/common"
+	"github.com/seanmcadam/octovpn/common/status"
 )
 
 var connCount counter.Counter
@@ -33,7 +33,7 @@ type UDPConnection struct {
 	addrport netip.AddrPort
 	recvch   chan *bufferpool.Buffer
 	sendch   chan *bufferpool.Buffer
-	statusch chan common.LayerStatus
+	status   *status.LayerStatusStruct
 	remove   func(netip.AddrPort)
 }
 
@@ -53,7 +53,7 @@ func NewConnection(cx *ctx.Ctx, conn *net.UDPConn, udpport *net.UDPAddr, remove 
 		addrport: udpport.AddrPort(),
 		recvch:   make(chan *bufferpool.Buffer, 5),
 		sendch:   make(chan *bufferpool.Buffer, 5),
-		statusch: make(chan common.LayerStatus, 2),
+		status:   status.New(cx),
 		remove:   remove,
 	}
 
@@ -87,7 +87,6 @@ func (uc *UDPConnection) goSend() {
 			uc.remove(uc.addrport)
 		}
 		close(uc.sendch)
-		close(uc.statusch)
 	}()
 
 	for {
@@ -120,6 +119,10 @@ func (uc *UDPConnection) goSend() {
 			}
 			if n != buf.Size() {
 				loggy.FatalfStack("%s: WriteToUDP() Size Error:%d/%d", uc.id, n, buf.Size())
+			}
+
+			if buf.Used() == false {
+				loggy.ErrorfStack("%s: Buf Used = false", uc.id)
 			}
 
 			buf.ReturnToPool()
@@ -218,8 +221,12 @@ func (uc *UDPConnection) RecvCh() (ch chan *bufferpool.Buffer) {
 	return uc.recvch
 }
 
-func (uc *UDPConnection) StatusCh() (statusch chan common.LayerStatus) {
-	return uc.statusch
+func (uc *UDPConnection) Status() (status status.LayerStatus) {
+	return uc.status.Get()
+}
+
+func (uc *UDPConnection) StatusCh() (statusch chan status.LayerStatus) {
+	return uc.status.GetCh()
 }
 
 func isNetClosingError(err error) bool {

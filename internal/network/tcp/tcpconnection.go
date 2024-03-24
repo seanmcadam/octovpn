@@ -10,7 +10,7 @@ import (
 	"github.com/seanmcadam/counter"
 	"github.com/seanmcadam/ctx"
 	"github.com/seanmcadam/loggy"
-	"github.com/seanmcadam/octovpn/common"
+	"github.com/seanmcadam/octovpn/common/status"
 	"github.com/seanmcadam/octovpn/interfaces/layers"
 )
 
@@ -21,13 +21,13 @@ func init() {
 }
 
 type TCPConnection struct {
-	serial   counter.Count
-	id       string
-	cx       *ctx.Ctx
-	conn     net.Conn
-	recvch   chan *bufferpool.Buffer
-	sendch   chan *bufferpool.Buffer
-	statusch chan common.LayerStatus
+	serial counter.Count
+	id     string
+	cx     *ctx.Ctx
+	conn   net.Conn
+	recvch chan *bufferpool.Buffer
+	sendch chan *bufferpool.Buffer
+	status *status.LayerStatusStruct
 }
 
 var pool bufferpool.Pool
@@ -39,12 +39,12 @@ func init() {
 func connection(cx *ctx.Ctx, conn net.Conn) layers.LayerInterface {
 
 	tc := &TCPConnection{
-		serial:   connCount.Next(),
-		cx:       cx,
-		conn:     conn,
-		recvch:   make(chan *bufferpool.Buffer, 5),
-		sendch:   make(chan *bufferpool.Buffer, 5),
-		statusch: make(chan common.LayerStatus, 2),
+		serial: connCount.Next(),
+		cx:     cx,
+		conn:   conn,
+		recvch: make(chan *bufferpool.Buffer, 5),
+		sendch: make(chan *bufferpool.Buffer, 5),
+		status: status.New(cx),
 	}
 
 	tc.id = fmt.Sprintf("[%d]%s:%s->%s", tc.serial.Uint(), tc.conn.LocalAddr().Network(), tc.conn.LocalAddr().String(), tc.conn.RemoteAddr().String())
@@ -67,7 +67,6 @@ func (tc *TCPConnection) goSend() {
 		tc.cx.Cancel()
 		tc.conn.Close()
 		close(tc.sendch)
-		close(tc.statusch)
 	}()
 
 	for {
@@ -193,8 +192,12 @@ func (tc *TCPConnection) RecvCh() (ch chan *bufferpool.Buffer) {
 	return tc.recvch
 }
 
-func (tc *TCPConnection) StatusCh() (statusch chan common.LayerStatus) {
-	return tc.statusch
+func (tc *TCPConnection) Status() (status status.LayerStatus) {
+	return tc.status.Get()
+}
+
+func (tc *TCPConnection) StatusCh() (statusch chan status.LayerStatus) {
+	return tc.status.GetCh()
 }
 
 func isNetClosingError(err error) bool {
